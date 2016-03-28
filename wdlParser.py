@@ -1,3 +1,12 @@
+# -----------------------------------------------------------------------------
+# @file     wdlParser.py
+# @brief    parser for the Waveform Development Language
+# @author   David Hale
+# @date     2016-xx-xx
+# @modified 2016-03-28 DH
+# 
+# This is the parser for the Waveform Development Language (WDL).
+# -----------------------------------------------------------------------------
 import Lexer as lexer
 from Symbols import *
 
@@ -50,7 +59,7 @@ def getToken():
 def found(argTokenType):
         """
         """
-        if token.type == argTokenType:
+        if token.type.upper() == argTokenType.upper():
                 return True
         return False
 
@@ -77,7 +86,7 @@ def consume(argTokenType):
     If the current token is NOT of the expected type, then
     raise an error.
     """
-    if token.type == argTokenType:
+    if token.type.upper() == argTokenType.upper():
         getToken()
     else:
         print "ERROR"
@@ -323,13 +332,17 @@ def sequence_label():
 # -----------------------------------------------------------------------------
 # @fn     generic_sequence
 # @brief  
-# @param  none
+# @param  optional sequenceName
 # @return none
+# 
+# The optional sequenceName parameter is used for the RETURN statement,
+# when applicable.
 # -----------------------------------------------------------------------------
-def generic_sequence():
+def generic_sequence(*sequenceName):
     """
     """
     global token
+    # sequence/waveform must start with an open (left) curly brace, {
     consume("{")
     # process until end-of-sequence
     while not found("}"):
@@ -349,17 +362,27 @@ def generic_sequence():
                 # if the next token isn't a closing paren then assume it's a number or param
                 if not found(")"):
                     sequenceLine += "(" + token.cargo #+ ")"
+            elif found("RETURN"):
+                consume("RETURN")
+                print "RETURN " + sequenceName[0]
+                break
             else:
                 sequenceLine += token.cargo
+            if found("RETURN"):
+                consume("RETURN")
+                print "*** RETURN "
+                break
             getToken()
             # if next token not a symbol then pad with a space
             if token.cargo not in TwoCharacterSymbols and \
                token.cargo not in OneCharacterSymbols:
                 sequenceLine += " "
+        # line must end with a semi-colon
+        consume(";")
         # won't normally have a 0-length sequenceLine, but could happen during testing
         if len(sequenceLine) > 0:
             print sequenceLine
-        eol()
+    # sequence/waveform must end with an close (right) curly brace, }
     consume("}")
 
 # -----------------------------------------------------------------------------
@@ -375,8 +398,7 @@ def sequence():
     global subroutines
 
     sequenceName = sequence_label()
-    generic_sequence()
-    print "RETURN " + sequenceName
+    generic_sequence(sequenceName)
 
 # -----------------------------------------------------------------------------
 # @fn     main

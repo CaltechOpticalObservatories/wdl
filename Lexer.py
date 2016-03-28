@@ -99,7 +99,7 @@ def get():
 			token.cargo += c1
 			getChar() 
 
-		if token.cargo.upper() in Keywords: token.type = token.cargo
+		if token.cargo.upper() in Keywords: token.type = token.cargo.upper()
 		return token
 
 	if c1 in NUMBER_STARTCHARS:
