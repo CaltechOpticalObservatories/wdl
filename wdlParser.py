@@ -4,12 +4,14 @@
 # @author   David Hale
 # @date     2016-xx-xx
 # @modified 2016-03-28 DH
+# @modified 2016-03-29 DH
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
+from __future__ import print_function
+import sys
 import Lexer as lexer
 from Symbols import *
-
 
 gotMain      = False
 token        = None
@@ -22,7 +24,6 @@ level        = 0
 lastTime     = 0
 maxTime      = 0
 timeStamps   = {}
-waveformName = ""
 
 # -----------------------------------------------------------------------------
 # @fn     dq
@@ -89,7 +90,6 @@ def consume(argTokenType):
     if token.type.upper() == argTokenType.upper():
         getToken()
     else:
-        print "ERROR"
         error("expected " + dq(argTokenType) + 
               " but got " + token.show(align=False) )
 
@@ -143,7 +143,7 @@ def time():
             if token.cargo in timeStamps:
                 eqn += str( timeStamps[token.cargo] )
             else:
-                print "Unresolved symbol " + dq(token.cargo)
+                print( "Unresolved symbol " + dq(token.cargo), file=sys.stderr )
             consume(IDENTIFIER)
         else:
             eqn += token.cargo
@@ -154,21 +154,6 @@ def time():
     # need to remember the max time, for the RETURN
     if lastTime > maxTime:
         maxTime = lastTime
-
-    # line starts with a number for a time
-#   if found(NUMBER):
-#       lastTime = token.cargo
-#       consume(NUMBER)
-#       consume(":")
-#   # or line can start with a label
-#   elif found(IDENTIFIER):
-#       # if a label, then it has to have been already defined
-#       if token.cargo in timeStamps:
-#           eqn += timeStamps[token.cargo]
-#       else:
-#           print "Unresolved symbol " + dq(token.cargo)
-
-#   # if line starts with nothing then we use the same time as the previous line
 
 # -----------------------------------------------------------------------------
 # @fn     set
@@ -266,14 +251,13 @@ def waverules():
 def wavelabel():
     """
     """
-    global waveformName
-
     if found(IDENTIFIER):
         waveformName = token.cargo
     else:
-        print "missing waveform label"
-
+        print( "missing waveform label", file=sys.stderr )
+        waveformName = ""
     consume(IDENTIFIER)
+    return waveformName
 
 # -----------------------------------------------------------------------------
 # @fn     waveform
@@ -288,15 +272,16 @@ def waveform():
     global lastTime
     global maxTime
     global level
-    global waveformName
-    
+
+    outputText = ""
+
     # a waveform must start with the "WAVEFORM" keyword, ...
     consume("WAVEFORM")
 
     # ...followed by a label for the waveform.
-    wavelabel()
+    waveformName = wavelabel()
 
-    print "waveform " + waveformName + ":"
+    outputText += "waveform " + waveformName + ":" + "\n"
 
     maxTime = 0
 
@@ -306,11 +291,15 @@ def waveform():
     while not found("}"):
         waverules()
         for index in range(len(board)):
-            print lastTime , board[index], chan[index] , level
+            outputText += str(lastTime)     + " " +\
+                          str(board[index]) + " " +\
+                          str(chan[index])  + " " +\
+                          str(level)        + "\n"
     consume("}")
 
     # "RETURN" marks the end of the waveform output
-    print str(maxTime+1) + " RETURN " + waveformName
+    outputText += str(maxTime+1) + " RETURN " + waveformName + "\n\n"
+    return outputText
 
 # -----------------------------------------------------------------------------
 # @fn     sequence_label
@@ -324,8 +313,9 @@ def sequence_label():
     global token
 
     if found(IDENTIFIER):
-        print "sequence " + token.cargo + ":"
         name = token.cargo
+    else:
+        name = ""
     consume(IDENTIFIER)
     return name
 
@@ -344,6 +334,7 @@ def generic_sequence(*sequenceName):
     global token
     # sequence/waveform must start with an open (left) curly brace, {
     consume("{")
+    outputText = ""
     # process until end-of-sequence
     while not found("}"):
         sequenceLine = ""
@@ -364,14 +355,10 @@ def generic_sequence(*sequenceName):
                     sequenceLine += "(" + token.cargo #+ ")"
             elif found("RETURN"):
                 consume("RETURN")
-                print "RETURN " + sequenceName[0]
+                outputText += "RETURN " + sequenceName[0] + "\n"
                 break
             else:
                 sequenceLine += token.cargo
-            if found("RETURN"):
-                consume("RETURN")
-                print "*** RETURN "
-                break
             getToken()
             # if next token not a symbol then pad with a space
             if token.cargo not in TwoCharacterSymbols and \
@@ -381,9 +368,10 @@ def generic_sequence(*sequenceName):
         consume(";")
         # won't normally have a 0-length sequenceLine, but could happen during testing
         if len(sequenceLine) > 0:
-            print sequenceLine
+            outputText += sequenceLine + "\n"
     # sequence/waveform must end with an close (right) curly brace, }
     consume("}")
+    return outputText
 
 # -----------------------------------------------------------------------------
 # @fn     sequence
@@ -398,7 +386,9 @@ def sequence():
     global subroutines
 
     sequenceName = sequence_label()
-    generic_sequence(sequenceName)
+    outputText = "sequence " + sequenceName + ":" + "\n"
+    outputText += generic_sequence(sequenceName) + "\n"
+    return outputText
 
 # -----------------------------------------------------------------------------
 # @fn     main
@@ -415,14 +405,14 @@ def main():
     global gotMain
 
     if gotMain:
-        print "ERROR"
         error("cannot have more than one MAIN")
 
     consume("MAIN")
-    print "sequence MAIN:"
-    generic_sequence()
-    print "GOTO MAIN"
+    outputText = "sequence MAIN:" + "\n"
+    outputText += generic_sequence()
+    outputText += "GOTO MAIN" + "\n"
     gotMain = True
+    return outputText
 
 # -----------------------------------------------------------------------------
 # @fn     parse_waveform
@@ -560,21 +550,35 @@ def parse(sourceText):
 
     lexer.initialize(sourceText)
 
+    waveformText = ""
+    sequenceText = ""
+    mainText     = ""
+
     getToken()
     while True:
         if token.type == EOF:
             break
         elif found("WAVEFORM"):
-            waveform()
+            waveformText += waveform()
         elif found("param"):
             param()
         elif found("MAIN"):
-            main()
+            mainText = main()
         elif found(IDENTIFIER):
-            sequence()
+            sequenceText += sequence()
         else:
             error("unrecognized token " + token.show(align=False) )
             break
 
+
+    print("")
+
+    print(mainText)
+
+    print(sequenceText)
+
+    print(waveformText)
+
     for p in paramList:
-        print p
+        print(p)
+
