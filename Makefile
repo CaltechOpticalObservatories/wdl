@@ -19,7 +19,8 @@ FIXRAW	= no
 
 GPP	= /usr/local/bin/gpp
 GFLAGS	= +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
-PARSER	= /home/ztf/devel/wdl/ParserDriver.py
+WDLPARSER	= /home/ztf/devel/wdl/wdlParserDriver.py
+MODPARSER	= /home/ztf/devel/wdl/modParserDriver.py
 WAVGEN	= /home/ztf/devel/wdl/wavgenDriver.py
 I2A	= /home/ztf/devel/perl/ini2acf.pl
 FRE	= /home/ztf/devel/perl/fixrawendline.pl
@@ -34,6 +35,8 @@ all:	;
 %:	;
 	@echo making $(@F)...
 	@echo "signalfile $(@F).signals" > $(@F).wdl
-	@cat $(@F).waveform $(@F).seq | $(GPP) $(GFLAGS) $(INCL) |  $(PARSER) - >> $(@F).wdl
+	@cat $(@F).waveform $(@F).seq | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - >> $(@F).wdl
+	@echo "[CONFIG]" >  $(@F).modules
+	@cat $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) - >> $(@F).modules
 	@$(WAVGEN) $(@F)
-	@cat $(@F).script $(@F).states | $(I2A) - > $(@F).acf
+	@echo "[CONFIG]" | cat - $(@F).script $(@F).modules $(@F).states | $(I2A) - > $(@F).acf

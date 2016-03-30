@@ -15,8 +15,8 @@ from Symbols import *
 
 gotMain      = False
 token        = None
-board        = []
-chan         = []
+sslot        = []   # SET slot
+schan        = []   # SET chan
 paramList    = []
 paramNames   = []
 subroutines  = []
@@ -24,6 +24,10 @@ level        = 0
 lastTime     = 0
 maxTime      = 0
 timeStamps   = {}
+drvOutput    = ""
+adcOutput    = ""
+hvlOutput    = ""
+hvhOutput    = ""
 
 # -----------------------------------------------------------------------------
 # @fn     dq
@@ -92,6 +96,200 @@ def consume(argTokenType):
     else:
         error("expected " + dq(argTokenType) + 
               " but got " + token.show(align=False) )
+
+# -----------------------------------------------------------------------------
+# @fn     module
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def module():
+    """
+    """
+    global token
+    module_name = token.cargo
+    if   module_name == "driver"  : type = 1
+    elif module_name == "ad"      : type = 2
+    elif module_name == "lvbias"  : type = 3
+    elif module_name == "hvbias"  : type = 4
+    elif module_name == "heater"  : type = 5
+    elif module_name == "hs"      : type = 7
+    elif module_name == "hvxbias" : type = 8
+    elif module_name == "lvxbias" : type = 9
+    elif module_name == "lvds"    : type = 10
+    else:
+        error("unrecognized module type: " + dq(module_name))
+    return(type)
+
+# -----------------------------------------------------------------------------
+# @fn     preampgain
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def preampgain(slotNumber):
+    """
+    """
+    global token
+    global adcOutput
+
+    consume("=")
+    while not found(";"):
+        # allow a 0 or 1
+        if found(NUMBER):
+            if token.cargo == "0":
+                preampgain = "0"
+            elif token.cargo == "1":
+                preampgain = "1"
+            else:
+                error("unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+            consume(NUMBER)
+        # or "low" or "high"
+        elif found(IDENTIFIER):
+            if token.cargo == "low":
+                preampgain = "0"
+            elif token.cargo == "high":
+                preampgain = "1"
+            else:
+                error("unrecognized value: " + dq(token.cargo) + "\nexpected "+dq("low")+" or "+dq("high"))
+            consume(IDENTIFIER)
+    consume(";")
+
+    adcOutput += "MOD" + slotNumber + "\PREAMPGAIN=" + preampgain + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     clamp
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def clamp(slotNumber):
+    """
+    """
+    global token
+    global adcOutput
+
+    if found(NUMBER):
+        adChan = token.cargo
+    consume(NUMBER)
+    consume("=")
+    while not found(";"):
+        if found(NUMBER):
+            clamp = token.cargo
+        consume(NUMBER)
+    consume(";")
+
+    adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + clamp + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     hvlc
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def hvlc(slotNumber):
+    """
+    """
+    global token
+    global hvlOutput
+
+    if found(NUMBER):
+        hvlChan = token.cargo
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if found(NUMBER):
+            volts = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            order = token.cargo
+        consume(NUMBER)
+    consume("]")
+    consume(";")
+
+    hvlOutput += "MOD" + slotNumber + "\LABEL" + hvlChan + "=\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
+    hvlOutput += "MOD" + slotNumber + "\ORDER" + hvlChan + "=" + order + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     drv
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def drv(slotNumber):
+    """
+    """
+    global token
+    global drvOutput
+
+    if found(NUMBER):
+        drvChan = token.cargo
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if found(NUMBER):
+            slewfast = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            slewslow = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            enable = token.cargo
+        consume(NUMBER)
+    consume("]")
+    consume(";")
+
+    drvOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=\n"
+    drvOutput += "MOD" + slotNumber + "\ENABLE" + drvChan + "=" + enable + "\n"
+    drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
+    drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     slot
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def slot():
+    """
+    """
+    global token
+
+    consume("SLOT")
+
+    if found(NUMBER):
+        slotNumber = token.cargo
+    consume(NUMBER)
+
+    if found(IDENTIFIER):
+        type = module()
+    consume(IDENTIFIER)
+
+    # Then, until the end of the waveform (delimited by curly brace),
+    # check for the waveform rules.
+    consume("{")
+    while not found("}"):
+        if found("DRV"):
+            consume("DRV")
+            drv(slotNumber)
+        elif found("CLAMP"):
+            consume("CLAMP")
+            clamp(slotNumber)
+        if found("PREAMPGAIN"):
+            consume("PREAMPGAIN")
+            preampgain(slotNumber)
+        if found("HVLC"):
+            consume("HVLC")
+            hvlc(slotNumber)
+        else:
+            getToken()
+    consume("}")
+
+    return
 
 # -----------------------------------------------------------------------------
 # @fn     timelabel
@@ -164,10 +362,10 @@ def time():
 def set():
     """
     """
-    global board
-    global chan
-    board = []
-    chan  = []
+    global sslot
+    global schan
+    sslot = []
+    schan = []
 
     consume("SET")
 
@@ -177,11 +375,11 @@ def set():
 
     while not found(","):
         if found (NUMBER):
-            board.append(token.cargo)
+            sslot.append(token.cargo)
         consume(NUMBER)
         consume(":")
         if found (NUMBER):
-            chan.append(token.cargo)
+            schan.append(token.cargo)
         consume(NUMBER)
 
         if found(","):
@@ -290,10 +488,10 @@ def waveform():
     consume("{")
     while not found("}"):
         waverules()
-        for index in range(len(board)):
+        for index in range(len(sslot)):
             outputText += str(lastTime)     + " " +\
-                          str(board[index]) + " " +\
-                          str(chan[index])  + " " +\
+                          str(sslot[index]) + " " +\
+                          str(schan[index]) + " " +\
                           str(level)        + "\n"
     consume("}")
 
@@ -537,6 +735,35 @@ def get_params(sourceText):
     return paramNames
 
 # -----------------------------------------------------------------------------
+# @fn     parse_modules
+# @brief  
+# @param  sourceText
+# @return none
+# -----------------------------------------------------------------------------
+def parse_modules(sourceText):
+    """
+    """
+    global token
+    global drvOutput
+    global adcOutput
+    global hvlOutput
+    global hvhOutput
+
+    lexer.initialize(sourceText)
+
+    getToken()
+    while True:
+        if token.type == EOF:
+            break
+        elif found("SLOT"):
+            slot()
+        else:
+            error("unrecognized token " + token.show(align=False) )
+            break
+
+    print(drvOutput+adcOutput+hvlOutput)
+
+# -----------------------------------------------------------------------------
 # @fn     parse
 # @brief  parses everything
 # @param  sourceText
@@ -581,4 +808,3 @@ def parse(sourceText):
 
     for p in paramList:
         print(p)
-

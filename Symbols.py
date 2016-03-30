@@ -18,6 +18,14 @@ GOTO
 CALL
 RETURN
 PARAM
+SLOT
+DRV
+HVLC
+HVHC
+CLAMP
+PREAMPGAIN
+DIO
+DIOPOWER
 """
 Keywords = Keywords.split()
 
