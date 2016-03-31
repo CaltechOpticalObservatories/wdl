@@ -882,7 +882,7 @@ def parse_modules(sourceText):
     sysOutput = ""
     sysOutput += "BACKPLANE_ID=0000000000000000\n"
     sysOutput += "BACKPLANE_REV=0\n"
-    sysOutput += "BACKPLANE_TYPE=0\n"
+    sysOutput += "BACKPLANE_TYPE=1\n"
     sysOutput += "BACKPLANE_VERSION=0.0.0\n"
 
     getToken()
