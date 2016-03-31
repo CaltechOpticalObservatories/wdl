@@ -22,9 +22,9 @@ paramList    = []
 paramNames   = []
 subroutines  = []
 level        = 0
-lastTime     = 0
-maxTime      = 0
-timeStamps   = {}
+evalTime     = 0    # evaluated time for waveform line
+maxTime      = 0    # max time for each waveform
+timeStamps   = {}   # dictionary of time stamps, timelabel:time
 drvOutput    = ""
 adcOutput    = ""
 hvlOutput    = ""
@@ -428,56 +428,59 @@ def timelabel():
     """
     global token
     global timeStamps
-    global lastTime
+    global evalTime
 
     # if there is an equal sign then a label has been assigned to this time
     if found("="):
         consume("=")
-        timeStamps[token.cargo] = lastTime
+        # Store the time at this time stamp label in a dictionary, label:time
+        # for later retrieval (used in the time() function).
+        timeStamps[token.cargo] = evalTime
         consume(IDENTIFIER)
 
 # -----------------------------------------------------------------------------
 # @fn     time
-# @brief  
+# @brief  evaluate the time stamp for each entry in the waveform
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
 def time():
     """
+    evaluate the time stamp for each entry in the waveform
     """
-    global lastTime
+    global evalTime
     global maxTime
     global timeStamps
 
-    eqn = ""
+    if found("SET"):       # If no time found, then this waveform happens at the
+        return             # same time as the previous line, so just return.
 
-    if found("SET"):
-        return
+    # init an equation from which the time will be calculated
 
-    if found(".+"):
-        prevTime = lastTime
+    if found(".+"):        # start new equation with the last eval time
+        eqn = str(evalTime) + "+"
         consume(".+")
-    else:
-        prevTime = 0
+    else:                  # or start anew
+        eqn = ""
 
-    eqn += str( prevTime ) + "+"
-
+    # form an equation from which the time will be evaluated using everything up to the ":"
     while not found(":"):
         if found(IDENTIFIER):
+            # if we found a time stamp label then get its actual time from the dictionary
             if token.cargo in timeStamps:
                 eqn += str( timeStamps[token.cargo] )
             else:
                 print( "Unresolved symbol " + dq(token.cargo), file=sys.stderr )
             consume(IDENTIFIER)
         else:
-            eqn += token.cargo
+            eqn += token.cargo   # if not a label then we have a number or an arithmetic symbol
             getToken()
     consume(":")
-    lastTime = int( eval(eqn) )
+    evalTime = int( eval(eqn) )  # new evaluated time
 
     # need to remember the max time, for the RETURN
-    if lastTime > maxTime:
-        maxTime = lastTime
+    if evalTime > maxTime:
+        maxTime = evalTime
 
 # -----------------------------------------------------------------------------
 # @fn     set
@@ -553,12 +556,27 @@ def eol():
 
 # -----------------------------------------------------------------------------
 # @fn     waverules
-# @brief  
+# @brief  rules for defining a waveform
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
 def waverules():
     """
+    These are the rules for defining a waveform:
+
+        [time]: [=timelabel] SET signallabel TO level;
+ 
+        time: at least one time label is required, followed by colon
+              (if omitted then SET... lines are all at the same time as previous time)
+              arithmetic operations are allowed for time
+              units are allowed to follow numbers, E.G. ns, us, ms
+              ".+" means to add to the previous time
+ 
+        =timelabel is an optional label for this time, which can be used elsewhere
+ 
+        SET signallabel TO level; 
+        is required and must end with a semi-colon
+        signallabel and level can be defined anywhere
     """
     time()
     timelabel()
@@ -585,29 +603,28 @@ def wavelabel():
 
 # -----------------------------------------------------------------------------
 # @fn     waveform
-# @brief  
+# @brief  waveform definition
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
 def waveform():
     """
+    waveform definition
     """
     global token
-    global lastTime
+    global evalTime
     global maxTime
     global level
 
     outputText = ""
+    maxTime    = 0
 
     # a waveform must start with the "WAVEFORM" keyword, ...
     consume("WAVEFORM")
 
     # ...followed by a label for the waveform.
     waveformName = wavelabel()
-
-    outputText += "waveform " + waveformName + ":" + "\n"
-
-    maxTime = 0
+    outputText   += "waveform " + waveformName + ":" + "\n"
 
     # Then, until the end of the waveform (delimited by curly brace),
     # check for the waveform rules.
@@ -615,7 +632,7 @@ def waveform():
     while not found("}"):
         waverules()
         for index in range(len(sslot)):
-            outputText += str(lastTime)     + " " +\
+            outputText += str(evalTime)     + " " +\
                           str(sslot[index]) + " " +\
                           str(schan[index]) + " " +\
                           str(level)        + "\n"
