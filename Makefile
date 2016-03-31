@@ -23,15 +23,16 @@ I2A	= /home/ztf/devel/perl/ini2acf.pl
 
 INCL	= -I$(CURDIR)
 
-TMPFILE	:= $(shell mktemp)
-
-all:	;
-	@echo "please specify an instrument name (corresponding to a .def file)"
-
 %:	;
-	@echo making $(@F)...
+	@echo making $(@F).wdl ...
 	@echo "signalfile $(@F).signals" > $(@F).wdl
 	@cat $(@F).waveform $(@F).seq | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - >> $(@F).wdl
+	@echo making $(@F).script, $(@F).states ...
 	@echo $(@F) | cat  - $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
 	@$(WAVGEN) $(@F)
-	@echo "[CONFIG]" | cat - $(@F).script $(@F).modules $(@F).states $(@F).system | $(I2A) - > $(@F).acf
+#	@echo "[CONFIG]" | cat - $(@F).script $(@F).modules $(@F).states $(@F).system | $(I2A) - > $(@F).acf
+	@echo making $(@F).acf ...
+	@echo "[CONFIG]" | \
+		cat - $(@F).cds | $(GPP) $(GFLAGS) $(INCL) | \
+		cat - $(@F).script $(@F).modules $(@F).states $(@F).system | \
+		$(I2A) - > $(@F).acf

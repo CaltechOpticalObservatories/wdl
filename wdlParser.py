@@ -406,7 +406,7 @@ def slot():
             consume("DIOPOWER")
             diopower(slotNumber)
         else:
-            getToken()
+            pass
     consume("}")
 
     # build up the information for a .system file
