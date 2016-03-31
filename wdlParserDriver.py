@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 import fileinput
 import wdlParser as parser
 import sys
@@ -24,7 +25,9 @@ def main(sourceText):
 
     parser.get_params(sourceText)
 
-    parser.parse(sourceText)
+    wdlOutput = parser.parse(sourceText)
+
+    print(wdlOutput)
 
 # -----------------------------------------------------------------------------
 #           __main__

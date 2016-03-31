@@ -5,6 +5,7 @@
 # @date     2016-xx-xx
 # @modified 2016-03-28 DH
 # @modified 2016-03-29 DH
+# @modified 2016-03-31 DH output is returned instead of printed
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -28,6 +29,8 @@ drvOutput    = ""
 adcOutput    = ""
 hvlOutput    = ""
 hvhOutput    = ""
+dioOutput    = ""
+sysOutput    = ""
 
 # -----------------------------------------------------------------------------
 # @fn     dq
@@ -122,6 +125,73 @@ def module():
     return(type)
 
 # -----------------------------------------------------------------------------
+# @fn     dio
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def dio(slotNumber):
+    """
+    """
+    global token
+    global dioOutput
+
+    if found(NUMBER):
+        dioChan = token.cargo
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if found(NUMBER):
+            source = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            direction = token.cargo
+        consume(NUMBER)
+    consume("]")
+    consume(";")
+
+    dioOutput += "MOD" + slotNumber + "\LABEL"  + dioChan + "=\n"
+    dioOutput += "MOD" + slotNumber + "\SOURCE" + dioChan + "=" + source    + "\n"
+    dioOutput += "MOD" + slotNumber + "\DIR"    + dioChan + "=" + direction + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     diopower
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def diopower(slotNumber):
+    """
+    """
+    global token
+    global dioOutput
+
+    consume("=")
+    while not found(";"):
+        # allow a 0 or 1
+        if found(NUMBER):
+            if token.cargo == "0":
+                diopower = "0"
+            elif token.cargo == "1":
+                diopower = "1"
+            else:
+                error("unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+            consume(NUMBER)
+        # or "low" or "high"
+        elif found(IDENTIFIER):
+            if token.cargo == "low":
+                diopower = "0"
+            elif token.cargo == "high":
+                diopower = "1"
+            else:
+                error("unrecognized value: " + dq(token.cargo) + "\nexpected "+dq("low")+" or "+dq("high"))
+            consume(IDENTIFIER)
+    consume(";")
+
+    dioOutput += "MOD" + slotNumber + "\DIO_POWER=" + diopower + "\n"
+
+# -----------------------------------------------------------------------------
 # @fn     preampgain
 # @brief  
 # @param  none
@@ -182,6 +252,46 @@ def clamp(slotNumber):
     adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + clamp + "\n"
 
 # -----------------------------------------------------------------------------
+# @fn     hvhc
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def hvhc(slotNumber):
+    """
+    """
+    global token
+    global hvhOutput
+
+    if found(NUMBER):
+        hvhChan = token.cargo
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if found(NUMBER):
+            volts = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            current = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            order = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            enable = token.cargo
+        consume(NUMBER)
+    consume("]")
+    consume(";")
+
+    hvhOutput += "MOD" + slotNumber + "\LABEL"   + hvhChan + "=\n"
+    hvhOutput += "MOD" + slotNumber + "\HVLC_V"  + hvhChan + "=" + volts   + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVLC_IL" + hvhChan + "=" + current + "\n"
+    hvhOutput += "MOD" + slotNumber + "\ORDER"   + hvhChan + "=" + order   + "\n"
+
+# -----------------------------------------------------------------------------
 # @fn     hvlc
 # @brief  
 # @param  none
@@ -208,9 +318,9 @@ def hvlc(slotNumber):
     consume("]")
     consume(";")
 
-    hvlOutput += "MOD" + slotNumber + "\LABEL" + hvlChan + "=\n"
+    hvlOutput += "MOD" + slotNumber + "\LABEL"  + hvlChan + "=\n"
     hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
-    hvlOutput += "MOD" + slotNumber + "\ORDER" + hvlChan + "=" + order + "\n"
+    hvlOutput += "MOD" + slotNumber + "\ORDER"  + hvlChan + "=" + order + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     drv
@@ -243,8 +353,8 @@ def drv(slotNumber):
     consume("]")
     consume(";")
 
-    drvOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=\n"
-    drvOutput += "MOD" + slotNumber + "\ENABLE" + drvChan + "=" + enable + "\n"
+    drvOutput += "MOD" + slotNumber + "\LABEL"        + drvChan + "=\n"
+    drvOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
     drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
     drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
 
@@ -258,6 +368,7 @@ def slot():
     """
     """
     global token
+    global sysOutput
 
     consume("SLOT")
 
@@ -285,9 +396,24 @@ def slot():
         if found("HVLC"):
             consume("HVLC")
             hvlc(slotNumber)
+        if found("HVHC"):
+            consume("HVHC")
+            hvhc(slotNumber)
+        if found("DIO"):
+            consume("DIO")
+            dio(slotNumber)
+        if found("DIOPOWER"):
+            consume("DIOPOWER")
+            diopower(slotNumber)
         else:
             getToken()
     consume("}")
+
+    # build up the information for a .system file
+    sysOutput += "MOD" + slotNumber + "_ID=0000000000000000\n"
+    sysOutput += "MOD" + slotNumber + "_REV=0\n"
+    sysOutput += "MOD" + slotNumber + "_VERSION=0.0.0\n"
+    sysOutput += "MOD" + slotNumber + "_TYPE=" + str(type) + "\n"
 
     return
 
@@ -748,8 +874,16 @@ def parse_modules(sourceText):
     global adcOutput
     global hvlOutput
     global hvhOutput
+    global sysOutput
 
     lexer.initialize(sourceText)
+
+    # initialize the system output string
+    sysOutput = ""
+    sysOutput += "BACKPLANE_ID=0000000000000000\n"
+    sysOutput += "BACKPLANE_REV=0\n"
+    sysOutput += "BACKPLANE_TYPE=0\n"
+    sysOutput += "BACKPLANE_VERSION=0.0.0\n"
 
     getToken()
     while True:
@@ -761,7 +895,26 @@ def parse_modules(sourceText):
             error("unrecognized token " + token.show(align=False) )
             break
 
-    print(drvOutput+adcOutput+hvlOutput)
+    retval = ""
+    retval += drvOutput
+    retval += adcOutput
+    retval += hvlOutput
+    retval += hvhOutput
+    retval += dioOutput
+
+    return retval
+
+# -----------------------------------------------------------------------------
+# @fn     parse_system
+# @brief  
+# @param  sourceText
+# @return none
+# -----------------------------------------------------------------------------
+def parse_system():
+    """
+    """
+    global sysOutput
+    return sysOutput
 
 # -----------------------------------------------------------------------------
 # @fn     parse
@@ -797,14 +950,11 @@ def parse(sourceText):
             error("unrecognized token " + token.show(align=False) )
             break
 
-
-    print("")
-
-    print(mainText)
-
-    print(sequenceText)
-
-    print(waveformText)
-
+    retval =""
+    retval += mainText
+    retval += sequenceText
+    retval += waveformText
     for p in paramList:
-        print(p)
+        retval += p + "\n"
+
+    return retval

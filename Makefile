@@ -6,6 +6,7 @@
 # @modified 2016-01-14
 # @modified 2016-01-27 added fixrawendline (special case for Peter)
 # @modified 2016-01-28 removed clean. Use @F.h instead of HFILE=archon.h
+# @modified 2016-03-31 change how .mod is parsed
 #
 # This Makefile uses the general preprocessor GPP 2.24 for macro processing.
 # It also requires the ini2acf.pl Perl script for creating an Archon acf file.
@@ -13,17 +14,12 @@
 # -----------------------------------------------------------------------------
 #
 
-# set FIXRAW = yes to run "fixrawendline.pl" script on resultant .acf file
-#
-FIXRAW	= no
-
 GPP	= /usr/local/bin/gpp
 GFLAGS	= +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
 WDLPARSER	= /home/ztf/devel/wdl/wdlParserDriver.py
 MODPARSER	= /home/ztf/devel/wdl/modParserDriver.py
 WAVGEN	= /home/ztf/devel/wdl/wavgenDriver.py
 I2A	= /home/ztf/devel/perl/ini2acf.pl
-FRE	= /home/ztf/devel/perl/fixrawendline.pl
 
 INCL	= -I$(CURDIR)
 
@@ -36,7 +32,6 @@ all:	;
 	@echo making $(@F)...
 	@echo "signalfile $(@F).signals" > $(@F).wdl
 	@cat $(@F).waveform $(@F).seq | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - >> $(@F).wdl
-	@echo "[CONFIG]" >  $(@F).modules
-	@cat $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) - >> $(@F).modules
+	@echo $(@F) | cat  - $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
 	@$(WAVGEN) $(@F)
-	@echo "[CONFIG]" | cat - $(@F).script $(@F).modules $(@F).states | $(I2A) - > $(@F).acf
+	@echo "[CONFIG]" | cat - $(@F).script $(@F).modules $(@F).states $(@F).system | $(I2A) - > $(@F).acf
