@@ -26,6 +26,7 @@ def main(source):
     """
     input  = source+".wdl"
     output = source
+    PHM.wavgen.GenerateFigs = False
     PHM.wavgen.loadWDL(input, output)
     plt.show(block=True)
 
