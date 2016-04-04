@@ -6,6 +6,7 @@
 # @modified 2016-03-28 DH
 # @modified 2016-03-29 DH
 # @modified 2016-03-31 DH output is returned instead of printed
+# @modified 2016-04-04 DH implement make_include in support of .conf files
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -13,6 +14,8 @@ from __future__ import print_function
 import sys
 import Lexer as lexer
 from Symbols import *
+
+class ParserError(Exception): pass
 
 gotMain      = False
 token        = None
@@ -31,6 +34,15 @@ hvlOutput    = ""
 hvhOutput    = ""
 dioOutput    = ""
 sysOutput    = ""
+
+# -----------------------------------------------------------------------------
+# @fn     abort
+# @brief  throw a parser error
+# @param  self, msg
+# @return none
+# -----------------------------------------------------------------------------
+def abort(self, msg):
+    raise ParserError(msg)
 
 # -----------------------------------------------------------------------------
 # @fn     dq
@@ -543,6 +555,16 @@ def to():
     consume(NUMBER)
 
 # -----------------------------------------------------------------------------
+# @fn     slew
+# @brief  
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def slew():
+    """
+    """
+
+# -----------------------------------------------------------------------------
 # @fn     eol
 # @brief  check for end-of-line character
 # @param  none
@@ -564,7 +586,7 @@ def waverules():
     """
     These are the rules for defining a waveform:
 
-        [time]: [=timelabel] SET signallabel TO level;
+        [time]: [=timelabel] SET signallabel TO level, slew;
  
         time: at least one time label is required, followed by colon
               (if omitted then SET... lines are all at the same time as previous time)
@@ -576,12 +598,19 @@ def waverules():
  
         SET signallabel TO level; 
         is required and must end with a semi-colon
-        signallabel and level can be defined anywhere
+
+        signallabel and level can be defined anywhere and is of the form
+        slot:chan or a list of [slot:chan, slot:chan, ...]
+        and level is a voltage
+
+        slew is "fast" or "slow" and selects which of the slew rates,
+        defined in the .mod file, to be used for this particular state
     """
     time()
     timelabel()
     set()
     to()
+    slew()
     eol()
 
 # -----------------------------------------------------------------------------
@@ -950,6 +979,8 @@ def parse(sourceText):
     waveformText = ""
     sequenceText = ""
     mainText     = ""
+    systemFile   = ""
+    signalFile   = ""
 
     getToken()
     while True:
@@ -963,11 +994,21 @@ def parse(sourceText):
             mainText = main()
         elif found(IDENTIFIER):
             sequenceText += sequence()
+        elif found("SYSTEM_FILE"):
+            consume("SYSTEM_FILE")
+            systemFile = token.cargo.strip('"')
+            consume(STRING)
+        elif found("SIGNAL_FILE"):
+            consume("SIGNAL_FILE")
+            signalFile = token.cargo.strip('"')
+            consume(STRING)
         else:
             error("unrecognized token " + token.show(align=False) )
             break
 
     retval =""
+    retval += "systemfile " + systemFile + "\n"
+    retval += "signalfile " + signalFile + "\n\n"
     retval += mainText
     retval += sequenceText
     retval += waveformText
@@ -975,3 +1016,66 @@ def parse(sourceText):
         retval += p + "\n"
 
     return retval
+
+# -----------------------------------------------------------------------------
+# @fn     make_include
+# @brief  
+# @param  
+# @return none
+# -----------------------------------------------------------------------------
+def make_include(sourceText):
+    """
+    """
+    global token
+
+    systemFile   = ""
+    waveformFile = ""
+    signalFile   = ""
+    sequenceFile = ""
+
+    lexer.initialize(sourceText)
+
+    getToken()
+    while True:
+        if token.type == EOF:
+            break
+        elif found("SYSTEM_FILE"):
+            consume("SYSTEM_FILE")
+            consume("=")
+            if found(STRING):
+                systemFile = token.cargo
+            consume(STRING)
+        elif found("WAVEFORM_FILE"):
+            consume("WAVEFORM_FILE")
+            consume("=")
+            if found(STRING):
+                waveformFile = token.cargo
+            consume(STRING)
+        elif found("SIGNAL_FILE"):
+            consume("SIGNAL_FILE")
+            consume("=")
+            if found(STRING):
+                signalFile = token.cargo
+            consume(STRING)
+        elif found("SEQUENCE_FILE"):
+            consume("SEQUENCE_FILE")
+            consume("=")
+            if found(STRING):
+                sequenceFile = token.cargo
+            consume(STRING)
+
+    if len(waveformFile) == 0:
+        raise ParserError("missing WAVEFORM_FILE")
+
+    if len(signalFile) == 0:
+        raise ParserError("missing SIGNAL_FILE")
+
+    if len(sequenceFile) == 0:
+        raise ParserError("missing SEQUENCE_FILE")
+
+    print( "SYSTEM_FILE " + systemFile )  # PHM requires this to appear in the output
+    print( "SIGNAL_FILE " + signalFile )  # PHM requires this to appear in the output
+
+    print( "#include " + signalFile   )
+    print( "#include " + waveformFile )
+    print( "#include " + sequenceFile )
