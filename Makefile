@@ -27,8 +27,7 @@ INCL      = -I$(CURDIR)
 %:	;
 	@test -f $(@F).conf || echo $(@F).conf does not exist
 	@echo making $(@F).wdl ...
-	@echo ""                          > $(@F).wdl
-	@test -f $(@F).conf && cat $(@F).conf | $(INCPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - >> $(@F).wdl
+	@test -f $(@F).conf && cat $(@F).conf | $(INCPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - > $(@F).wdl
 	@echo making $(@F).script, $(@F).states ...
 	@test -f $(@F).mod || echo $(@F).mod does not exist
 	@test -f $(@F).mod && echo $(@F) | cat  - $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
