@@ -21,7 +21,7 @@ INCPARSER = /home/ztf/devel/wdl/incParserDriver.py
 WDLPARSER = /home/ztf/devel/wdl/wdlParserDriver.py
 MODPARSER = /home/ztf/devel/wdl/modParserDriver.py
 WAVGEN    = /home/ztf/devel/wdl/wavgenDriver.py
-I2A       = /home/ztf/devel/perl/ini2acf.pl
+I2A       = /home/ztf/devel/wdl/ini2acf.pl
 INCL      = -I$(CURDIR)
 
 %:	;
