@@ -676,11 +676,11 @@ def waveform():
         for index in range(len(setSlot)):
             outputText += str(evalTime)                + " " +\
                           str(setSlot[index])          + " " +\
-                          str(2*int(setChan[index]))   + " " +\
+                          str(2*int(setChan[index])-2)   + " " +\
                           str(setLevel)                + "\n"
             outputText += str(evalTime)                + " " +\
                           str(setSlot[index])          + " " +\
-                          str(2*int(setChan[index])+1) + " " +\
+                          str(2*int(setChan[index])-1) + " " +\
                           str(setSlew)                 + "\n"
     consume("}")
 
