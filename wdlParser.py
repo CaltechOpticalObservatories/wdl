@@ -19,12 +19,13 @@ class ParserError(Exception): pass
 
 gotMain      = False
 token        = None
-sslot        = []   # SET slot
-schan        = []   # SET chan
+setSlot      = []   # SET slot
+setChan      = []   # SET chan
+setSlew      = -1   # SET slew
+setLevel     = 0
 paramList    = []
 paramNames   = []
 subroutines  = []
-level        = 0
 evalTime     = 0    # evaluated time for waveform line
 maxTime      = 0    # max time for each waveform
 timeStamps   = {}   # dictionary of time stamps, timelabel:time
@@ -503,10 +504,10 @@ def time():
 def set():
     """
     """
-    global sslot
-    global schan
-    sslot = []
-    schan = []
+    global setSlot
+    global setChan
+    setSlot = []
+    setChan = []
 
     consume("SET")
 
@@ -516,11 +517,11 @@ def set():
 
     while not found(","):
         if found (NUMBER):
-            sslot.append(token.cargo)
+            setSlot.append(token.cargo)
         consume(NUMBER)
         consume(":")
         if found (NUMBER):
-            schan.append(token.cargo)
+            setChan.append(token.cargo)
         consume(NUMBER)
 
         if found(","):
@@ -539,7 +540,7 @@ def set():
 def to():
     """
     """
-    global level
+    global setLevel
 
     consume("TO")
     # could be a negative number...
@@ -551,7 +552,7 @@ def to():
         sign=1.0
     if found(NUMBER):
         # multiply the value by the sign from above (hehe)
-        level = str( sign * float(token.cargo) )
+        setLevel = str( sign * float(token.cargo) )
     consume(NUMBER)
 
 # -----------------------------------------------------------------------------
@@ -563,6 +564,17 @@ def to():
 def slew():
     """
     """
+    global setSlew
+
+    consume(",")
+    if found("SLOW"):
+        consume("SLOW")
+        setSlew = 0
+    elif found("FAST"):
+        consume("FAST")
+        setSlew = 1
+    else:
+        error("expected SLOW | FAST but got: " + dq(token.cargo))
 
 # -----------------------------------------------------------------------------
 # @fn     eol
@@ -643,7 +655,8 @@ def waveform():
     global token
     global evalTime
     global maxTime
-    global level
+    global setLevel
+    global setSlew
 
     outputText = ""
     maxTime    = 0
@@ -660,11 +673,15 @@ def waveform():
     consume("{")
     while not found("}"):
         waverules()
-        for index in range(len(sslot)):
-            outputText += str(evalTime)     + " " +\
-                          str(sslot[index]) + " " +\
-                          str(schan[index]) + " " +\
-                          str(level)        + "\n"
+        for index in range(len(setSlot)):
+            outputText += str(evalTime)                + " " +\
+                          str(setSlot[index])          + " " +\
+                          str(2*int(setChan[index]))   + " " +\
+                          str(setLevel)                + "\n"
+            outputText += str(evalTime)                + " " +\
+                          str(setSlot[index])          + " " +\
+                          str(2*int(setChan[index])+1) + " " +\
+                          str(setSlew)                 + "\n"
     consume("}")
 
     # "RETURN" marks the end of the waveform output

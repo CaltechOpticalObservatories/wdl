@@ -30,6 +30,8 @@ SYSTEM_FILE
 WAVEFORM_FILE
 SIGNAL_FILE
 SEQUENCE_FILE
+SLOW
+FAST
 """
 Keywords = Keywords.split()
 
