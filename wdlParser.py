@@ -7,6 +7,7 @@
 # @modified 2016-03-29 DH
 # @modified 2016-03-31 DH output is returned instead of printed
 # @modified 2016-04-04 DH implement make_include in support of .conf files
+# @modified 2016-04-05 DH waveform output written differently depending on slew
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -36,6 +37,10 @@ hvhOutput    = ""
 dioOutput    = ""
 sysOutput    = ""
 
+__SLEW_FAST  =  1
+__SLEW_SLOW  =  0
+__SLEW_NONE  = -1
+
 # -----------------------------------------------------------------------------
 # @fn     abort
 # @brief  throw a parser error
@@ -43,6 +48,9 @@ sysOutput    = ""
 # @return none
 # -----------------------------------------------------------------------------
 def abort(self, msg):
+    """
+    throw a parser error
+    """
     raise ParserError(msg)
 
 # -----------------------------------------------------------------------------
@@ -73,12 +81,13 @@ def getToken():
 
 # -----------------------------------------------------------------------------
 # @fn     found
-# @brief  
+# @brief  returns True if the current token type matches the parameter
 # @param  token type
 # @return True or False
 # -----------------------------------------------------------------------------
 def found(argTokenType):
         """
+        returns True if the current token type matches the parameter
         """
         if token.type.upper() == argTokenType.upper():
                 return True
@@ -86,18 +95,19 @@ def found(argTokenType):
 
 # -----------------------------------------------------------------------------
 # @fn     error
-# @brief  
+# @brief  abort the parsing process
 # @param  msg
 # @return none
 # -----------------------------------------------------------------------------
 def error(msg):
     """
+    abort the parsing process
     """
     token.abort(msg)
 
 # -----------------------------------------------------------------------------
 # @fn     consume
-# @brief  
+# @brief  consume a token of the specified type and get the next token
 # @param  argTokenType
 # @return none
 # -----------------------------------------------------------------------------
@@ -105,7 +115,7 @@ def consume(argTokenType):
     """
     Consume a token of a given type and get the next token.
     If the current token is NOT of the expected type, then
-    raise an error.
+    throw an error.
     """
     if token.type.upper() == argTokenType.upper():
         getToken()
@@ -115,36 +125,44 @@ def consume(argTokenType):
 
 # -----------------------------------------------------------------------------
 # @fn     module
-# @brief  
+# @brief  return an integer type for the module of the current token
 # @param  none
-# @return none
+# @return integer module type
 # -----------------------------------------------------------------------------
 def module():
     """
+    return an integer type for the module of the current token
     """
     global token
     module_name = token.cargo
-    if   module_name == "driver"  : type = 1
-    elif module_name == "ad"      : type = 2
-    elif module_name == "lvbias"  : type = 3
-    elif module_name == "hvbias"  : type = 4
-    elif module_name == "heater"  : type = 5
-    elif module_name == "hs"      : type = 7
-    elif module_name == "hvxbias" : type = 8
-    elif module_name == "lvxbias" : type = 9
-    elif module_name == "lvds"    : type = 10
+    # convert all comparisons to upper for case-insensitivity
+    if   module_name.upper() == "DRIVER"  : type = 1
+    elif module_name.upper() == "AD"      : type = 2
+    elif module_name.upper() == "LVBIAS"  : type = 3
+    elif module_name.upper() == "HVBIAS"  : type = 4
+    elif module_name.upper() == "HEATER"  : type = 5
+    elif module_name.upper() == "HS"      : type = 7
+    elif module_name.upper() == "HVXBIAS" : type = 8
+    elif module_name.upper() == "LVXBIAS" : type = 9
+    elif module_name.upper() == "LVDS"    : type = 10
     else:
         error("unrecognized module type: " + dq(module_name))
     return(type)
 
 # -----------------------------------------------------------------------------
 # @fn     dio
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the DIO keyword
+# @param  string slotNumber
+# @return none, appends to global variable "dioOutput"
 # -----------------------------------------------------------------------------
 def dio(slotNumber):
     """
+    These are the rules for the DIO keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    DIO # [#,#];
+
+    where # is any number
+    format of numbers is channel [source, direction]
     """
     global token
     global dioOutput
@@ -170,19 +188,24 @@ def dio(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     diopower
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the DIOPOWER keyword
+# @param  string slotNumber
+# @return none, appends to global variable "dioOutput"
 # -----------------------------------------------------------------------------
 def diopower(slotNumber):
     """
+    These are the rules for the DIOPOWER keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    DIOPOWER=?;
+
+    where ? is 0,1,enabled,disabled
     """
     global token
     global dioOutput
 
     consume("=")
     while not found(";"):
-        # allow a 0 or 1
+        # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
                 diopower = "0"
@@ -191,14 +214,15 @@ def diopower(slotNumber):
             else:
                 error("unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
             consume(NUMBER)
-        # or "low" or "high"
+        # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
-            if token.cargo == "low":
+            if token.cargo.upper() == "ENABLED":
                 diopower = "0"
-            elif token.cargo == "high":
+            elif token.cargo.upper() == "DISABLED":
                 diopower = "1"
             else:
-                error("unrecognized value: " + dq(token.cargo) + "\nexpected "+dq("low")+" or "+dq("high"))
+                error("unrecognized value: " + dq(token.cargo) +\
+                      "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
@@ -206,19 +230,24 @@ def diopower(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     preampgain
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the PREAMPGAIN keyword
+# @param  string slotNumber
+# @return none, appends to global variable "adcOutput"
 # -----------------------------------------------------------------------------
 def preampgain(slotNumber):
     """
+    These are the rules for the PREAMPGAIN keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    PREAMPGAIN=?;
+
+    where ? is 0,1,low,high
     """
     global token
     global adcOutput
 
     consume("=")
     while not found(";"):
-        # allow a 0 or 1
+        # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
                 preampgain = "0"
@@ -227,14 +256,15 @@ def preampgain(slotNumber):
             else:
                 error("unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
             consume(NUMBER)
-        # or "low" or "high"
+        # or "low" or "high", converted to upper for case-insensitivity
         elif found(IDENTIFIER):
-            if token.cargo == "low":
+            if token.cargo.upper() == "LOW":
                 preampgain = "0"
-            elif token.cargo == "high":
+            elif token.cargo.upper() == "HIGH":
                 preampgain = "1"
             else:
-                error("unrecognized value: " + dq(token.cargo) + "\nexpected "+dq("low")+" or "+dq("high"))
+                error("unrecognized value: " + dq(token.cargo) +\
+                      "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
@@ -242,12 +272,18 @@ def preampgain(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     clamp
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the CLAMP keyword
+# @param  string slotNumber
+# @return none, appends to global variable "adcOutput"
 # -----------------------------------------------------------------------------
 def clamp(slotNumber):
     """
+    These are the rules for the CLAMP keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    CLAMP #=#;
+
+    where ? is any number
+    format of numbers is channel=level
     """
     global token
     global adcOutput
@@ -266,12 +302,18 @@ def clamp(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     hvhc
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the HVHC keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "hvhOutput"
 # -----------------------------------------------------------------------------
 def hvhc(slotNumber):
     """
+    These are the rules for the HVHC keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    HVHC # [#,#,#,#];
+
+    where # is any number
+    format of numbers is channel [volts, current_limit, order, enable]
     """
     global token
     global hvhOutput
@@ -306,12 +348,18 @@ def hvhc(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     hvlc
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the HVHC keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "hvlOutput"
 # -----------------------------------------------------------------------------
 def hvlc(slotNumber):
     """
+    These are the rules for the HVLC keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    HVLC # [#,#];
+
+    where # is any number
+    format of numbers is [volts, order]
     """
     global token
     global hvlOutput
@@ -337,12 +385,18 @@ def hvlc(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     drv
-# @brief  
-# @param  none
-# @return none
+# @brief  rules for the DRV keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "drvOutput"
 # -----------------------------------------------------------------------------
 def drv(slotNumber):
     """
+    These are the rules for the DRV keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    DRV # [#,#,#];
+
+    where # is any number
+    format of numbers is [slewfast, slewslow, enable]
     """
     global token
     global drvOutput
@@ -373,12 +427,21 @@ def drv(slotNumber):
 
 # -----------------------------------------------------------------------------
 # @fn     slot
-# @brief  
+# @brief  rules for the SLOT Keyword
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
 def slot():
     """
+    These are the rules for the SLOT keyword, encountered while parsing
+    the modules (.mod) file. Required format is
+
+    SLOT # type { param }
+
+    where param is DRV, CLAMP, PREAMPGAIN, HVLC, HVHC, DIO, DIOPOWER
+                followed by param specific rules,
+          type  is a valid Archon module type,
+          #     is any number.
     """
     global token
     global sysOutput
@@ -422,7 +485,10 @@ def slot():
             pass
     consume("}")
 
-    # build up the information for a .system file
+    # Build up the information for a .system file --
+    # Values of ID, REV, VERSION don't matter, but they need to be defined if the
+    # resultant .acf file is to be loaded by the GUI without an error. The important
+    # value here is the TYPE, so that the correct tabs are created.
     sysOutput += "MOD" + slotNumber + "_ID=0000000000000000\n"
     sysOutput += "MOD" + slotNumber + "_REV=0\n"
     sysOutput += "MOD" + slotNumber + "_VERSION=0.0.0\n"
@@ -432,12 +498,14 @@ def slot():
 
 # -----------------------------------------------------------------------------
 # @fn     timelabel
-# @brief  
+# @brief  when a time label is encountered, store the time in a dictionary
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
 def timelabel():
     """
+    When a time label is encountered in the waveform, store the time in a 
+    dictionary under that given label.
     """
     global token
     global timeStamps
@@ -459,7 +527,7 @@ def timelabel():
 # -----------------------------------------------------------------------------
 def time():
     """
-    evaluate the time stamp for each entry in the waveform
+    Evaluate the time stamp for each entry in the waveform.
     """
     global evalTime
     global maxTime
@@ -486,7 +554,7 @@ def time():
                 print( "Unresolved symbol " + dq(token.cargo), file=sys.stderr )
             consume(IDENTIFIER)
         else:
-            eqn += token.cargo   # if not a label then we have a number or an arithmetic symbol
+            eqn += token.cargo   # if not a label then we have a number or math symbol
             getToken()
     consume(":")
     evalTime = int( eval(eqn) )  # new evaluated time
@@ -497,12 +565,18 @@ def time():
 
 # -----------------------------------------------------------------------------
 # @fn     set
-# @brief  
+# @brief  rules for the SET keyword
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
 def set():
     """
+    These are the rules for the SET keyword, encountered while parsing
+    waveforms. Format is
+
+    SET signallabel TO level [,slew]
+
+    see waverules() for more details.
     """
     global setSlot
     global setChan
@@ -511,23 +585,29 @@ def set():
 
     consume("SET")
 
-    # may be a set enclosed in square brackets
+    # may be a set enclosed in square brackets (but isn't required)
     if found("["):
         consume("[")
 
     while not found(","):
+        # SLOT
         if found (NUMBER):
             setSlot.append(token.cargo)
         consume(NUMBER)
         consume(":")
+        # CHANNEL
         if found (NUMBER):
             setChan.append(token.cargo)
         consume(NUMBER)
 
+        # There can be a list of SLOT:CHAN, SLOT:CHAN within the [brackets]
+        # so consume the comma and continue, if there is one,
         if found(","):
             consume(",")
+        # otherwise get out of the loop if there is no list.
         else:
             break
+
     if found("]"):
         consume("]")
 
@@ -566,13 +646,20 @@ def slew():
     """
     global setSlew
 
+    # If the next token isn't a comma then there is no slew rate,
+    # I.E. this isn't a driver, so flag as such (-1) and return
+    if not found(","):
+        setSlew = __SLEW_NONE
+        return
+
+    # otherwise continue, flag as fast (1) or slow (0)
     consume(",")
     if found("SLOW"):
         consume("SLOW")
-        setSlew = 0
+        setSlew = __SLEW_SLOW
     elif found("FAST"):
         consume("FAST")
-        setSlew = 1
+        setSlew = __SLEW_FAST
     else:
         error("expected SLOW | FAST but got: " + dq(token.cargo))
 
@@ -598,7 +685,7 @@ def waverules():
     """
     These are the rules for defining a waveform:
 
-        [time]: [=timelabel] SET signallabel TO level, slew;
+        [time]: [=timelabel] SET signallabel TO level [,slew];
  
         time: at least one time label is required, followed by colon
               (if omitted then SET... lines are all at the same time as previous time)
@@ -615,8 +702,9 @@ def waverules():
         slot:chan or a list of [slot:chan, slot:chan, ...]
         and level is a voltage
 
-        slew is "fast" or "slow" and selects which of the slew rates,
-        defined in the .mod file, to be used for this particular state
+        slew is an optional "fast" or "slow" and selects which of the slew
+        rates, defined in the .mod file, to be used for this particular state
+        (applicable only to driver outputs).
     """
     time()
     timelabel()
@@ -674,14 +762,22 @@ def waveform():
     while not found("}"):
         waverules()
         for index in range(len(setSlot)):
-            outputText += str(evalTime)                + " " +\
-                          str(setSlot[index])          + " " +\
-                          str(2*int(setChan[index])-2)   + " " +\
-                          str(setLevel)                + "\n"
-            outputText += str(evalTime)                + " " +\
-                          str(setSlot[index])          + " " +\
-                          str(2*int(setChan[index])-1) + " " +\
-                          str(setSlew)                 + "\n"
+            # The output is written differently depending on whether or not
+            # a slew rate (fast | slow) has been specified.
+            if (setSlew == __SLEW_NONE):
+                outputText += str(evalTime)                + " " +\
+                              str(setSlot[index])          + " " +\
+                              str(int(setChan[index])-1)   + " " +\
+                              str(setLevel)                + "\n"
+            else:
+                outputText += str(evalTime)                + " " +\
+                              str(setSlot[index])          + " " +\
+                              str(2*int(setChan[index])-2) + " " +\
+                              str(setLevel)                + "\n"
+                outputText += str(evalTime)                + " " +\
+                              str(setSlot[index])          + " " +\
+                              str(2*int(setChan[index])-1) + " " +\
+                              str(setSlew)                 + "\n"
     consume("}")
 
     # "RETURN" marks the end of the waveform output
@@ -737,7 +833,7 @@ def generic_sequence(*sequenceName):
                 sequenceLine += "CALL " + token.cargo
                 consume(IDENTIFIER)
                 consume("(")
-                # if the next token isn't a closing paren then assume it's a number or param
+                # if next token isn't a closing paren then assume it's a number or param
                 if not found(")"):
                     sequenceLine += "(" + token.cargo #+ ")"
             elif found("RETURN"):
@@ -786,7 +882,8 @@ def sequence():
 def main():
     """
     MAIN is a special sequence which is an infinite loop. Every script has
-    a MAIN and every MAIN has a goto MAIN.
+    a MAIN (and only one MAIN) and every MAIN has an implicit goto MAIN (which
+    is forced to be explicit, here).
     """
     global token
     global gotMain
@@ -1022,6 +1119,9 @@ def parse(sourceText):
         else:
             error("unrecognized token " + token.show(align=False) )
             break
+
+    if not gotMain:
+        error("must define at least one MAIN in the .seq file")
 
     retval =""
     retval += "systemfile " + systemFile + "\n"
