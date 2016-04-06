@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -----------------------------------------------------------------------------
 # @file     wavgenDriver.py
 # @brief    driver script for PHM.wavgen
@@ -10,7 +10,7 @@
 # -----------------------------------------------------------------------------
 
 import fileinput
-import PHM.wavgen
+import wavgen
 import matplotlib.pyplot as plt
 import sys
 sys.tracebacklimit=0
@@ -26,8 +26,8 @@ def main(source):
     """
     input  = source+".wdl"
     output = source
-    PHM.wavgen.GenerateFigs = False
-    PHM.wavgen.loadWDL(input, output)
+    wavgen.GenerateFigs = False
+    wavgen.loadWDL(input, output)
     plt.show(block=True)
 
 # -----------------------------------------------------------------------------

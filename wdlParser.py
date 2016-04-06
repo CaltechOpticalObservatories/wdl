@@ -1093,7 +1093,7 @@ def parse(sourceText):
     waveformText = ""
     sequenceText = ""
     mainText     = ""
-    systemFile   = ""
+    moduleFile   = ""
     signalFile   = ""
 
     getToken()
@@ -1108,9 +1108,9 @@ def parse(sourceText):
             mainText = main()
         elif found(IDENTIFIER):
             sequenceText += sequence()
-        elif found("SYSTEM_FILE"):
-            consume("SYSTEM_FILE")
-            systemFile = token.cargo.strip('"')
+        elif found("MODULE_FILE"):
+            consume("MODULE_FILE")
+            moduleFile = token.cargo.strip('"')
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
@@ -1124,7 +1124,7 @@ def parse(sourceText):
         error("must define at least one MAIN in the .seq file")
 
     retval =""
-    retval += "systemfile " + systemFile + "\n"
+    retval += "modulefile " + moduleFile + "\n"
     retval += "signalfile " + signalFile + "\n\n"
     retval += mainText
     retval += sequenceText
@@ -1145,7 +1145,7 @@ def make_include(sourceText):
     """
     global token
 
-    systemFile   = ""
+    moduleFile   = ""
     waveformFile = ""
     signalFile   = ""
     sequenceFile = ""
@@ -1156,11 +1156,11 @@ def make_include(sourceText):
     while True:
         if token.type == EOF:
             break
-        elif found("SYSTEM_FILE"):
-            consume("SYSTEM_FILE")
+        elif found("MODULE_FILE"):
+            consume("MODULE_FILE")
             consume("=")
             if found(STRING):
-                systemFile = token.cargo
+                moduleFile = token.cargo
             consume(STRING)
         elif found("WAVEFORM_FILE"):
             consume("WAVEFORM_FILE")
@@ -1180,6 +1180,8 @@ def make_include(sourceText):
             if found(STRING):
                 sequenceFile = token.cargo
             consume(STRING)
+        else:
+            error("unrecognized keyword: " + dq(token.cargo))
 
     if len(waveformFile) == 0:
         raise ParserError("missing WAVEFORM_FILE")
@@ -1190,7 +1192,7 @@ def make_include(sourceText):
     if len(sequenceFile) == 0:
         raise ParserError("missing SEQUENCE_FILE")
 
-    print( "SYSTEM_FILE " + systemFile )  # PHM requires this to appear in the output
+    print( "MODULE_FILE " + moduleFile )  # PHM requires this to appear in the output
     print( "SIGNAL_FILE " + signalFile )  # PHM requires this to appear in the output
 
     print( "#include " + signalFile   )
