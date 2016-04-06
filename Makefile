@@ -16,12 +16,14 @@
 #
 
 GPP       = /usr/local/bin/gpp
+WDLPATH   = /home/ztf/devel/wdl
+
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
-INCPARSER = /home/ztf/devel/wdl/incParserDriver.py
-WDLPARSER = /home/ztf/devel/wdl/wdlParserDriver.py
-MODPARSER = /home/ztf/devel/wdl/modParserDriver.py
-WAVGEN    = /home/ztf/devel/wdl/wavgenDriver.py
-I2A       = /home/ztf/devel/wdl/ini2acf.pl
+INCPARSER = $(WDLPATH)/incParserDriver.py
+WDLPARSER = $(WDLPATH)/wdlParserDriver.py
+MODPARSER = $(WDLPATH)/modParserDriver.py
+WAVGEN    = $(WDLPATH)/wavgenDriver.py
+I2A       = $(WDLPATH)/ini2acf.pl
 INCL      = -I$(CURDIR)
 
 %:	;
