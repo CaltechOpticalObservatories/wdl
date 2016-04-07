@@ -8,6 +8,7 @@
 # @modified 2016-01-28 removed clean. Use @F.h instead of HFILE=archon.h
 # @modified 2016-03-31 change how .mod is parsed
 # @modified 2016-04-04 add INCPARSER and checks for file existence
+# @modified 2016-04-07 add plotting option and check for WAVGEN exit code
 #
 # This Makefile uses the general preprocessor GPP 2.24 for macro processing.
 # It also requires the ini2acf.pl Perl script for creating an Archon acf file.
@@ -18,6 +19,7 @@
 GPP       = /usr/local/bin/gpp
 WDLPATH   = /home/ztf/devel/wdl
 
+PLOT      = True    # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
 INCPARSER = $(WDLPATH)/incParserDriver.py
 WDLPARSER = $(WDLPATH)/wdlParserDriver.py
@@ -33,7 +35,8 @@ INCL      = -I$(CURDIR)
 	@echo making $(@F).script, $(@F).states ...
 	@test -f $(@F).mod || echo $(@F).mod does not exist
 	@test -f $(@F).mod && echo $(@F) | cat  - $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
-	@$(WAVGEN) $(@F)
+	@$(WAVGEN) $(@F) $(PLOT)
+	@if [ $$? -eq 1 ]; then exit 1; fi
 	@echo making $(@F).acf ...
 	@test -f $(@F).cds || echo $(@F).cds does not exist
 	@test -f $(@F).cds && echo "[CONFIG]" | \
