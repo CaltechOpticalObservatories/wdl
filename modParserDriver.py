@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import fileinput
-import wdlParser as parser
 import sys
 sys.dont_write_bytecode = True
 sys.tracebacklimit=0
+import fileinput
+import wdlParser as parser
 
 # -----------------------------------------------------------------------------
 # @fn     main

@@ -9,12 +9,12 @@
 # This script invokes the PHM wavgen.
 # -----------------------------------------------------------------------------
 
-import fileinput
-import wavgen
-import matplotlib.pyplot as plt
 import sys
 sys.dont_write_bytecode = True
 sys.tracebacklimit=0
+import fileinput
+import wavgen
+import matplotlib.pyplot as plt
 
 # -----------------------------------------------------------------------------
 # @fn     main
