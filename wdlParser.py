@@ -8,6 +8,7 @@
 # @modified 2016-03-31 DH output is returned instead of printed
 # @modified 2016-04-04 DH implement make_include in support of .conf files
 # @modified 2016-04-05 DH waveform output written differently depending on slew
+# @modified 2016-04-07 DH additional error checking of inputs
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -169,15 +170,21 @@ def dio(slotNumber):
 
     if found(NUMBER):
         dioChan = token.cargo
+        if int(dioChan) < 1 or int(dioChan) > 4:
+            error("DIO channel " + dq(dioChan) + " outside range [1..4]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
         if found(NUMBER):
             source = token.cargo
+            if source != "0" and source != "1" and source != "2" and source != "3":
+                error("DIO source " + dq(source) + " must be 0, 1, 2 or 3")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             direction = token.cargo
+            if direction != "0" and direction != "1":
+                error("DIO direction " + dq(direction) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
     consume(";")
@@ -290,6 +297,8 @@ def clamp(slotNumber):
 
     if found(NUMBER):
         adChan = token.cargo
+        if int(adChan) < 1 or int(adChan) > 4:
+            error("CLAMP channel " + dq(adChan) + " outside range [1..4]")
     consume(NUMBER)
     consume("=")
     while not found(";"):
@@ -320,23 +329,33 @@ def hvhc(slotNumber):
 
     if found(NUMBER):
         hvhChan = token.cargo
+        if int(hvhChan) < 1 or int(hvhChan) > 6:
+            error("HVHC channel " + dq(hvhChan) + " outside range [1..6]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
         if found(NUMBER):
             volts = token.cargo
+            if float(volts) < 0 or float(volts) > 31:
+                error("HVHC volts " + dq(volts) + " outside range [0..31] V")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             current = token.cargo
+            if float(current) < 0 or float(current) > 250:
+                error("HVHC current " + dq(current) + " outside range [0..250] mA")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             order = token.cargo
+            if int(order) < 0 or int(order) > 6:
+                error("HVHC order " + dq(order) + " outside range [0..6]")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             enable = token.cargo
+            if enable != "0" and enable != "1":
+                error("HVHC enable " + dq(enable) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
     consume(";")
@@ -366,15 +385,21 @@ def hvlc(slotNumber):
 
     if found(NUMBER):
         hvlChan = token.cargo
+        if int(hvlChan) < 1 or int(hvlChan) > 23:
+            error("HVLC channel " + dq(hvlChan) + " outside range [1..23]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
         if found(NUMBER):
             volts = token.cargo
+            if float(volts) < 0 or float(volts) > 31:
+                error("HVLC volts " + dq(volts) + " outside range [0..31] V")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             order = token.cargo
+            if int(order) < 0 or int(order) > 23:
+                error("HVLC order " + dq(order) + " outside range [0..23]")
         consume(NUMBER)
     consume("]")
     consume(";")
@@ -403,19 +428,27 @@ def drv(slotNumber):
 
     if found(NUMBER):
         drvChan = token.cargo
+        if int(drvChan) < 0 or int(drvChan) > 8:
+            error("DRV channel " + dq(drvChan) + " outside range [1..8]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
         if found(NUMBER):
             slewfast = token.cargo
+            if float(slewfast) < 0.001 or float(slewfast) > 1000:
+                error("DRV Fast Slew Rate " + dq(slewfast) + " outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             slewslow = token.cargo
+            if float(slewslow) < 0.001 or float(slewslow) > 1000:
+                error("DRV Slow Slew Rate " + dq(slewslow) + " outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             enable = token.cargo
+            if enable != "0" and enable != "1":
+                error("DRV enable " + dq(enable) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
     consume(";")
@@ -450,6 +483,8 @@ def slot():
 
     if found(NUMBER):
         slotNumber = token.cargo
+        if int(slotNumber) < 1 or int(slotNumber) > 12:
+            error("SLOT " + dq(slotNumber) + " outside range [1..12]")
     consume(NUMBER)
 
     if found(IDENTIFIER):
