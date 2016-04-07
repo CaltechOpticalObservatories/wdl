@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import re,sys, os
+sys.dont_write_bytecode = True
 from IPython.core.debugger import Tracer
 from IPython.core.magic import register_line_magic
 

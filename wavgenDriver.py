@@ -13,6 +13,7 @@ import fileinput
 import wavgen
 import matplotlib.pyplot as plt
 import sys
+sys.dont_write_bytecode = True
 sys.tracebacklimit=0
 
 # -----------------------------------------------------------------------------
