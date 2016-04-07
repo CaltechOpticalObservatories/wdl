@@ -705,7 +705,7 @@ def state(outfile=sys.stdout):
                         if jj_level in __SignalByIndx__.keys():
                             thisSigName = __SignalByIndx__[jj_level]
                         else:
-                            (thisSlot, thisChan) = __get_slot_chan_from_level_index__(jj_level)
+                            (thisSlot, thisChan, junk) = __get_slot_chan_from_level_index__(jj_level)
                             thisSigName = '(%d:%d)'%(thisSlot,thisChan+1)
                         print "*** WARNING: Driver signal (%s) has inconsistent KEEP flags ***"%thisSigName
                         print "*** check signals or waveform input files for consistency  ***"
