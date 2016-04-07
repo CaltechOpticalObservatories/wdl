@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
@@ -140,6 +141,8 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                         thisTS.nperiods = int(match.group(1))
                         if thisTS.nperiods == 0:
                             print 'WARNING: nperiods for %s %s is 0'%(TStype,acfLabel)
+    print 'Loading signal mnemonics from %s'%__SignalFile__
+    __loadSignals__(__SignalFile__)
     if outfile == '/dev/null': #default condition
         ok = script(outfile)
         state(outfile)
@@ -155,8 +158,6 @@ Use 'stdout' or sys.stdout to dump to terminal. """
         print 'Wrote states to %s.states'%outfile
 
     if ok:
-        print 'Loading signal mnemonics from %s'%__SignalFile__
-        __loadSignals__(__SignalFile__)
         print 'Catalog of timing objects:'
         catalog()
         global GenerateFigs
@@ -703,10 +704,9 @@ def state(outfile=sys.stdout):
                     if UniqueStateArr[id,jj_keepL] != UniqueStateArr[id,jj_keepF]:
                         # write an error message if keep flags don't agree.
                         if jj_level in __SignalByIndx__.keys():
-                            thisSigName = __SignalByIndx__[jj_level]
+                            thisSigName = __SignalByIndx__[jj_level/2]
                         else:
-                            (thisSlot, thisChan, junk) = __get_slot_chan_from_level_index__(jj_level)
-                            thisSigName = '(%d:%d)'%(thisSlot,thisChan+1)
+                            thisSigName = '%d:%d'%(clkslot,clkchan+1)
                         print "*** WARNING: Driver signal (%s) has inconsistent KEEP flags ***"%thisSigName
                         print "*** check signals or waveform input files for consistency  ***"
                 else:
