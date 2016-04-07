@@ -120,7 +120,7 @@ def consume(argTokenType):
     if token.type.upper() == argTokenType.upper():
         getToken()
     else:
-        error("expected " + dq(argTokenType) + 
+        error("expected " + argTokenType + 
               " but got " + token.show(align=False) )
 
 # -----------------------------------------------------------------------------
