@@ -681,7 +681,7 @@ def state(outfile=sys.stdout):
                 jj_keepF = offset + 4*clkchan + 3
                 if UniqueStateArr[id,jj_keepL] or UniqueStateArr[id,jj_keepF]:
                     # do not change anything UNLESS level and fast are NOT keep
-                    statestring += ",,1,"
+                    statestring += ",1,1,"
                     if UniqueStateArr[id,jj_keepL] != UniqueStateArr[id,jj_keepF]:
                         # write an error message if keep flags don't agree.
                         if jj_level in __SignalByIndx__.keys():
@@ -704,7 +704,7 @@ def state(outfile=sys.stdout):
                 jj_level= offset + 2*lvdschan + 0
                 jj_keep = offset + 2*lvdschan + 1
                 if UniqueStateArr[id,jj_keep] == True:
-                    statestring += ",1,"
+                    statestring += "1,1,"
                 else:
                     statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
             statestring = statestring[:-1] + '"'
@@ -716,7 +716,7 @@ def state(outfile=sys.stdout):
             jj_level= offset 
             jj_keep = offset + 1
             if UniqueStateArr[id,jj_keep] == True:
-                statestring += ",1,"
+                statestring += "0,1,"
             else:
                 statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
             statestring = statestring[:-1] + '"'
