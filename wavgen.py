@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
@@ -6,12 +5,7 @@ import re,sys, os
 sys.dont_write_bytecode = True
 from IPython.core.debugger import Tracer
 from IPython.core.magic import register_line_magic
-
-#
-# waveform LABEL:
-# t0 board0 chan0 level0
-# t1 board1 chan1 level1
-# TMAX Return
+from timeit import default_timer as timer
 
 # system parameters
 period_ns        = 10  # ns
@@ -29,7 +23,6 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
 UniqueStateArr   = np.array([]);
 Catalog          = {'Name':[], 'Time':[], 'TimeSegment': [], 'Type': []}
 Parameters       = []
-__SystemFile__   = '/Data/ACF/ztf.system'
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
@@ -44,7 +37,6 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     global slot
     global __chan_per_board__
     global Parameters
-    global __SystemFile__
 
     #default mod file
     ModFile = '/home/ztf/devel/wdl/test.mod'
@@ -76,10 +68,6 @@ Use 'stdout' or sys.stdout to dump to terminal. """
             line = re.sub(r'^\s*$','',line) # clear empty lines
             if line == '':
                 continue
-#            match = re.search('^systemfile\s+([~\w./]+)\s*$',line) # look for system file
-#            if match != None:
-#                print "*** systemfile has been replaced by modfile... fix the wdl file ***"
-#                continue
             match = re.search('^modulefile\s+([~\w./]+)\s*$',line) # look for mod file
             if match != None:
                 continue
@@ -157,7 +145,6 @@ Use 'stdout' or sys.stdout to dump to terminal. """
             print 'Wrote script to %s.script'%outfile
         state(outfile + '.states');
         print 'Wrote states to %s.states'%outfile
-
     if ok:
         print 'Catalog of timing objects:'
         catalog()
@@ -192,26 +179,6 @@ def __loadMod__(ModFile):
                         (thisBoardLabel,ModFile)
     return
     
-#def __loadSystem__():
-#    """ load the system configuration file """
-#    global __SystemFile__
-#    global slot
-#    typeID  = {1: 'drvr', 2: 'adc', 4: 'hvbd', 8: 'hvbd', 10: 'lvds'}
-#    slotnum = []
-#    btype   = []
-#    with open(__SystemFile__,'r') as f:
-#        for line in f:
-#            match = re.search('^MOD(\d+)_TYPE=(\d+)',line)
-#            if match != None and int(match.group(2)) != 0:
-#                slotnum.append(int(match.group(1)));
-#                btype.append(int(match.group(2)));
-#    for ID in typeID.keys(): 
-#        # sometime in python, the cure is worse than the disease
-#        name = typeID[ID]
-#        for ss in np.array(slotnum)[mlab.find(np.array(btype) == ID)]:
-#            slot[name].append(ss)
-#    return
-
 def __loadSignals__(__SignalFile__):
     """ load the signals file """
     global __boardTypes__
@@ -251,11 +218,7 @@ def __get_level_index_from_chan_slot__(slotnum, channel):
     # 1. determine board type from slot
     for boardname in slot.keys():
         if slotnum in slot[boardname]:
-####            # 1a. for driver channels, multiply the chan number by 2
-####            # to get the UniqueStateArr index
-####            if boardname == 'drvr':
-####                channel *= 2
-            # 1b. check that channel is valid for board type.
+            # 1. check that channel is valid for board type.
             if channel >= __chan_per_board__[boardname]:
                 print "*** INVALID channel (%d) specified for slot (%d,%s) ***"%(channel,slotnum,boardname)
                 return -1
@@ -636,7 +599,7 @@ condition (default=last non-zero state) """
         # find the commanded channels
         commanded = np.amin(keep, 0) == 0
 
-        print "--  %s"%Catalog['Name'][self.label],
+        print "--- %s"%Catalog['Name'][self.label],
         if sum(nonstatic):
         # calculate the slot/channel numbers for the nonstatic traces.
         # drvr, lvds, adc, back, hvbd
@@ -656,13 +619,6 @@ condition (default=last non-zero state) """
                 thisSigID = signalID[nsignals - kk - 1]
                 (thisSlot, thisChan, boardname) = __get_slot_chan_from_level_index__(thisSigID)
                 if thisSigID in __SignalByIndx__.keys():
-###                    if (boardname == 'drvr'):
-###                        if np.mod(thisChan,2) == 0: # 0: level, 1: driver fast slew
-###                            thisSigLabel = __SignalByIndx__[thisSigID]
-###                        else:
-###                            thisSigLabel = __SignalByIndx__[thisSigID-1] + '_fast'
-###                        thisChan /= 2
-###                    else:
                     thisSigLabel = __SignalByIndx__[thisSigID]
                 else:
                     thisSigLabel = '???'
@@ -682,7 +638,7 @@ condition (default=last non-zero state) """
             axes[kk].set_title('non-static waveforms for %s'%(Catalog['Name'][self.label]))
             plt.draw()
             print '(Figure %d)'%(self.label),
-        print ' --'
+        print '---'
         # report levels of commanded and static signals
         staticID = mlab.find(commanded & ~nonstatic)
         for thisID in staticID:
