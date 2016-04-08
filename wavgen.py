@@ -76,10 +76,10 @@ Use 'stdout' or sys.stdout to dump to terminal. """
             line = re.sub(r'^\s*$','',line) # clear empty lines
             if line == '':
                 continue
-            match = re.search('^systemfile\s+([~\w./]+)\s*$',line) # look for system file
-            if match != None:
-                print "*** systemfile has been replaced by modfile... fix the wdl file ***"
-                continue
+#            match = re.search('^systemfile\s+([~\w./]+)\s*$',line) # look for system file
+#            if match != None:
+#                print "*** systemfile has been replaced by modfile... fix the wdl file ***"
+#                continue
             match = re.search('^modulefile\s+([~\w./]+)\s*$',line) # look for mod file
             if match != None:
                 continue
@@ -192,25 +192,25 @@ def __loadMod__(ModFile):
                         (thisBoardLabel,ModFile)
     return
     
-def __loadSystem__():
-    """ load the system configuration file """
-    global __SystemFile__
-    global slot
-    typeID  = {1: 'drvr', 2: 'adc', 4: 'hvbd', 8: 'hvbd', 10: 'lvds'}
-    slotnum = []
-    btype   = []
-    with open(__SystemFile__,'r') as f:
-        for line in f:
-            match = re.search('^MOD(\d+)_TYPE=(\d+)',line)
-            if match != None and int(match.group(2)) != 0:
-                slotnum.append(int(match.group(1)));
-                btype.append(int(match.group(2)));
-    for ID in typeID.keys(): 
-        # sometime in python, the cure is worse than the disease
-        name = typeID[ID]
-        for ss in np.array(slotnum)[mlab.find(np.array(btype) == ID)]:
-            slot[name].append(ss)
-    return
+#def __loadSystem__():
+#    """ load the system configuration file """
+#    global __SystemFile__
+#    global slot
+#    typeID  = {1: 'drvr', 2: 'adc', 4: 'hvbd', 8: 'hvbd', 10: 'lvds'}
+#    slotnum = []
+#    btype   = []
+#    with open(__SystemFile__,'r') as f:
+#        for line in f:
+#            match = re.search('^MOD(\d+)_TYPE=(\d+)',line)
+#            if match != None and int(match.group(2)) != 0:
+#                slotnum.append(int(match.group(1)));
+#                btype.append(int(match.group(2)));
+#    for ID in typeID.keys(): 
+#        # sometime in python, the cure is worse than the disease
+#        name = typeID[ID]
+#        for ss in np.array(slotnum)[mlab.find(np.array(btype) == ID)]:
+#            slot[name].append(ss)
+#    return
 
 def __loadSignals__(__SignalFile__):
     """ load the signals file """
@@ -228,10 +228,17 @@ def __loadSignals__(__SignalFile__):
                 signame = match.group(1)
                 sigslot = int(match.group(2))
                 sigchan = int(match.group(3)) - 1
+                if sigslot in slot['drvr']:
+                    sigchan *= 2
                 LVLindx = __get_level_index_from_chan_slot__(sigslot,sigchan)
                 if LVLindx >= 0:
                     __SignalByIndx__.update({LVLindx:signame})
                     __SignalByName__.update({signame:LVLindx})
+                    if sigslot in slot['drvr']:
+                        FASTindx = LVLindx + 1
+                        fastname = signame + '_fast'
+                        __SignalByIndx__.update({FASTindx:fastname})
+                        __SignalByName__.update({fastname:FASTindx})
                 else:
                     print "*** Error in signal file %s ***"%__SignalFile__
     return
@@ -240,13 +247,14 @@ def __get_level_index_from_chan_slot__(slotnum, channel):
     """ given slot and channel, returns corresponding the level|keep column index """
     global slot
     global __boardTypes__
+    isDrvr = False
     # 1. determine board type from slot
     for boardname in slot.keys():
         if slotnum in slot[boardname]:
-            # 1a. for driver channels, multiply the chan number by 2
-            # to get the UniqueStateArr index
-            if boardname == 'drvr':
-                channel *= 2
+####            # 1a. for driver channels, multiply the chan number by 2
+####            # to get the UniqueStateArr index
+####            if boardname == 'drvr':
+####                channel *= 2
             # 1b. check that channel is valid for board type.
             if channel >= __chan_per_board__[boardname]:
                 print "*** INVALID channel (%d) specified for slot (%d,%s) ***"%(channel,slotnum,boardname)
@@ -588,7 +596,8 @@ and there is no auto-generated end to the segment"""
         return True
 
     def plot(self, initialState=-1, cycles=2, fignum=1):
-        """ plot the states in the timing script. optionally takes an initial condition (default=do_nothing)"""
+        """plot the states in the timing script. optionally takes an initial
+condition (default=last non-zero state) """
 
         global Catalog
         if Catalog['Type'][self.label] == 'sequence':
@@ -624,56 +633,71 @@ and there is no auto-generated end to the segment"""
         choi = ~np.all(keep,0)
         # find the static channels
         nonstatic = np.amax(true_level,0) != np.amin(true_level,0)
-        if sum(nonstatic) == 0:
-            print "No waveforms to plot for %s (all static)."%Catalog['Name'][self.label]
-            return False
+        # find the commanded channels
+        commanded = np.amin(keep, 0) == 0
 
+        print "--  %s"%Catalog['Name'][self.label],
+        if sum(nonstatic):
         # calculate the slot/channel numbers for the nonstatic traces.
         # drvr, lvds, adc, back, hvbd
-        signalID = mlab.find(nonstatic)
-        nsignals = len(signalID)
-        
-        fig = plt.figure(self.label)
-        plt.clf();
-        figXLeft = 0.15
-        figYBtm = 0.1
-        figYTop = 0.06
-        gap     = 0.02
-        vspace  = (1 - figYBtm - figYTop)/nsignals
-        vgap    = vspace * gap / 2
-        axes = []
-        for kk in range(nsignals):
-            thisSigID = signalID[nsignals - kk - 1]
-            (thisSlot, thisChan, boardname) = __get_slot_chan_from_level_index__(thisSigID)
-            if thisSigID in __SignalByIndx__.keys():
-                if (boardname == 'drvr'):
-                    if np.mod(thisChan,2) == 0: # 0: level, 1: driver fast slew
-                        thisSigLabel = __SignalByIndx__[thisSigID]
-                    else:
-                        thisSigLabel = __SignalByIndx__[thisSigID-1] + '_fast'
-                    thisChan /= 2
-                else:
+            signalID = mlab.find(nonstatic)
+            nsignals = len(signalID)
+
+            fig = plt.figure(self.label)
+            plt.clf();
+            figXLeft = 0.15
+            figYBtm = 0.1
+            figYTop = 0.06
+            gap     = 0.02
+            vspace  = (1 - figYBtm - figYTop)/nsignals
+            vgap    = vspace * gap / 2
+            axes = []
+            for kk in range(nsignals):
+                thisSigID = signalID[nsignals - kk - 1]
+                (thisSlot, thisChan, boardname) = __get_slot_chan_from_level_index__(thisSigID)
+                if thisSigID in __SignalByIndx__.keys():
+###                    if (boardname == 'drvr'):
+###                        if np.mod(thisChan,2) == 0: # 0: level, 1: driver fast slew
+###                            thisSigLabel = __SignalByIndx__[thisSigID]
+###                        else:
+###                            thisSigLabel = __SignalByIndx__[thisSigID-1] + '_fast'
+###                        thisChan /= 2
+###                    else:
                     thisSigLabel = __SignalByIndx__[thisSigID]
+                else:
+                    thisSigLabel = '???'
+                # left, bottom, width, height (range 0 to 1)
+                axes.append(fig.add_axes([figXLeft, figYBtm + kk*vspace + vgap,
+                                          0.97 - figXLeft, vspace*(1-gap)]))
+                axes[kk].plot(time,true_level[:,thisSigID])
+                axes[kk].set_ylabel('%s\n%s\n(%d,%d)'%(boardname,thisSigLabel,thisSlot,thisChan+1))
+                yy = axes[kk].set_ylim()
+                dy = np.diff(yy)
+                yy = axes[kk].set_ylim((yy[0] - .1*dy, yy[1] + .1*dy))
+                axes[kk].plot([self.nperiods * period_us]*cycles, yy,'k--')
+                axes[kk].grid('on')
+                if kk > 0:
+                    axes[kk].set_xticklabels([])
+            axes[0].set_xlabel('time [$\mu$s]');
+            axes[kk].set_title('non-static waveforms for %s'%(Catalog['Name'][self.label]))
+            plt.draw()
+            print '(Figure %d)'%(self.label),
+        print ' --'
+        # report levels of commanded and static signals
+        staticID = mlab.find(commanded & ~nonstatic)
+        for thisID in staticID:
+            if thisID in __SignalByIndx__.keys():
+                thisLabel = __SignalByIndx__[thisID]
             else:
-                thisSigLabel = '???'
-            # left, bottom, width, height (range 0 to 1)
-            axes.append(fig.add_axes([figXLeft, figYBtm + kk*vspace + vgap,
-                                      0.97 - figXLeft, vspace*(1-gap)]))
-            axes[kk].plot(time,true_level[:,thisSigID])
-            axes[kk].set_ylabel('%s\n%s\n(%d,%d)'%(boardname,thisSigLabel,thisSlot,thisChan+1))
-            yy = axes[kk].set_ylim()
-            dy = np.diff(yy)
-            yy = axes[kk].set_ylim((yy[0] - .1*dy, yy[1] + .1*dy))
-            axes[kk].plot([self.nperiods * period_us]*cycles, yy,'k--')
-            axes[kk].grid('on')
-            if kk > 0:
-                axes[kk].set_xticklabels([])
-        axes[0].set_xlabel('time [$\mu$s]');
-        axes[kk].set_title('non-static waveforms for %s'%(Catalog['Name'][self.label]))
-        plt.draw()
-        print 'Waveforms for %s plotted in Figure %d.'%(Catalog['Name'][self.label],self.label)
-#        Tracer()()
-        return True #time,true_level[:,static]
+                (thisSlot, thisChan, boardname) = __get_slot_chan_from_level_index__(thisID)
+                thisLabel = "%s[%d:%d]"%(boardname,thisSlot,thisChan+1)
+            try:
+                thisLevel = level[mlab.find(keep[:,thisID]==0)[0], thisID]
+                print "  %s %s= %3g"%(thisLabel,' '*(16-len(thisLabel)),thisLevel)
+            except:
+                Tracer()()
+
+        return True
 
 def state(outfile=sys.stdout):
     """ write states from the UniqueStateArr to the file or file handle specified """
