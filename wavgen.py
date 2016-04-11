@@ -579,7 +579,7 @@ condition (default=last non-zero state) """
         # the last non-do_nothing_state in unique_state_ID list
         if initialState < 0:
             try:
-                initialState = self.unique_state_ID[find(self.unique_state_ID)[-1]]
+                initialState = self.unique_state_ID[mlab.find(self.unique_state_ID)[-1]]
             except:
                 initialState = 0 # didn't find a do-something state in the waveform
         IC = UniqueStateArr[initialState,0::2]
