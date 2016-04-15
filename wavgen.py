@@ -22,7 +22,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'hvbd' : 30 }
 UniqueStateArr   = np.array([]);
 Catalog          = {'Name':[], 'Time':[], 'TimeSegment': [], 'Type': []}
-Parameters       = []
+Parameters       = {}
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
@@ -77,9 +77,12 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                 if not os.path.isfile(__SignalFile__):
                     print "Signal file specified does not exist (%s)"%__SignalFile__
                 continue
-            match = re.search('^parameter\s+([\w=]+)\s*$',line) # look for parameters
+            match = re.search('^parameter\s+(\w+)=(\d+)\s*$',line) # look for parameters
             if match != None:
-                Parameters.append(match.group(1))
+                #                Parameters.append(match.group(1))
+                pname = match.group(1)
+                pval  = int(match.group(2))
+                Parameters.update({pname:pval})
                 continue
             match = re.search(r'^(sequence|waveform)\s+(\w+):\s*$',line) # look for a label
             if match != None:
@@ -459,7 +462,7 @@ and there is no auto-generated end to the segment"""
         # end of __make_waves
 
     def script(self, outfile=sys.stdout):
-        """ Append script to file or file handle, generates new uniques states as needed. """
+        """ Append script to file or file handle, generates new unique states as needed. """
 
         if type(outfile)==str:
             outfile = open(outfile, 'a')
@@ -750,6 +753,15 @@ def state(outfile=sys.stdout):
             outfile.write(statestring + '"\n')
             offset += n_hvbd_X_2
     outfile.write('STATES=%d\n'%(id+1))
+
+    global Catalog
+    global Parameters
+    if 'RawPixel' in Catalog['Name'] and 'Pixels' in Parameters.keys():
+        RP_label = mlab.find(np.array(Catalog['Name']) == 'RawPixel')[0]
+        RP_time  = Catalog['Time'][RP_label]
+        samples_per_line = Parameters['Pixels'] * RP_time
+        rawsamples_per_line = int(np.ceil(samples_per_line / 1024.) * 1024)
+        outfile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
     if outfile.name != '<stdout>': # don't close stdout!
         outfile.close()
 
@@ -779,8 +791,8 @@ Catalog if a consistent script cannot be generated  """
             outfilehandle = outfile
         if len(Parameters) > 0:
             outfilehandle.write('[PARAMETER#]\n')
-            for param in Parameters:
-                outfilehandle.write(param+'\n')
+            for param in Parameters.keys():
+                outfilehandle.write('%s=%d\n'%(param,Parameters[param]))
         outfilehandle.write('[LINE#]\n')
         if outfilehandle.name != '<stdout>':
             outfilehandle.close();
