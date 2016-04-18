@@ -9,6 +9,7 @@
 # @modified 2016-04-04 DH implement make_include in support of .conf files
 # @modified 2016-04-05 DH waveform output written differently depending on slew
 # @modified 2016-04-07 DH additional error checking of inputs
+# @modified 2016-04-18 DH implement GOTO
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -386,8 +387,8 @@ def hvlc(slotNumber):
 
     if found(NUMBER):
         hvlChan = token.cargo
-        if int(hvlChan) < 1 or int(hvlChan) > 23:
-            error("HVLC channel " + dq(hvlChan) + " outside range [1..23]")
+        if int(hvlChan) < 1 or int(hvlChan) > 24:
+            error("HVLC channel " + dq(hvlChan) + " outside range [1..24]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
@@ -399,8 +400,8 @@ def hvlc(slotNumber):
         consume(",")
         if found(NUMBER):
             order = token.cargo
-            if int(order) < 0 or int(order) > 23:
-                error("HVLC order " + dq(order) + " outside range [0..23]")
+            if int(order) < 0 or int(order) > 24:
+                error("HVLC order " + dq(order) + " outside range [0..24]")
         consume(NUMBER)
     consume("]")
     consume(";")
@@ -863,6 +864,21 @@ def generic_sequence(*sequenceName):
                 ( token.cargo not in subroutines ) and \
                 ( token.cargo not in paramNames ):
                 error("undefined symbol " + token.show(align=False) )
+            # If token is a GOTO then the next token must be in the list
+            # of subroutines() with open and close parentheses and nothing else
+            if found("GOTO"):
+                consume("GOTO")
+                # Check next token against list of subroutines
+                if token.cargo not in subroutines:
+                    error("undefined waveform or sequence: " + dq(token.cargo))
+                else:
+                    sequenceLine += "GOTO " + token.cargo
+                    # then consume the IDENTIFIER and the open/close parentheses
+                    # and break, because that's it for the line.
+                    consume(IDENTIFIER)
+                    consume("(")
+                    consume(")")
+                    break
             # If token is in the list of subroutines then it must be CALLed
             # and must be followed by parentheses and an optional number
             if token.cargo in subroutines:
