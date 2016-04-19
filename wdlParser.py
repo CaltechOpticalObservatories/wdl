@@ -12,6 +12,7 @@
 # @modified 2016-04-18 DH implement GOTO
 # @modified 2016-04-19 DH changes to implement INCLUDE_FILE= in .conf file
 # @modified 2016-04-19 DH remove requirement for MAIN sequence
+# @modified 2016-04-19 DH remove \???_LABEL from output
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -192,7 +193,6 @@ def dio(slotNumber):
     consume("]")
     consume(";")
 
-#    dioOutput += "MOD" + slotNumber + "\DIO_LABEL"  + dioChan + "=\n"
     dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
     dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
 
@@ -363,7 +363,6 @@ def hvhc(slotNumber):
     consume("]")
     consume(";")
 
-#    hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL"   + hvhChan + "=\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_V"  + hvhChan + "=" + volts   + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_IL" + hvhChan + "=" + current + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER"   + hvhChan + "=" + order   + "\n"
@@ -407,7 +406,6 @@ def hvlc(slotNumber):
     consume("]")
     consume(";")
 
-#    hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL"  + hvlChan + "=\n"
     hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
     hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER"  + hvlChan + "=" + order + "\n"
 
@@ -456,7 +454,6 @@ def drv(slotNumber):
     consume("]")
     consume(";")
 
-#    drvOutput += "MOD" + slotNumber + "\LABEL"        + drvChan + "=\n"
     drvOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
     drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
     drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
