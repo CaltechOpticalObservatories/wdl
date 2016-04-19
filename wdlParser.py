@@ -11,6 +11,7 @@
 # @modified 2016-04-07 DH additional error checking of inputs
 # @modified 2016-04-18 DH implement GOTO
 # @modified 2016-04-19 DH changes to implement INCLUDE_FILE= in .conf file
+# @modified 2016-04-19 DH remove requirement for MAIN sequence
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -22,7 +23,6 @@ from Symbols import *
 
 class ParserError(Exception): pass
 
-gotMain      = False
 token        = None
 setSlot      = []   # SET slot
 setChan      = []   # SET chan
@@ -927,31 +927,6 @@ def sequence():
     return outputText
 
 # -----------------------------------------------------------------------------
-# @fn     main
-# @brief  
-# @param  none
-# @return none
-# -----------------------------------------------------------------------------
-def main():
-    """
-    MAIN is a special sequence which is an infinite loop. Every script has
-    a MAIN (and only one MAIN) and every MAIN has an implicit goto MAIN (which
-    is forced to be explicit, here).
-    """
-    global token
-    global gotMain
-
-    if gotMain:
-        error("cannot have more than one MAIN")
-
-    consume("MAIN")
-    outputText = "sequence MAIN:" + "\n"
-    outputText += generic_sequence()
-    outputText += "GOTO MAIN" + "\n"
-    gotMain = True
-    return outputText
-
-# -----------------------------------------------------------------------------
 # @fn     parse_waveform
 # @brief  
 # @param  sourceText
@@ -1009,7 +984,6 @@ def parse_sequence(sourceText):
 
     getToken()
     param()
-    main()
 
     while True:
         getToken()
@@ -1145,7 +1119,6 @@ def parse(sourceText):
 
     waveformText = ""
     sequenceText = ""
-    mainText     = ""
     moduleFile   = ""
     signalFile   = ""
 
@@ -1157,8 +1130,6 @@ def parse(sourceText):
             waveformText += waveform()
         elif found("param"):
             param()
-        elif found("MAIN"):
-            mainText = main()
         elif found(IDENTIFIER):
             sequenceText += sequence()
         elif found("MODULE_FILE"):
@@ -1173,13 +1144,9 @@ def parse(sourceText):
             error("unrecognized token " + token.show(align=False) )
             break
 
-    if not gotMain:
-        error("must define at least one MAIN in the .seq file")
-
     retval =""
     retval += "modulefile " + moduleFile + "\n"
     retval += "signalfile " + signalFile + "\n\n"
-    retval += mainText
     retval += sequenceText
     retval += waveformText
     for p in paramList:

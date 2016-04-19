@@ -9,7 +9,6 @@ An identifier must start with a letter.
 # a list of keywords -- must be defined here as UPPERCASE
 #----------------------------------------------------------
 Keywords = """
-MAIN
 WAVEFORM
 SET
 TO
