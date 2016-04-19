@@ -9,6 +9,7 @@
 # @modified 2016-03-31 change how .mod is parsed
 # @modified 2016-04-04 add INCPARSER and checks for file existence
 # @modified 2016-04-07 add plotting option and check for WAVGEN exit code
+# @modified 2016-04-19 changes to implement INCLUDE_FILE= in *.conf
 #
 # This Makefile uses the general preprocessor GPP 2.24 for macro processing.
 # It also requires the ini2acf.pl Perl script for creating an Archon acf file.
@@ -21,6 +22,7 @@ WDLPATH   = /home/ztf/devel/wdl
 
 PLOT      = True    # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
+SEQPARSER = $(WDLPATH)/seqParserDriver.py
 INCPARSER = $(WDLPATH)/incParserDriver.py
 WDLPARSER = $(WDLPATH)/wdlParserDriver.py
 MODPARSER = $(WDLPATH)/modParserDriver.py
@@ -30,16 +32,16 @@ INCL      = -I$(CURDIR)
 
 %:	;
 	@test -f $(@F).conf || echo $(@F).conf does not exist
-	@echo making $(@F).wdl ...
-	@test -f $(@F).conf && cat $(@F).conf | $(INCPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - > $(@F).wdl
-	@echo making $(@F).script, $(@F).states ...
+	@echo making $(@F).wdl from $(@F).conf ...
+	@test -f $(@F).conf && cat $(@F).conf | $(SEQPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - > $(@F).wdl
+	@echo making $(@F).script, $(@F).states from $(@F).wdl ...
 	@test -f $(@F).mod || echo $(@F).mod does not exist
 	@test -f $(@F).mod && echo $(@F) | cat  - $(@F).mod | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
 	@$(WAVGEN) $(@F) $(PLOT)
 	@if [ $$? -eq 1 ]; then exit 1; fi
-	@echo making $(@F).acf ...
-	@test -f $(@F).cds || echo $(@F).cds does not exist
-	@test -f $(@F).cds && echo "[CONFIG]" | \
-		cat - $(@F).cds | $(GPP) $(GFLAGS) $(INCL) | \
+	@echo assembling $(@F).acf ...
+		@test -f $(@F).cds || echo $(@F).cds does not exist
+		@test -f $(@F).cds && echo "[CONFIG]" > $(@F).acf
+		@test -f $(@F).cds && cat $(@F).conf | $(INCPARSER) - | cat - $(@F).cds | $(GPP) $(GFLAGS) $(INCL) | \
 		cat - $(@F).script $(@F).modules $(@F).states $(@F).system | \
-		$(I2A) - > $(@F).acf
+		$(I2A) - >> $(@F).acf

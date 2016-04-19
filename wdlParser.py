@@ -10,6 +10,7 @@
 # @modified 2016-04-05 DH waveform output written differently depending on slew
 # @modified 2016-04-07 DH additional error checking of inputs
 # @modified 2016-04-18 DH implement GOTO
+# @modified 2016-04-19 DH changes to implement INCLUDE_FILE= in .conf file
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -1188,19 +1189,18 @@ def parse(sourceText):
 
 # -----------------------------------------------------------------------------
 # @fn     make_include
-# @brief  
-# @param  
+# @brief  produces the #include directives from the .conf file
+# @param  sourceText is the text of the .conf file
 # @return none
+# 
+# Parse all the input of the .conf file, making sure it meets criteria,
+# but act only on the INCLUDE_FILE tokens.
 # -----------------------------------------------------------------------------
 def make_include(sourceText):
     """
+    produces the #include directives from the .conf file
     """
     global token
-
-    moduleFile   = ""
-    waveformFile = ""
-    signalFile   = ""
-    sequenceFile = ""
 
     lexer.initialize(sourceText)
 
@@ -1208,6 +1208,69 @@ def make_include(sourceText):
     while True:
         if token.type == EOF:
             break
+        elif found("INCLUDE_FILE"):
+            consume("INCLUDE_FILE")
+            consume("=")
+            print( "#include " + token.cargo.strip("\"")   )
+            consume(STRING)
+        elif found("MODULE_FILE"):
+            consume("MODULE_FILE")
+            consume("=")
+            if found(STRING):
+                moduleFile = token.cargo
+            consume(STRING)
+        elif found("WAVEFORM_FILE"):
+            consume("WAVEFORM_FILE")
+            consume("=")
+            if found(STRING):
+                waveformFile = token.cargo
+            consume(STRING)
+        elif found("SIGNAL_FILE"):
+            consume("SIGNAL_FILE")
+            consume("=")
+            if found(STRING):
+                signalFile = token.cargo
+            consume(STRING)
+        elif found("SEQUENCE_FILE"):
+            consume("SEQUENCE_FILE")
+            consume("=")
+            if found(STRING):
+                sequenceFile = token.cargo
+            consume(STRING)
+        else:
+            error("unrecognized keyword: " + dq(token.cargo))
+
+# -----------------------------------------------------------------------------
+# @fn     make_include_sequence
+# @brief  produces output for assembling the sequence files from .conf
+# @param  sourceText is the text of the .conf file
+# @return none
+# 
+# Parse all the input of the .conf file, making sure it meets criteria.
+# -----------------------------------------------------------------------------
+def make_include_sequence(sourceText):
+    """
+    produces output for assembling the sequence files from .conf
+    """
+    global token
+
+    moduleFile   = ""
+    waveformFile = ""
+    signalFile   = ""
+    sequenceFile = ""
+    includeFiles = ""
+
+    lexer.initialize(sourceText)
+
+    getToken()
+    while True:
+        if token.type == EOF:
+            break
+        elif found("INCLUDE_FILE"):
+            consume("INCLUDE_FILE")
+            consume("=")
+            includeFiles += "#include " + token.cargo + "\n"
+            consume(STRING)
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
             consume("=")
@@ -1247,6 +1310,7 @@ def make_include(sourceText):
     print( "MODULE_FILE " + moduleFile )  # PHM requires this to appear in the output
     print( "SIGNAL_FILE " + signalFile )  # PHM requires this to appear in the output
 
+    print( includeFiles )
     print( "#include " + signalFile   )
     print( "#include " + waveformFile )
     print( "#include " + sequenceFile )
