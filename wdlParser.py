@@ -191,9 +191,9 @@ def dio(slotNumber):
     consume("]")
     consume(";")
 
-    dioOutput += "MOD" + slotNumber + "\LABEL"  + dioChan + "=\n"
-    dioOutput += "MOD" + slotNumber + "\SOURCE" + dioChan + "=" + source    + "\n"
-    dioOutput += "MOD" + slotNumber + "\DIR"    + dioChan + "=" + direction + "\n"
+#    dioOutput += "MOD" + slotNumber + "\DIO_LABEL"  + dioChan + "=\n"
+    dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
+    dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     diopower
@@ -362,10 +362,10 @@ def hvhc(slotNumber):
     consume("]")
     consume(";")
 
-    hvhOutput += "MOD" + slotNumber + "\LABEL"   + hvhChan + "=\n"
-    hvhOutput += "MOD" + slotNumber + "\HVLC_V"  + hvhChan + "=" + volts   + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVLC_IL" + hvhChan + "=" + current + "\n"
-    hvhOutput += "MOD" + slotNumber + "\ORDER"   + hvhChan + "=" + order   + "\n"
+#    hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL"   + hvhChan + "=\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_V"  + hvhChan + "=" + volts   + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_IL" + hvhChan + "=" + current + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER"   + hvhChan + "=" + order   + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     hvlc
@@ -406,9 +406,9 @@ def hvlc(slotNumber):
     consume("]")
     consume(";")
 
-    hvlOutput += "MOD" + slotNumber + "\LABEL"  + hvlChan + "=\n"
+#    hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL"  + hvlChan + "=\n"
     hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
-    hvlOutput += "MOD" + slotNumber + "\ORDER"  + hvlChan + "=" + order + "\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER"  + hvlChan + "=" + order + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     drv
@@ -455,7 +455,7 @@ def drv(slotNumber):
     consume("]")
     consume(";")
 
-    drvOutput += "MOD" + slotNumber + "\LABEL"        + drvChan + "=\n"
+#    drvOutput += "MOD" + slotNumber + "\LABEL"        + drvChan + "=\n"
     drvOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
     drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
     drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
