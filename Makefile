@@ -40,8 +40,8 @@ INCL      = -I$(CURDIR)
 	@$(WAVGEN) $(@F) $(PLOT)
 	@if [ $$? -eq 1 ]; then exit 1; fi
 	@echo assembling $(@F).acf ...
-		@test -f $(@F).cds || echo $(@F).cds does not exist
-		@test -f $(@F).cds && echo "[CONFIG]" > $(@F).acf
-		@test -f $(@F).cds && cat $(@F).conf | $(INCPARSER) - | cat - $(@F).cds | $(GPP) $(GFLAGS) $(INCL) | \
+	@test -f $(@F).cds || echo $(@F).cds does not exist
+	@test -f $(@F).cds && echo "[CONFIG]" > $(@F).acf
+	@test -f $(@F).cds && cat $(@F).conf | $(INCPARSER) - | cat - $(@F).cds | $(GPP) $(GFLAGS) $(INCL) | \
 		cat - $(@F).script $(@F).modules $(@F).states $(@F).system | \
 		$(I2A) - >> $(@F).acf

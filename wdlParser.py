@@ -13,6 +13,7 @@
 # @modified 2016-04-19 DH changes to implement INCLUDE_FILE= in .conf file
 # @modified 2016-04-19 DH remove requirement for MAIN sequence
 # @modified 2016-04-19 DH remove \???_LABEL from output
+# @modified 2016-04-19 DH implement manual sequence return
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -24,27 +25,29 @@ from Symbols import *
 
 class ParserError(Exception): pass
 
-token        = None
-setSlot      = []   # SET slot
-setChan      = []   # SET chan
-setSlew      = -1   # SET slew
-setLevel     = 0
-paramList    = []
-paramNames   = []
-subroutines  = []
-evalTime     = 0    # evaluated time for waveform line
-maxTime      = 0    # max time for each waveform
-timeStamps   = {}   # dictionary of time stamps, timelabel:time
-drvOutput    = ""
-adcOutput    = ""
-hvlOutput    = ""
-hvhOutput    = ""
-dioOutput    = ""
-sysOutput    = ""
+token         = None
+setSlot       = []   # SET slot
+setChan       = []   # SET chan
+setSlew       = -1   # SET slew
+setLevel      = 0
+paramList     = []
+paramNames    = []
+subroutines   = []
+evalTime      = 0    # evaluated time for waveform line
+maxTime       = 0    # max time for each waveform
+seqReturnTime = 0    # time at which a sequence has manually specified a return
+seqReturn     = False
+timeStamps    = {}   # dictionary of time stamps, timelabel:time
+drvOutput     = ""
+adcOutput     = ""
+hvlOutput     = ""
+hvhOutput     = ""
+dioOutput     = ""
+sysOutput     = ""
 
-__SLEW_FAST  =  1
-__SLEW_SLOW  =  0
-__SLEW_NONE  = -1
+__SLEW_FAST   =  1
+__SLEW_SLOW   =  0
+__SLEW_NONE   = -1
 
 # -----------------------------------------------------------------------------
 # @fn     abort
@@ -555,6 +558,34 @@ def timelabel():
         consume(IDENTIFIER)
 
 # -----------------------------------------------------------------------------
+# @fn     seq_return
+# @brief  
+# @param  
+# @return 
+# -----------------------------------------------------------------------------
+def seq_return():
+    """
+    
+    """
+    global evalTime
+    global maxTime
+    global seqReturnTime
+    global seqReturn
+    global setSlew
+
+    if found("RETURN"):
+        consume("RETURN")
+        seqReturn = True
+        seqReturnTime = evalTime
+    else:
+        seqReturn = False
+        # If manual return not specified then remember the max time, for the RETURN
+        if evalTime > maxTime:
+            maxTime = evalTime
+
+    return seqReturn
+
+# -----------------------------------------------------------------------------
 # @fn     time
 # @brief  evaluate the time stamp for each entry in the waveform
 # @param  none
@@ -593,10 +624,6 @@ def time():
             getToken()
     consume(":")
     evalTime = int( eval(eqn) )  # new evaluated time
-
-    # need to remember the max time, for the RETURN
-    if evalTime > maxTime:
-        maxTime = evalTime
 
 # -----------------------------------------------------------------------------
 # @fn     set
@@ -743,9 +770,10 @@ def waverules():
     """
     time()
     timelabel()
-    set()
-    to()
-    slew()
+    if not seq_return():
+        set()
+        to()
+        slew()
     eol()
 
 # -----------------------------------------------------------------------------
@@ -780,9 +808,12 @@ def waveform():
     global maxTime
     global setLevel
     global setSlew
+    global seqReturn
+    global seqReturnTime
 
     outputText = ""
     maxTime    = 0
+    seqReturn  = False  # True if a manual sequence return is specified
 
     # a waveform must start with the "WAVEFORM" keyword, ...
     consume("WAVEFORM")
@@ -798,8 +829,11 @@ def waveform():
         waverules()
         for index in range(len(setSlot)):
             # The output is written differently depending on whether or not
-            # a slew rate (fast | slow) has been specified.
-            if (setSlew == __SLEW_NONE):
+            # a slew rate (fast | slow) has been specified.  Also use the setSlew
+            # variable to determine if a manual sequence return was specified.
+            if seqReturn:
+                outputText += str(evalTime) + " RETURN " + waveformName + "\n\n"
+            elif (setSlew == __SLEW_NONE):
                 outputText += str(evalTime)                + " " +\
                               str(setSlot[index])          + " " +\
                               str(int(setChan[index])-1)   + " " +\
@@ -816,7 +850,10 @@ def waveform():
     consume("}")
 
     # "RETURN" marks the end of the waveform output
-    outputText += str(maxTime+1) + " RETURN " + waveformName + "\n\n"
+    if not seqReturn:
+        outputText += str(maxTime+1) + " RETURN " + waveformName + "\n\n"
+    if seqReturn and (seqReturnTime <= maxTime):
+        error("sequence return time: " + str(seqReturnTime) + " must be > " + str(maxTime))
     return outputText
 
 # -----------------------------------------------------------------------------
