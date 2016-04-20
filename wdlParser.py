@@ -1238,6 +1238,10 @@ def make_include(sourceText):
             if found(STRING):
                 sequenceFile = token.cargo
             consume(STRING)
+        elif found("CDS_FILE"):
+            consume("CDS_FILE")
+            consume("=")
+            consume(STRING)
         else:
             error("unrecognized keyword: " + dq(token.cargo))
 
@@ -1295,6 +1299,10 @@ def make_include_sequence(sourceText):
             consume("=")
             if found(STRING):
                 sequenceFile = token.cargo
+            consume(STRING)
+        elif found("CDS_FILE"):
+            consume("CDS_FILE")
+            consume("=")
             consume(STRING)
         else:
             error("unrecognized keyword: " + dq(token.cargo))

@@ -6,6 +6,7 @@
 # @date     2016-xx-xx
 # @modified 2016-03-29 DH
 # @modified 2016-04-07 DH added plotting option and exit code
+# @modified 2016-04-20 DH accept more toplot options (F|T|Y|N)
 # 
 # This script invokes the PHM wavgen.
 # -----------------------------------------------------------------------------
@@ -28,9 +29,11 @@ def main(source, toplot):
     """
     input  = source+".wdl"
     output = source
-    if toplot.upper() == "FALSE" or toplot.upper() == "NO" or toplot.upper() == "0":
+    if toplot.upper() == "FALSE" or toplot.upper() == "NO" or \
+       toplot.upper() == "F"     or toplot.upper() == "N"  or toplot.upper() == "0":
         wavgen.GenerateFigs = False
-    elif toplot.upper() == "TRUE" or toplot.upper() == "YES" or toplot.upper() == "1":
+    elif toplot.upper() == "TRUE" or toplot.upper() == "YES" or \
+         toplot.upper() == "T"    or toplot.upper() == "Y"   or toplot.upper() == "1":
         wavgen.GenerateFigs = True
     else:
         print("warning: invalid plotting option specified, defaulting to True")
