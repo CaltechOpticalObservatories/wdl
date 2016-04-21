@@ -29,6 +29,11 @@ $enumerate = 0;
 ($infile) = @ARGV;
 
 open(FILE,"<$infile");
+
+# write [CONFIG] at head
+push @newstuff, "[CONFIG]\n";
+push @TAGS, "CONFIG";
+
 $jj=0;
 LINE: while (<FILE>) {
     # look for TAGs
