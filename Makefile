@@ -36,16 +36,18 @@ SCAN_CDSFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
 SCAN_MODFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
 		awk -F= '{gsub(" |\t","",$$1)} $$1=="MODULE_FILE"{print $$2}' | cut -d'"' -f2
 
+F_TMP = $(@F)_TMP
+
 %:	;
 	$(eval MODFILE := $(shell $(SCAN_MODFILE)))
 	@echo looking for MODULE_FILE = $(MODFILE) ...
 	@test -f $(@F).conf || echo $(@F).conf does not exist
-	@echo making $(@F).wdl from $(@F).conf ...
-	@test -f $(@F).conf && cat $(@F).conf | $(SEQPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - > $(@F).wdl
-	@echo making $(@F).script, $(@F).states from $(@F).wdl ...
+	@echo making $(F_TMP).wdl from $(@F).conf ...
+	@test -f $(@F).conf && cat $(@F).conf | $(SEQPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - > $(F_TMP).wdl
+	@echo making $(F_TMP).script, $(F_TMP).states from $(F_TMP).wdl ...
 	@test -f $(MODFILE) || echo $(MODFILE) does not exist
-	@test -f $(MODFILE) && echo $(@F) | cat  - $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
-	@$(WAVGEN) $(@F) $(PLOT)
+	@test -f $(MODFILE) && echo $(F_TMP) | cat  - $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
+	@$(WAVGEN) $(F_TMP) $(PLOT)
 	@if [ $$? -eq 1 ]; then exit 1; fi
 	@echo assembling $(@F).acf ...
 	$(eval CDSFILE := $(shell $(SCAN_CDSFILE)))
@@ -54,5 +56,5 @@ SCAN_MODFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
 	@echo assembling $(@F).acf file ...
 	@test -f $(CDSFILE) && echo "[CONFIG]" > $(@F).acf
 	@test -f $(CDSFILE) && cat $(@F).conf | $(INCPARSER) - | cat - $(CDSFILE) | $(GPP) $(GFLAGS) $(INCL) | \
-		cat - $(@F).script $(@F).modules $(@F).states $(@F).system | \
+		cat - $(F_TMP).script $(F_TMP).modules $(F_TMP).states $(F_TMP).system | \
 		$(I2A) - >> $(@F).acf
