@@ -54,7 +54,6 @@ F_TMP = $(@F)_TMP
 	@echo looking for CDS_FILE = $(CDSFILE) ...
 	@test -f $(CDSFILE) || echo $(CDSFILE) does not exist
 	@echo assembling $(@F).acf file ...
-	@test -f $(CDSFILE) && echo "[CONFIG]" > $(@F).acf
 	@test -f $(CDSFILE) && cat $(@F).conf | $(INCPARSER) - | cat - $(CDSFILE) | $(GPP) $(GFLAGS) $(INCL) | \
 		cat - $(F_TMP).script $(F_TMP).modules $(F_TMP).states $(F_TMP).system | \
-		$(I2A) - >> $(@F).acf
+		$(I2A) - > $(@F).acf
