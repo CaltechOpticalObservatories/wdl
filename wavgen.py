@@ -743,7 +743,7 @@ def state(outfile=sys.stdout):
             # 1. check that there is only one non-keep in hvbdKeep
             KeepSum = sum(hvbdKeep)
             if KeepSum == __chan_per_board__['hvbd']: # nothing changed
-                statestring += "0,,"                
+                statestring += "0,1,0"                
             elif (KeepSum + 1) == __chan_per_board__['hvbd']: # proper change 
                 # 2. get the level corresponding to the non-keep.
                 hvbd_chan = mlab.find(hvbdKeep == 0)
