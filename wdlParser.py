@@ -14,6 +14,7 @@
 # @modified 2016-04-19 DH remove requirement for MAIN sequence
 # @modified 2016-04-19 DH remove \???_LABEL from output
 # @modified 2016-04-19 DH implement manual sequence return
+# @modified 2016-04-21 DH fix bug in waveform() for manual sequence return
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -827,26 +828,28 @@ def waveform():
     consume("{")
     while not found("}"):
         waverules()
-        for index in range(len(setSlot)):
-            # The output is written differently depending on whether or not
-            # a slew rate (fast | slow) has been specified.  Also use the setSlew
-            # variable to determine if a manual sequence return was specified.
-            if seqReturn:
-                outputText += str(evalTime) + " RETURN " + waveformName + "\n\n"
-            elif (setSlew == __SLEW_NONE):
-                outputText += str(evalTime)                + " " +\
-                              str(setSlot[index])          + " " +\
-                              str(int(setChan[index])-1)   + " " +\
-                              str(setLevel)                + "\n"
-            else:
-                outputText += str(evalTime)                + " " +\
-                              str(setSlot[index])          + " " +\
-                              str(2*int(setChan[index])-2) + " " +\
-                              str(setLevel)                + "\n"
-                outputText += str(evalTime)                + " " +\
-                              str(setSlot[index])          + " " +\
-                              str(2*int(setChan[index])-1) + " " +\
-                              str(setSlew)                 + "\n"
+        # If a manual sequence return was specified then write it here,
+        if seqReturn:
+            outputText += str(seqReturnTime) + " RETURN " + waveformName + "\n\n"
+        # otherwise loop through all the slots that were set and write a line for each
+        else:
+            for index in range(len(setSlot)):
+                # The output is written differently depending on whether or not
+                # a slew rate (fast | slow) has been specified.
+                if (setSlew == __SLEW_NONE):
+                    outputText += str(evalTime)                + " " +\
+                                  str(setSlot[index])          + " " +\
+                                  str(int(setChan[index])-1)   + " " +\
+                                  str(setLevel)                + "\n"
+                else:
+                    outputText += str(evalTime)                + " " +\
+                                  str(setSlot[index])          + " " +\
+                                  str(2*int(setChan[index])-2) + " " +\
+                                  str(setLevel)                + "\n"
+                    outputText += str(evalTime)                + " " +\
+                                  str(setSlot[index])          + " " +\
+                                  str(2*int(setChan[index])-1) + " " +\
+                                  str(setSlew)                 + "\n"
     consume("}")
 
     # "RETURN" marks the end of the waveform output
