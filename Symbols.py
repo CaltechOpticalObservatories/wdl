@@ -40,7 +40,7 @@ Keywords = Keywords.split()
 # a list of symbols that are one character long
 #----------------------------------------------------------
 OneCharacterSymbols = """
-=
+! =
 ( )
 [ ]
 { }
