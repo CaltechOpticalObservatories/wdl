@@ -11,6 +11,7 @@ An identifier must start with a letter.
 Keywords = """
 WAVEFORM
 SEQUENCE
+SIGNALS
 SET
 TO
 IF

@@ -1181,6 +1181,10 @@ def parse(sourceText):
     while True:
         if token.type == EOF:
             break
+        elif found("SIGNALS"):
+            consume("SIGNALS")
+            consume("{")
+            consume("}")
         elif found("WAVEFORM"):
             waveformText += waveform()
         elif found("param"):
@@ -1281,10 +1285,10 @@ def make_include_sequence(sourceText):
     global token
 
     moduleFile   = ""
-    waveformFile = ""
+    waveformFile = []
     signalFile   = ""
     sequenceFile = ""
-    includeFiles = ""
+    includeFiles = []
 
     lexer.initialize(sourceText)
 
@@ -1295,7 +1299,7 @@ def make_include_sequence(sourceText):
         elif found("INCLUDE_FILE"):
             consume("INCLUDE_FILE")
             consume("=")
-            includeFiles += "#include " + token.cargo + "\n"
+            includeFiles.append( token.cargo )
             consume(STRING)
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
@@ -1307,7 +1311,7 @@ def make_include_sequence(sourceText):
             consume("WAVEFORM_FILE")
             consume("=")
             if found(STRING):
-                waveformFile = token.cargo
+                waveformFile.append( token.cargo )
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
@@ -1340,7 +1344,16 @@ def make_include_sequence(sourceText):
     print( "MODULE_FILE " + moduleFile )  # PHM requires this to appear in the output
     print( "SIGNAL_FILE " + signalFile )  # PHM requires this to appear in the output
 
-    print( includeFiles )
+    # global include files come first, since they can have defines/conditionals
+    # that might affect things downstream
+    for incf in includeFiles:
+        print( "#include " + incf )
+
+    # signal files must come before waveforms and sequences, since the waveforms
+    # will use #defines from the signal file
     print( "#include " + signalFile   )
-    print( "#include " + waveformFile )
+
+    for wf in waveformFile:
+        print( "#include " + wf )
+
     print( "#include " + sequenceFile )
