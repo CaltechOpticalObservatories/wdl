@@ -36,8 +36,8 @@ paramNames    = []
 subroutines   = []
 evalTime      = 0    # evaluated time for waveform line
 maxTime       = 0    # max time for each waveform
-seqReturnTime = 0    # time at which a sequence has manually specified a return
-seqReturn     = False
+wavReturnTime = 0    # time at which a waveform has manually specified a return
+wavReturn     = False
 timeStamps    = {}   # dictionary of time stamps, timelabel:time
 drvOutput     = ""
 adcOutput     = ""
@@ -559,32 +559,32 @@ def timelabel():
         consume(IDENTIFIER)
 
 # -----------------------------------------------------------------------------
-# @fn     seq_return
+# @fn     wav_return
 # @brief  
 # @param  
 # @return 
 # -----------------------------------------------------------------------------
-def seq_return():
+def wav_return():
     """
     
     """
     global evalTime
     global maxTime
-    global seqReturnTime
-    global seqReturn
+    global wavReturnTime
+    global wavReturn
     global setSlew
 
     if found("RETURN"):
         consume("RETURN")
-        seqReturn = True
-        seqReturnTime = evalTime
+        wavReturn = True
+        wavReturnTime = evalTime
     else:
-        seqReturn = False
+        wavReturn = False
         # If manual return not specified then remember the max time, for the RETURN
         if evalTime > maxTime:
             maxTime = evalTime
 
-    return seqReturn
+    return wavReturn
 
 # -----------------------------------------------------------------------------
 # @fn     time
@@ -771,7 +771,7 @@ def waverules():
     """
     time()
     timelabel()
-    if not seq_return():
+    if not wav_return():
         set()
         to()
         slew()
@@ -809,12 +809,12 @@ def waveform():
     global maxTime
     global setLevel
     global setSlew
-    global seqReturn
-    global seqReturnTime
+    global wavReturn
+    global wavReturnTime
 
     outputText = ""
     maxTime    = 0
-    seqReturn  = False  # True if a manual sequence return is specified
+    wavReturn  = False  # True if a manual waveform return is specified
 
     # a waveform must start with the "WAVEFORM" keyword, ...
     consume("WAVEFORM")
@@ -828,9 +828,9 @@ def waveform():
     consume("{")
     while not found("}"):
         waverules()
-        # If a manual sequence return was specified then write it here,
-        if seqReturn:
-            outputText += str(seqReturnTime) + " RETURN " + waveformName + "\n\n"
+        # If a manual waveform return was specified then write it here,
+        if wavReturn:
+            outputText += str(wavReturnTime) + " RETURN " + waveformName + "\n\n"
         # otherwise loop through all the slots that were set and write a line for each
         else:
             for index in range(len(setSlot)):
@@ -853,10 +853,10 @@ def waveform():
     consume("}")
 
     # "RETURN" marks the end of the waveform output
-    if not seqReturn:
+    if not wavReturn:
         outputText += str(maxTime+1) + " RETURN " + waveformName + "\n\n"
-    if seqReturn and (seqReturnTime <= maxTime):
-        error("sequence return time: " + str(seqReturnTime) + " must be > " + str(maxTime))
+    if wavReturn and (wavReturnTime <= maxTime):
+        error("waveform return time: " + str(wavReturnTime) + " must be > " + str(maxTime))
     return outputText
 
 # -----------------------------------------------------------------------------
@@ -1086,12 +1086,21 @@ def get_params(sourceText):
 
 # -----------------------------------------------------------------------------
 # @fn     parse_modules
-# @brief  
+# @brief  creates the .modules file
 # @param  sourceText
-# @return none
+# @return .modules file output string
+#
+# This is called by modParserDriver.py when we want the .modules file.
+# The only valid keyword is SLOT.
+#
+# The text for the .system file is assembled here (in sysOutput) but
+# not returned from here.
 # -----------------------------------------------------------------------------
 def parse_modules(sourceText):
     """
+    This is called to create the .modules file. The only valid keyword is SLOT.
+    The text for the .system file is assembled here in global variable sysOutput
+    but not returned from here.
     """
     global token
     global drvOutput
@@ -1114,8 +1123,10 @@ def parse_modules(sourceText):
         if token.type == EOF:
             break
         elif found("SLOT"):
+            # parse the rules for the SLOT keyword
             slot()
         else:
+            # We should only be parsing modules now
             error("unrecognized token " + token.show(align=False) )
             break
 
@@ -1130,9 +1141,13 @@ def parse_modules(sourceText):
 
 # -----------------------------------------------------------------------------
 # @fn     parse_system
-# @brief  
+# @brief  returns the text for the .system file
 # @param  sourceText
 # @return none
+#
+# This is called by modParserDriver.py when we want the .system file.
+# The text string that is returned has already been built by previous calls
+# to slot() and parse_modules().
 # -----------------------------------------------------------------------------
 def parse_system():
     """
@@ -1145,6 +1160,8 @@ def parse_system():
 # @brief  parses everything
 # @param  sourceText
 # @return none
+#
+# This is called by wdlParserDriver.py
 # -----------------------------------------------------------------------------
 def parse(sourceText):
     """
