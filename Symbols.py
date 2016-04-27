@@ -10,6 +10,7 @@ An identifier must start with a letter.
 #----------------------------------------------------------
 Keywords = """
 WAVEFORM
+SEQUENCE
 SET
 TO
 IF

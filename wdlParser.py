@@ -958,6 +958,7 @@ def sequence():
     global token
     global subroutines
 
+    consume("SEQUENCE")
     sequenceName = sequence_label()
     outputText = "sequence " + sequenceName + ":" + "\n"
     outputText += generic_sequence(sequenceName) + "\n"
@@ -1184,7 +1185,7 @@ def parse(sourceText):
             waveformText += waveform()
         elif found("param"):
             param()
-        elif found(IDENTIFIER):
+        elif found("SEQUENCE"):
             sequenceText += sequence()
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
