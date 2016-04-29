@@ -38,6 +38,9 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     global __chan_per_board__
     global Parameters
 
+    # user command and arguments for feedback
+    usercommands = []
+    
     #default mod file
     ModFile = '/home/ztf/devel/wdl/test.mod'
     __SignalFile__ = ''
@@ -84,12 +87,13 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                 pval  = int(match.group(2))
                 Parameters.update({pname:pval})
                 continue
-            match = re.search(r'^(sequence|waveform)\s+(\w+):\s*$',line) # look for a label
+            match = re.search(r'^(sequence|waveform)\s+(\w+)(\.(\w+)\((.*)\))?:\s*$',line) # look for a label
             if match != None:
                 # SEQUENCE HEADER:  acf label found, generate sequence object
                 TStype  = match.group(1)
                 acfLabel = match.group(2)
-                
+                pycmd   = match.group(4)
+                pyargs  = match.group(5)
                 if TStype == 'sequence':
                     thisTS = TimingSegment(acfLabel,TStype)
                     ctr = 0
@@ -98,6 +102,8 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                 else:
                     print 'INVALID TimingSegment type: %s'%TStype
                     print '>> %s'%line
+                if pycmd != None:
+                    usercommands.append([eval('thisTS.%s'%pycmd),pyargs])
             else: # SEQUENCE BODY: line does not match a code segment label/header
                 if TStype == 'sequence':
                     thisTS.sequenceDef.append([ctr,line[:-1]]);
@@ -151,12 +157,16 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     if ok:
         print 'Catalog of timing objects:'
         catalog()
-        global GenerateFigs
-        if GenerateFigs:
-            print 'Generating figures...'
-            indxWaveform = mlab.find(np.array(Catalog['Type']) == 'waveform')
-            for kk in indxWaveform:
-                Catalog['TimeSegment'][kk].plot()
+        if len(usercommands) > 0:
+            print "Running user-specified commands..."
+        for usercmd in usercommands:
+            eval('usercmd[0](%s)'%usercmd[1]);
+#        global GenerateFigs
+#        if GenerateFigs:
+#            print 'Generating figures...'
+#            indxWaveform = mlab.find(np.array(Catalog['Type']) == 'waveform')
+#            for kk in indxWaveform:
+#                Catalog['TimeSegment'][kk].plot()
     return
 
 def __loadMod__(ModFile):
@@ -462,7 +472,8 @@ and there is no auto-generated end to the segment"""
         # end of __make_waves
 
     def script(self, outfile=sys.stdout):
-        """ Append script to file or file handle, generates new unique states as needed. """
+        """Append script to file or file handle, generates new unique states
+as needed. Calculate time for time segment to complete"""
 
         if type(outfile)==str:
             outfile = open(outfile, 'a')
@@ -513,7 +524,7 @@ and there is no auto-generated end to the segment"""
                         print "input string: '%s'"%this_sub_call
                     this_sub_command    = regexmatch.group(1)
                     this_sub_name       = regexmatch.group(2)
-                    try:
+                    try: # ultimately if it's not an integer, it should be pulled from parameters
                         this_sub_iterations = int(regexmatch.group(4))
                     except:
                         this_sub_iterations = 1
@@ -528,7 +539,7 @@ and there is no auto-generated end to the segment"""
                         Catalog['Time'].append(this_sub_time)
                         Catalog['TimeSegment'].append(None)
                         Catalog['Type'].append('')
-                    if this_sub_command in ('Call','CALL','call'):
+                    if this_sub_command.upper() == 'CALL':
                         # only add time if this is not a call to itself (usually RETURN)
                         time += this_sub_time * this_sub_iterations
             if (do_anything_tt[jj] == self.nperiods - 1):
@@ -561,7 +572,7 @@ and there is no auto-generated end to the segment"""
 
         return True
 
-    def plot(self, initialState=-1, cycles=2, fignum=1):
+    def plot(self, initialState=-1, cycles=2):
         """plot the states in the timing script. optionally takes an initial
 condition (default=last non-zero state) """
 
@@ -590,7 +601,7 @@ condition (default=last non-zero state) """
         # Calculate the waveform level(ax 1) vs time(ax 0) for each channel
         true_level = np.zeros((cycles*self.nperiods,n_var))
         true_level[-1,:] = IC; # handles initial condition, but is overwritten on first pass
-        for tt in range(2*self.nperiods):
+        for tt in range(cycles*self.nperiods):
             tnow  = np.mod(tt,self.nperiods)
             tprev = np.mod(tt-1,np.size(true_level,0))
             true_level[tt, keep[tnow,:]] = true_level[tprev, keep[tnow,:]]
@@ -633,7 +644,8 @@ condition (default=last non-zero state) """
                 yy = axes[kk].set_ylim()
                 dy = np.diff(yy)
                 yy = axes[kk].set_ylim((yy[0] - .1*dy, yy[1] + .1*dy))
-                axes[kk].plot([self.nperiods * period_us]*cycles, yy,'k--')
+                for nn in range(cycles):
+                    axes[kk].plot([self.nperiods * period_us * (nn+1)]*2, yy,'k--')
                 axes[kk].grid('on')
                 if kk > 0:
                     axes[kk].set_xticklabels([])
