@@ -21,8 +21,13 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'back' : 6,
                        'hvbd' : 30 }
 UniqueStateArr   = np.array([]);
-Catalog          = {'Name':[], 'Time':[], 'TimeSegment': [], 'Type': []}
-Parameters       = {}
+Catalog          = {'Name':[],
+                    'Time':[],
+                    'TimeSegment': [],
+                    'Type': [],
+                    'ParamList': [], # list of parameters in this object
+                    'ExitState': []}
+Parameters       = {} # all of the parameters
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
@@ -267,7 +272,12 @@ return the slot and channel number"""
     thisChan = np.mod(rawindex,__chan_per_board__[boardname])
     thisSlot = slot[boardname][rawindex/__chan_per_board__[boardname]]
     return thisSlot, thisChan, boardname
-        
+
+def __index_of__(Name):
+    """ returns the Catalog index number of a named time segment in the waveform """
+    global Catalog
+    return mlab.find(np.array(Catalog['Name']) == Name)[0]
+
 class TimingSegment(object):
     """ general timing segment object (waveforms and sequences) to generate ACF states and script"""
 
@@ -295,17 +305,22 @@ and there is no auto-generated end to the segment"""
             TStype_orig = TStype
             TStype = ''
 
-        if name not in Catalog['Name']:
+        if name not in Catalog['Name']: # initialize entry in Catalog
             self.label = __seq_ID__
             __seq_ID__ += 1
             Catalog['Name'].append(name)
             Catalog['Time'].append(np.nan)
             Catalog['TimeSegment'].append(self)
             Catalog['Type'].append(TStype)
-        else:
-            self.label = mlab.find(np.array(Catalog['Name']) == name)[0]
+            Catalog['ParamList'].append([])
+            Catalog['ExitState'].append(0)
+        else: # or reinitialize entry in Catalog
+            self.label = __index_of__(name)
+            Catalog['Time'][self.label] = np.nan
             Catalog['TimeSegment'][self.label] = self
             Catalog['Type'][self.label] = TStype
+            Catalog['ParamList'][self.label] = []
+            Catalog['ExitState'][self.label] = 0
                                             
         if NotifyTSTypeChange:
             print "invalid TimingSegment type (TStype) specified: %s"%TStype_orig
@@ -372,6 +387,11 @@ and there is no auto-generated end to the segment"""
 
     def __fill_state(self, definition, isDriver=False):
         """ fill level and boolean keep for state definition """
+
+        #############################################################################
+        ## this subroutine needs to be fixed in order to compress the state array. ##
+        #############################################################################
+
         n_defs = len(definition)
         level  = np.zeros((self.nperiods, n_defs))
         keep   = np.ones((self.nperiods, n_defs)).astype('bool')
@@ -422,6 +442,13 @@ and there is no auto-generated end to the segment"""
         ### GENERATE THE STATES ###
         # even columns are levels or slew rate switches, odd columns are KEEP flags
         # relative to Archon, i've inserted an extra keep flag for driver to produce a more regular pattern
+        #
+        # L1a L2a L3a 
+        # L1b L2b L3b          L1a K1a L2a K2a L3a K3a
+        # L1c L2c L3c ======>  L1b K1b L2b K2b L3b K3b
+        # K1a K2a K3a          L1c K1c L2c K2c L3c K3c
+        # K1b K2b K3b
+        # K1c K2c K3c
         state_arr = np.hstack((np.reshape(np.vstack((drvr_level,drvr_keep)),## !driver-speed-keep 
                                           (self.nperiods, 2*num_drvr), 'F'),## !driver-speed-keep
                                np.reshape(np.vstack((lvds_level ,lvds_keep)) ,
@@ -437,8 +464,9 @@ and there is no auto-generated end to the segment"""
         # UNIQUE_STATE_ID will hold the row in UNIQUE_STATES for each time step
         unique_state_ID = np.zeros((self.nperiods,)).astype('int')
         global UniqueStateArr
-        if np.size(UniqueStateArr,0) == 0: # empty condition
-            UniqueStateArr = np.array([state_arr[0,:]])
+        ## this never happens, since USA is set up in __init__
+        # if np.size(UniqueStateArr,0) == 0: # empty condition
+        # UniqueStateArr = np.array([state_arr[0,:]])
         for tt in range(self.nperiods):
             state_matches_ustate = mlab.find(np.sum(np.abs(state_arr[tt,:] - UniqueStateArr),1) == 0)
             if len(state_matches_ustate) == 0:
@@ -473,7 +501,8 @@ and there is no auto-generated end to the segment"""
 
     def script(self, outfile=sys.stdout):
         """Append script to file or file handle, generates new unique states
-as needed. Calculate time for time segment to complete"""
+as needed. Calculate time for time segment to complete, stores the
+exit state and the parameters used in Catalog """
 
         if type(outfile)==str:
             outfile = open(outfile, 'a')
@@ -500,20 +529,37 @@ as needed. Calculate time for time segment to complete"""
             print "waveform definition error - event at t=0"
         for jj in range(len(do_anything_dt)):
             pad  = __padmax__ # column to start comment
-            skip = False
-            # print next state on new line
+            EOL = False # end of line flag
             count += 1
             time  += 1
             pad   -= 11
             outfile.write("STATE%03d; "%(unique_state_ID[do_anything_tt[jj]]))
+            # over write the exit state if the unique_state_ID is nonzero
+            if unique_state_ID[do_anything_tt[jj]] > 0:
+                Catalog['ExitState'][self.label] = unique_state_ID[do_anything_tt[jj]]
             this_sub_call = self.__sequence_list__[do_anything_tt[jj]]
-            if (this_sub_call != ''):
+            # true condition means this is a subroutine call, not a state change.
+            if (this_sub_call != ''): 
                 pad -= len(this_sub_call)
                 outfile.write("%s"%(this_sub_call))
-                skip = True
+                EOL = True
+                if this_sub_call[0:3].upper() == 'IF ':
+                    # get the first word after IF...
+                    regexmatch = re.search('\w+\s+!?([\w]+)',this_sub_call)
+                    this_param = regexmatch.group(1)
+                    try: # test if this_param is an integer
+                        int(this_param)
+                    except: # if its not, then its a parameter, so add it to the Catalog.
+                        if this_param not in Catalog['ParamList'][self.label]:
+                            Catalog['ParamList'][self.label].append(this_param)
                 if '--' in this_sub_call: # increment count for Param--'s
+                    # this assumes that the decrement is not happening in the IF TEST part of a call
+                    # is something like IF TEST-- TEST2-- even legal in ACF?
                     count += 1
                     time  += 1
+                    this_param = this_sub_call[:-2]  # I'm assuming it's a bare call
+                    if this_param not in Catalog['ParamList'][self.label]:
+                        Catalog['ParamList'][self.label].append(this_param)
                 else:
                     # parse the label name and iterations from the sub call
                     # and use that info to calculate the time.
@@ -528,8 +574,12 @@ as needed. Calculate time for time segment to complete"""
                         this_sub_iterations = int(regexmatch.group(4))
                     except:
                         this_sub_iterations = 1
+                        if regexmatch.lastindex > 2:
+                            this_param = regexmatch.group(4)
+                            if this_param not in Catalog['ParamList'][self.label]:
+                                Catalog['ParamList'][self.label].append(this_param)
                     if this_sub_name in Catalog['Name']:
-                        this_sub_time = Catalog['Time'][mlab.find(np.array(Catalog['Name']) == this_sub_name)]
+                        this_sub_time = Catalog['Time'][__index_of__(this_sub_name)]
                     else:
                         # if the called subroutine has not been defined in Catalog, then insert a holder
                         global __seq_ID__
@@ -539,9 +589,15 @@ as needed. Calculate time for time segment to complete"""
                         Catalog['Time'].append(this_sub_time)
                         Catalog['TimeSegment'].append(None)
                         Catalog['Type'].append('')
+                        Catalog['ParamList'].append([])
+                        Catalog['ExitState'].append(0)
                     if this_sub_command.upper() == 'CALL':
                         # only add time if this is not a call to itself (usually RETURN)
                         time += this_sub_time * this_sub_iterations
+                        # update the exit state with that of the subroutine
+                        if  Catalog['ExitState'][__index_of__(this_sub_name)] != 0:
+                            Catalog['ExitState'][self.label] = Catalog['ExitState'][__index_of__(this_sub_name)]
+            ## END OF SUBROUTINE PARSING
             if (do_anything_tt[jj] == self.nperiods - 1):
                 if self.endline == -1:
                     pad -= 7 + len(scriptName)
@@ -549,8 +605,8 @@ as needed. Calculate time for time segment to complete"""
                 elif self.endline >= 0 and self.endline < len(SubName):
                     pad -= 6 + len(SubName[self.endline])
                     outfile.write("GOTO %s"%(SubName[self.endline]))
-                skip = True
-            if (do_anything_dt[jj] > 1) and not skip:
+                EOL = True
+            if (do_anything_dt[jj] > 1) and not EOL:
                 # if the time to the next THING is more than 1 period
                 # away, then print a DO_NOTHING
                 count += do_anything_dt[jj] - 1
@@ -667,8 +723,7 @@ condition (default=last non-zero state) """
                 print "  %s %s= %3g"%(thisLabel,' '*(16-len(thisLabel)),thisLevel)
             except:
                 Tracer()()
-
-        return True
+        return true_level[0:self.nperiods,:] # returns only the first loop
 
 def state(outfile=sys.stdout):
     """ write states from the UniqueStateArr to the file or file handle specified """
@@ -769,7 +824,7 @@ def state(outfile=sys.stdout):
     global Catalog
     global Parameters
     if 'RawPixel' in Catalog['Name'] and 'Pixels' in Parameters.keys():
-        RP_label = mlab.find(np.array(Catalog['Name']) == 'RawPixel')[0]
+        RP_label = __index_of__('RawPixel')
         RP_time  = Catalog['Time'][RP_label]
         samples_per_line = Parameters['Pixels'] * RP_time
         rawsamples_per_line = int(np.ceil(samples_per_line / 1024.) * 1024)
@@ -822,12 +877,13 @@ Catalog if a consistent script cannot be generated  """
 def catalog(MagicNullArgument=None):
     """ print catalog in human readable form """
     global Catalog
-    print "index  label                                type  time [us]"
-    print "-----------------------------------------------------------"
+    print "index  label                                type  exit  time [us]"
+    print "-----------------------------------------------------------------"
     for jj in range(len(Catalog['Time'])):
-        print "%4d:  %-32s %-8s %10.2f"%(jj,Catalog['Name'][jj], 
-                                         Catalog['Type'][jj],    
-                                         Catalog['Time'][jj]/100.)
+        print "%4d:  %-32s %-8s   %03d %10.2f"%(jj,Catalog['Name'][jj], 
+                                                Catalog['Type'][jj],    
+                                                Catalog['ExitState'][jj],
+                                                Catalog['Time'][jj]/100.)
 
 # @register_line_magic
 def wplot(TimingObjectLabel):
@@ -839,9 +895,7 @@ def wplot(TimingObjectLabel):
         print Catalog['Name']
         return
 
-    seqnum = mlab.find(np.array(Catalog['Name']) == TimingObjectLabel)
-
-    Catalog['TimeSegment'][seqnum].plot()
+    Catalog['TimeSegment'][__index_of__(TimingObjectLabel)].plot()
 
     return
 
