@@ -15,6 +15,7 @@
 # @modified 2016-04-19 DH remove \???_LABEL from output
 # @modified 2016-04-19 DH implement manual sequence return
 # @modified 2016-04-21 DH fix bug in waveform() for manual sequence return
+# @modified 2016-05-06 DH parse Python commands and clean up get_subroutines()
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -1079,17 +1080,35 @@ def get_subroutines(sourceText):
 
     subroutines = []
 
+    getToken()
     while True:
-        getToken()
         if token.type == EOF: break
-        if found(IDENTIFIER):
+        # look only for sequences or waveforms
+        if found("SEQUENCE") or found("WAVEFORM"):
+            # consume whichever keyword was found
+            if found("SEQUENCE"):
+                consume("SEQUENCE")
+            if found("WAVEFORM"):
+                consume("WAVEFORM")
+
+            # next token has to be an identifier
             name = token.cargo
             consume(IDENTIFIER)
-            if found("{"):
-                subroutines.append(name)
-                consume("{")
-                while not found("}"):
-                    getToken()
+
+            # if there is an appended Python command then strip it
+            if found("."):
+                consume(".")
+                python_commands()
+            # otherwise there ought to be open and close braces
+            consume("{")
+            while not found("}"):
+                getToken()
+                if token.type == EOF: break
+            consume("}")
+            # finally! add the name to the list of subroutines
+            subroutines.append(name)
+        else:
+            getToken()
 
     return subroutines
 
