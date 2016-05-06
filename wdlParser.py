@@ -183,6 +183,7 @@ def dio(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             source = token.cargo
             if source != "0" and source != "1" and source != "2" and source != "3":
@@ -219,6 +220,7 @@ def diopower(slotNumber):
 
     consume("=")
     while not found(";"):
+        if token.type == EOF: break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
@@ -261,6 +263,7 @@ def preampgain(slotNumber):
 
     consume("=")
     while not found(";"):
+        if token.type == EOF: break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
@@ -309,6 +312,7 @@ def clamp(slotNumber):
     consume(NUMBER)
     consume("=")
     while not found(";"):
+        if token.type == EOF: break
         if found(NUMBER):
             clamp = token.cargo
         consume(NUMBER)
@@ -341,6 +345,7 @@ def hvhc(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
@@ -396,6 +401,7 @@ def hvlc(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
@@ -438,6 +444,7 @@ def drv(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
@@ -499,6 +506,7 @@ def slot():
     # check for the waveform rules.
     consume("{")
     while not found("}"):
+        if token.type == EOF: break
         if found("DRV"):
             consume("DRV")
             drv(slotNumber)
@@ -613,6 +621,7 @@ def time():
 
     # form an equation from which the time will be evaluated using everything up to the ":"
     while not found(":"):
+        if token.type == EOF: break
         if found(IDENTIFIER):
             # if we found a time stamp label then get its actual time from the dictionary
             if token.cargo in timeStamps:
@@ -653,6 +662,7 @@ def set():
         consume("[")
 
     while not found(","):
+        if token.type == EOF: break
         # SLOT
         if found (NUMBER):
             setSlot.append(token.cargo)
@@ -833,6 +843,7 @@ def waveform():
                                   str(setSlot[index])          + " " +\
                                   str(2*int(setChan[index])-1) + " " +\
                                   str(setSlew)                 + "\n"
+        if token.type == EOF: break
     consume("}")
 
     # "RETURN" marks the end of the waveform output
@@ -920,6 +931,7 @@ def generic_sequence(*sequenceName):
         sequenceLine = ""
         # process until end-of-line
         while not found(";"):
+            if token.type == EOF: break
             if  ( found(IDENTIFIER) ) and \
                 ( token.cargo not in subroutines ) and \
                 ( token.cargo not in paramNames ):
