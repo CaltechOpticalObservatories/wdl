@@ -183,6 +183,7 @@ def dio(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             source = token.cargo
             if source != "0" and source != "1" and source != "2" and source != "3":
@@ -219,6 +220,7 @@ def diopower(slotNumber):
 
     consume("=")
     while not found(";"):
+        if token.type == EOF: break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
@@ -261,6 +263,7 @@ def preampgain(slotNumber):
 
     consume("=")
     while not found(";"):
+        if token.type == EOF: break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
@@ -309,6 +312,7 @@ def clamp(slotNumber):
     consume(NUMBER)
     consume("=")
     while not found(";"):
+        if token.type == EOF: break
         if found(NUMBER):
             clamp = token.cargo
         consume(NUMBER)
@@ -341,6 +345,7 @@ def hvhc(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
@@ -396,6 +401,7 @@ def hvlc(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
@@ -438,6 +444,7 @@ def drv(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
+        if token.type == EOF: break
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
@@ -499,6 +506,7 @@ def slot():
     # check for the waveform rules.
     consume("{")
     while not found("}"):
+        if token.type == EOF: break
         if found("DRV"):
             consume("DRV")
             drv(slotNumber)
@@ -613,6 +621,7 @@ def time():
 
     # form an equation from which the time will be evaluated using everything up to the ":"
     while not found(":"):
+        if token.type == EOF: break
         if found(IDENTIFIER):
             # if we found a time stamp label then get its actual time from the dictionary
             if token.cargo in timeStamps:
@@ -653,6 +662,7 @@ def set():
         consume("[")
 
     while not found(","):
+        if token.type == EOF: break
         # SLOT
         if found (NUMBER):
             setSlot.append(token.cargo)
@@ -778,23 +788,6 @@ def waverules():
     eol()
 
 # -----------------------------------------------------------------------------
-# @fn     wavelabel
-# @brief  
-# @param  none
-# @return none
-# -----------------------------------------------------------------------------
-def wavelabel():
-    """
-    """
-    if found(IDENTIFIER):
-        waveformName = token.cargo
-    else:
-        print( "missing waveform label", file=sys.stderr )
-        waveformName = ""
-    consume(IDENTIFIER)
-    return waveformName
-
-# -----------------------------------------------------------------------------
 # @fn     waveform
 # @brief  waveform definition
 # @param  none
@@ -820,7 +813,7 @@ def waveform():
     consume("WAVEFORM")
 
     # ...followed by a label for the waveform.
-    waveformName = wavelabel()
+    waveformName = name_label()
     outputText   += "waveform " + waveformName + ":" + "\n"
 
     # Then, until the end of the waveform (delimited by curly brace),
@@ -850,6 +843,7 @@ def waveform():
                                   str(setSlot[index])          + " " +\
                                   str(2*int(setChan[index])-1) + " " +\
                                   str(setSlew)                 + "\n"
+        if token.type == EOF: break
     consume("}")
 
     # "RETURN" marks the end of the waveform output
@@ -860,21 +854,60 @@ def waveform():
     return outputText
 
 # -----------------------------------------------------------------------------
-# @fn     sequence_label
-# @brief  
+# @fn     python_commands
+# @brief  parse python command text appended to a sequence|waveform label name
 # @param  none
 # @return sequence name
 # -----------------------------------------------------------------------------
-def sequence_label():
+def python_commands():
     """
+    Parses the python command text appended to a sequence|waveform label name.
+    The period "." is consumed before calling this function so that the next
+    token available is the identifier of the python command. Require open
+    and close parentheses and copy everthing inbetween.
+    """
+    global token
+    pyCommand = token.cargo         # first token is the name label itself
+    consume("IDENTIFIER")
+    pyCommand += token.cargo        # next must be an open paren
+    consume("(")
+    while not found(")"):           # copy everything until a close paren
+        if token.type == EOF: break
+        pyCommand += token.cargo
+        getToken()
+    pyCommand += token.cargo
+    consume(")")
+    return pyCommand
+
+# -----------------------------------------------------------------------------
+# @fn     name_label
+# @brief  parses the name label for waveforms and sequences
+# @param  none
+# @return waveform|sequence name
+# -----------------------------------------------------------------------------
+def name_label():
+    """
+    Parses the name label for waveforms and sequences. The name identifier
+    can also be followed with ".pythoncommand(arg1=arg, arg2=arg, ...)".
+    The name can be a simple identifier but if followed by a period then there
+    must be another identifier followed by open/close parentheses. The contents
+    within the parentheses are not examined.
     """
     global token
 
     if found(IDENTIFIER):
         name = token.cargo
     else:
+        print( "waveform or sequence missing name label", file=sys.stderr )
         name = ""
-    consume(IDENTIFIER)
+    consume(IDENTIFIER)   # require an identifier for sequence|waveform name
+
+    # If there is a period after the sequence name, then require that
+    # it be followed by another set of rules
+    if found("."):
+        consume(".")      # next token will be examined in python_commands()
+        pyextension = python_commands()
+        name += ("." + pyextension)
     return name
 
 # -----------------------------------------------------------------------------
@@ -898,6 +931,7 @@ def generic_sequence(*sequenceName):
         sequenceLine = ""
         # process until end-of-line
         while not found(";"):
+            if token.type == EOF: break
             if  ( found(IDENTIFIER) ) and \
                 ( token.cargo not in subroutines ) and \
                 ( token.cargo not in paramNames ):
@@ -959,7 +993,7 @@ def sequence():
     global subroutines
 
     consume("SEQUENCE")
-    sequenceName = sequence_label()
+    sequenceName = name_label()
     outputText = "sequence " + sequenceName + ":" + "\n"
     outputText += generic_sequence(sequenceName) + "\n"
     return outputText
