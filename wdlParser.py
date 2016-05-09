@@ -16,6 +16,7 @@
 # @modified 2016-04-19 DH implement manual sequence return
 # @modified 2016-04-21 DH fix bug in waveform() for manual sequence return
 # @modified 2016-05-06 DH parse Python commands and clean up get_subroutines()
+# @modified 2016-05-09 DH return pyextension separately from label name
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -815,8 +816,8 @@ def waveform():
     consume("WAVEFORM")
 
     # ...followed by a label for the waveform.
-    waveformName = name_label()
-    outputText   += "waveform " + waveformName + ":" + "\n"
+    waveformName, pyextension = name_label()
+    outputText   += "waveform " + waveformName + pyextension + ":" + "\n"
 
     # Then, until the end of the waveform (delimited by curly brace),
     # check for the waveform rules.
@@ -885,7 +886,10 @@ def python_commands():
 # @fn     name_label
 # @brief  parses the name label for waveforms and sequences
 # @param  none
-# @return waveform|sequence name
+# @return waveform|sequence name, pyextension
+#
+# The waveform|sequence name is returned as a separate element from the
+# python extension, so that they can be used individually
 # -----------------------------------------------------------------------------
 def name_label():
     """
@@ -908,9 +912,10 @@ def name_label():
     # it be followed by another set of rules
     if found("."):
         consume(".")      # next token will be examined in python_commands()
-        pyextension = python_commands()
-        name += ("." + pyextension)
-    return name
+        pyextension = "." + python_commands()
+    else:
+        pyextension = ""
+    return name, pyextension
 
 # -----------------------------------------------------------------------------
 # @fn     generic_sequence
@@ -995,8 +1000,8 @@ def sequence():
     global subroutines
 
     consume("SEQUENCE")
-    sequenceName = name_label()
-    outputText = "sequence " + sequenceName + ":" + "\n"
+    sequenceName, pyextension = name_label()
+    outputText = "sequence " + sequenceName + pyextension + ":" + "\n"
     outputText += generic_sequence(sequenceName) + "\n"
     return outputText
 
