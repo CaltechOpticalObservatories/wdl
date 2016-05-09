@@ -138,7 +138,7 @@ def get():
 		getChar() # read past the second character of a 2-character token
 		return token
 
-	if c1 in OneCharacterSymbols:
+	if c1 in OneCharacterSymbols or c1 in PreSpaceSymbols:
 		token.type  = token.cargo  # for symbols, the token type is same as the cargo
 		getChar() # read past the symbol
 		return token
@@ -146,6 +146,7 @@ def get():
 	# else.... We have encountered something that we don't recognize.
 	print OneCharacterSymbols
 	print TwoCharacterSymbols
+	print PreSpaceSymbols
 	print hex(ord(c1))
 	token.abort("I found a character or symbol that I do not recognize: " + dq(c1))
 

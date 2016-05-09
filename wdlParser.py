@@ -973,10 +973,12 @@ def generic_sequence(*sequenceName):
                 break
             else:
                 sequenceLine += token.cargo
+            prevToken = token.cargo
             getToken()
             # if next token not a symbol then pad with a space
             if token.cargo not in TwoCharacterSymbols and \
-               token.cargo not in OneCharacterSymbols:
+               token.cargo not in OneCharacterSymbols and \
+               prevToken   not in PreSpaceSymbols:
                 sequenceLine += " "
         # line must end with a semi-colon
         consume(";")

@@ -39,10 +39,18 @@ FAST
 Keywords = Keywords.split()
 
 #----------------------------------------------------------
+# a list of symbols that require a leading space and no trailing space
+#----------------------------------------------------------
+PreSpaceSymbols = """
+!
+"""
+PreSpaceSymbols = PreSpaceSymbols.split()
+
+#----------------------------------------------------------
 # a list of symbols that are one character long
 #----------------------------------------------------------
 OneCharacterSymbols = """
-! =
+=
 ( )
 [ ]
 { }
