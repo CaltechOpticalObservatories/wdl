@@ -24,9 +24,7 @@ UniqueStateArr   = np.array([]);
 Catalog          = {'Name':[],
                     'Time':[],
                     'TimeSegment': [],
-                    'Type': [],
-                    'ParamList': [], # list of parameters in this object
-                    'ExitState': []}
+                    'Type': []}
 Parameters       = {} # all of the parameters
 __SignalByName__ = {}
 __SignalByIndx__ = {}
@@ -312,15 +310,11 @@ and there is no auto-generated end to the segment"""
             Catalog['Time'].append(np.nan)
             Catalog['TimeSegment'].append(self)
             Catalog['Type'].append(TStype)
-            Catalog['ParamList'].append([])
-            Catalog['ExitState'].append(0)
         else: # or reinitialize entry in Catalog
             self.label = __index_of__(name)
             Catalog['Time'][self.label] = np.nan
             Catalog['TimeSegment'][self.label] = self
             Catalog['Type'][self.label] = TStype
-            Catalog['ParamList'][self.label] = []
-            Catalog['ExitState'][self.label] = 0
                                             
         if NotifyTSTypeChange:
             print "invalid TimingSegment type (TStype) specified: %s"%TStype_orig
@@ -358,7 +352,12 @@ and there is no auto-generated end to the segment"""
                               len(self.events['back']) +
                               len(self.events['hvbd']) ))  
             UniqueStateArr = np.reshape(np.vstack((levels,keeps)), (1,-1), 'F')
-        
+
+        # Default exit state and level (not necessarily consistent!)
+        self.ExitState = 0
+        self.ExitLevel = UniqueStateArr[0:1,0::2]
+        # other defaults
+        self.Params = {};
 
     def __tmax(self,reset=False):
         """ determines the number of periods in the timing script """
@@ -408,8 +407,12 @@ and there is no auto-generated end to the segment"""
                     level[tt,chan] = definition[chan][jj][1]
         return level, keep
 
-    def __make_waves(self):
-        """ mave waveform from the event array """
+    def __make_states(self):
+        """Make the state array from the event array. In here are the initial
+definitions of do_anything_tt, do_anything_dt, unique_state_ID and
+__sequence_list__.  Adds new states to UniqueStateArr.
+
+        """
 
         # enlarge nperiods, if necessary, to encompass all events
         self.nperiods = self.__tmax()
@@ -497,7 +500,7 @@ and there is no auto-generated end to the segment"""
         self.__sequence_list__= sequence_list
 
         return
-        # end of __make_waves
+        # end of __make_states
 
     def script(self, outfile=sys.stdout):
         """Append script to file or file handle, generates new unique states
@@ -507,8 +510,10 @@ exit state and the parameters used in Catalog """
         if type(outfile)==str:
             outfile = open(outfile, 'a')
 
-        self.__make_waves()
+        if not hasattr(self,'unique_state_ID'):
+            self.__make_states()
         global Catalog
+        global Parameters
         global __padmax__
 
         scriptName = Catalog['Name'][self.label]
@@ -533,10 +538,14 @@ exit state and the parameters used in Catalog """
             count += 1
             time  += 1
             pad   -= 11
-            outfile.write("STATE%03d; "%(unique_state_ID[do_anything_tt[jj]]))
+            this_state = unique_state_ID[do_anything_tt[jj]]
+            outfile.write("STATE%03d; "%(this_state))
             # over write the exit state if the unique_state_ID is nonzero
-            if unique_state_ID[do_anything_tt[jj]] > 0:
-                Catalog['ExitState'][self.label] = unique_state_ID[do_anything_tt[jj]]
+            if this_state > 0:
+                self.ExitState = this_state
+                # until __make_waveform is run, this is the best guess
+                # for the exit levels
+                self.ExitLevel = UniqueStateArr[this_state:this_state+1,0::2]
             this_sub_call = self.__sequence_list__[do_anything_tt[jj]]
             # true condition means this is a subroutine call, not a state change.
             if (this_sub_call != ''): 
@@ -549,17 +558,21 @@ exit state and the parameters used in Catalog """
                     this_param = regexmatch.group(1)
                     try: # test if this_param is an integer
                         int(this_param)
-                    except: # if its not, then its a parameter, so add it to the Catalog.
-                        if this_param not in Catalog['ParamList'][self.label]:
-                            Catalog['ParamList'][self.label].append(this_param)
+                    except: # if its not, then its a parameter, so add it to self.Param dict
+                        if this_param not in self.Params.keys():
+                            if this_param not in Parameters.keys():
+                                Parameters.update({this_param:0}) # use 0 as default param value
+                            self.Params.update({this_param:Parameters[this_param]})
                 if '--' in this_sub_call: # increment count for Param--'s
                     # this assumes that the decrement is not happening in the IF TEST part of a call
                     # is something like IF TEST-- TEST2-- even legal in ACF?
                     count += 1
                     time  += 1
                     this_param = this_sub_call[:-2]  # I'm assuming it's a bare call
-                    if this_param not in Catalog['ParamList'][self.label]:
-                        Catalog['ParamList'][self.label].append(this_param)
+                    if this_param not in self.Params.keys():
+                        if this_param not in Parameters.keys():
+                            Parameters.update({this_param:0}) # use 0 as default param value
+                        self.Params.update({this_param:Parameters[this_param]})
                 else:
                     # parse the label name and iterations from the sub call
                     # and use that info to calculate the time.
@@ -576,8 +589,10 @@ exit state and the parameters used in Catalog """
                         this_sub_iterations = 1
                         if regexmatch.lastindex > 2:
                             this_param = regexmatch.group(4)
-                            if this_param not in Catalog['ParamList'][self.label]:
-                                Catalog['ParamList'][self.label].append(this_param)
+                            if this_param not in self.Params.keys():
+                                if this_param not in Parameters.keys():
+                                    Parameters.update({this_param:0}) # use 0 as default param value
+                                self.Params.update({this_param:Parameters[this_param]})
                     if this_sub_name in Catalog['Name']:
                         this_sub_time = Catalog['Time'][__index_of__(this_sub_name)]
                     else:
@@ -589,14 +604,13 @@ exit state and the parameters used in Catalog """
                         Catalog['Time'].append(this_sub_time)
                         Catalog['TimeSegment'].append(None)
                         Catalog['Type'].append('')
-                        Catalog['ParamList'].append([])
-                        Catalog['ExitState'].append(0)
                     if this_sub_command.upper() == 'CALL':
                         # only add time if this is not a call to itself (usually RETURN)
                         time += this_sub_time * this_sub_iterations
-                        # update the exit state with that of the subroutine
-                        if  Catalog['ExitState'][__index_of__(this_sub_name)] != 0:
-                            Catalog['ExitState'][self.label] = Catalog['ExitState'][__index_of__(this_sub_name)]
+                        # update the exit state and level with that of the subroutine
+                        if  Catalog['TimeSegment'][__index_of__(this_sub_name)].ExitState != 0:
+                            self.ExitState = Catalog['TimeSegment'][__index_of__(this_sub_name)].ExitState
+                            self.ExitLevel = Catalog['TimeSegment'][__index_of__(this_sub_name)].ExitLevel
             ## END OF SUBROUTINE PARSING
             if (do_anything_tt[jj] == self.nperiods - 1):
                 if self.endline == -1:
@@ -628,7 +642,76 @@ exit state and the parameters used in Catalog """
 
         return True
 
-    def plot(self, initialState=-1, cycles=2):
+    def __make_waveform(self, initialLevel=[]):
+        """ generate a signal-level matrix from the state array """
+        global UniqueStateArr
+        global Catalog
+        state_arr = UniqueStateArr[self.unique_state_ID.astype('int'),:]
+        keep  = state_arr[:,1::2].astype('bool')
+        level = state_arr[:,0::2]
+
+        if initialLevel == []:
+            initialLevel = self.ExitLevel
+
+        ##true level should be generated incrementally with  calls to subs.
+        true_level = initialLevel
+        this_level = np.zeros(np.shape(true_level))
+        for tt in range(self.nperiods):
+            this_level[0, keep[tt,:]] = true_level[-1, keep[tt,:]] # keep
+            this_level[0,~keep[tt,:]] =      level[tt,~keep[tt,:]] # get new values
+            true_level = np.vstack((true_level,this_level))
+            if self.__sequence_list__[tt] != '':
+                match = re.search('(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?'+
+                                  '((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?'+
+                                  '(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?', self.__sequence_list__[tt])
+                ## REGEX labels:
+                #  N0: negation of IF test (!)
+                #  P0: IF test parameter 
+                #  D0: decrement of test parameter (--)
+                #  CMD: branching command (RETURN, GOTO or CALL)
+                #  TS: Time segment to call
+                #  P1: Parameter
+                #  D1: Parameter decrement (--)
+                runcmd = True
+                if match.group('P0') != None:
+                    runcmd = self.Params[match.group('P0')]
+                    if match.group('N0') == '!':
+                        runcmd = not runcmd
+                    if (match.group('D0') == '--' and #decrement P0
+                        self.Params[match.group('P0')] > 0):
+                        self.Params[match.group('P0')] -= 1
+                if runcmd:
+                    if match.group('P1') != None:
+                        repeats = self.Params[match.group('P1')]
+                    else:
+                        repeats = 1
+                    if (match.group('D1') == '--' and  #decrement P0
+                        self.Params[match.group('P1')] > 0):
+                        self.Params[match.group('P1')] -= 1
+                    if match.group('CMD') == 'CALL' and match.group('TS') != None:
+                        print 'calling %s'%match.group('TS')
+                        TSindx  = __index_of__(match.group('TS'))
+                        for jj in range(repeats):
+                            calledLevel = Catalog['TimeSegment'][TSindx].__make_waveform(this_level)
+                            true_level = np.vstack((true_level,calledLevel))
+                            this_level = true_level[-1:,:];
+                            
+                    
+#                match = re.search('CALL (\w+)',self.__sequence_list__[tt])
+#                if match != None and match.lastindex > 0:
+#                    callTSname = match.group(1)
+#                    print 'calling %s'%callTSname
+#                    callTSlevel = Catalog['TimeSegment'][__index_of__(callTSname)]\
+#                        .__make_waveform(initialLevel=this_level)
+#                    true_level = np.vstack((true_level,callTSlevel))
+#                    
+        # chop off the initial condition.
+        true_level = true_level[1:,:]
+        # update the Exit level
+        self.ExitLevel = true_level[-1:,:] # colon after -1 keeps the array 2D
+        return true_level
+            
+    def plot(self, cycles=2, initialLevel=[]):
         """plot the states in the timing script. optionally takes an initial
 condition (default=last non-zero state) """
 
@@ -636,34 +719,22 @@ condition (default=last non-zero state) """
         if Catalog['Type'][self.label] == 'sequence':
             print 'plt_waves is intended for waveforms. this object is a sequence'
             print 'Warning: results may not make sense.'
-        self.__make_waves()
-        global period_ns
-        period_us = period_ns / 1000.
-        time  = np.arange(cycles * self.nperiods) * period_us
+        if not hasattr(self,'unique_state_ID'):
+            self.__make_states()
+
+
         global UniqueStateArr
         state_arr = UniqueStateArr[self.unique_state_ID.astype('int'),:]
         keep  = state_arr[:,1::2].astype('bool')
         level = state_arr[:,0::2]
-        n_var = np.size(level,1)
-        # set the initial condition to the specified state or (if <0),
-        # the last non-do_nothing_state in unique_state_ID list
-        if initialState < 0:
-            try:
-                initialState = self.unique_state_ID[mlab.find(self.unique_state_ID)[-1]]
-            except:
-                initialState = 0 # didn't find a do-something state in the waveform
-        IC = UniqueStateArr[initialState,0::2]
 
-        # Calculate the waveform level(ax 1) vs time(ax 0) for each channel
-        true_level = np.zeros((cycles*self.nperiods,n_var))
-        true_level[-1,:] = IC; # handles initial condition, but is overwritten on first pass
-        for tt in range(cycles*self.nperiods):
-            tnow  = np.mod(tt,self.nperiods)
-            tprev = np.mod(tt-1,np.size(true_level,0))
-            true_level[tt, keep[tnow,:]] = true_level[tprev, keep[tnow,:]]
-            true_level[tt,~keep[tnow,:]] =      level[tnow ,~keep[tnow,:]]
-        # "CHannel Of Interest": channels which are not kept in all states
-        choi = ~np.all(keep,0)
+        if initialLevel == []:
+            initialLevel = self.ExitLevel
+        true_level = np.zeros((0,np.shape(level)[1])); # 0xN empty array
+        for jj in range(cycles):
+            true_level = np.vstack((true_level, self.__make_waveform(initialLevel)))
+            initialLevel = self.ExitLevel
+
         # find the static channels
         nonstatic = np.amax(true_level,0) != np.amin(true_level,0)
         # find the commanded channels
@@ -695,13 +766,16 @@ condition (default=last non-zero state) """
                 # left, bottom, width, height (range 0 to 1)
                 axes.append(fig.add_axes([figXLeft, figYBtm + kk*vspace + vgap,
                                           0.97 - figXLeft, vspace*(1-gap)]))
+                global period_ns
+                period_us = period_ns / 1000.
+                time = np.arange(np.shape(true_level)[0]) * period_us
                 axes[kk].plot(time,true_level[:,thisSigID])
                 axes[kk].set_ylabel('%s\n%s\n(%d,%d)'%(boardname,thisSigLabel,thisSlot,thisChan+1))
                 yy = axes[kk].set_ylim()
                 dy = np.diff(yy)
                 yy = axes[kk].set_ylim((yy[0] - .1*dy, yy[1] + .1*dy))
                 for nn in range(cycles):
-                    axes[kk].plot([self.nperiods * period_us * (nn+1)]*2, yy,'k--')
+                    axes[kk].plot([len(time)/cycles * period_us * (nn+1)]*2, yy,'k--')
                 axes[kk].grid('on')
                 if kk > 0:
                     axes[kk].set_xticklabels([])
@@ -710,7 +784,7 @@ condition (default=last non-zero state) """
             plt.draw()
             print '(Figure %d)'%(self.label),
         print '---'
-        # report levels of commanded and static signals
+        # report levels of signals that are commanded, but static
         staticID = mlab.find(commanded & ~nonstatic)
         for thisID in staticID:
             if thisID in __SignalByIndx__.keys():
@@ -723,7 +797,7 @@ condition (default=last non-zero state) """
                 print "  %s %s= %3g"%(thisLabel,' '*(16-len(thisLabel)),thisLevel)
             except:
                 Tracer()()
-        return true_level[0:self.nperiods,:] # returns only the first loop
+        return
 
 def state(outfile=sys.stdout):
     """ write states from the UniqueStateArr to the file or file handle specified """
@@ -882,7 +956,7 @@ def catalog(MagicNullArgument=None):
     for jj in range(len(Catalog['Time'])):
         print "%4d:  %-32s %-8s   %03d %10.2f"%(jj,Catalog['Name'][jj], 
                                                 Catalog['Type'][jj],    
-                                                Catalog['ExitState'][jj],
+                                                Catalog['TimeSegment'][jj].ExitState,
                                                 Catalog['Time'][jj]/100.)
 
 # @register_line_magic
