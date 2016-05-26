@@ -30,7 +30,7 @@ __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
 __TStypes__      = ('','waveform','sequence')
-GenerateFigs     = True # set to False to suppress plotting when loadWDL is called.
+GenerateFigs     = False # set to True to plot waveforms when loadWDL is called.
 __padmax__       = 25 # padding for comments in script
 
 def loadWDL(infile,outfile='/dev/null'):
@@ -164,12 +164,12 @@ Use 'stdout' or sys.stdout to dump to terminal. """
             print "Running user-specified commands..."
         for usercmd in usercommands:
             eval('usercmd[0](%s)'%usercmd[1]);
-#        global GenerateFigs
-#        if GenerateFigs:
-#            print 'Generating figures...'
-#            indxWaveform = mlab.find(np.array(Catalog['Type']) == 'waveform')
-#            for kk in indxWaveform:
-#                Catalog['TimeSegment'][kk].plot()
+        global GenerateFigs
+        if GenerateFigs:
+            print 'Generating figures...'
+            indxWaveform = mlab.find(np.array(Catalog['Type']) == 'waveform')
+            for kk in indxWaveform:
+                Catalog['TimeSegment'][kk].plot()
     return
 
 def __loadMod__(ModFile):
