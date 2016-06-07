@@ -17,6 +17,7 @@
 # @modified 2016-04-21 DH fix bug in waveform() for manual sequence return
 # @modified 2016-05-06 DH parse Python commands and clean up get_subroutines()
 # @modified 2016-05-09 DH return pyextension separately from label name
+# @modified 2016-06-07 DH allow for signed values of CLAMP
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -315,8 +316,15 @@ def clamp(slotNumber):
     consume("=")
     while not found(";"):
         if token.type == EOF: break
+
+        # could have a negative number...
+        sign = +1
+        if found("-"):
+            consume("-")
+            sign = -1
+
         if found(NUMBER):
-            clamp = token.cargo
+            clamp = sign * token.cargo
         consume(NUMBER)
     consume(";")
 
