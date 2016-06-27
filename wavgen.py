@@ -901,8 +901,11 @@ def state(outfile=sys.stdout):
         RP_label = __index_of__('RawPixel')
         RP_time  = Catalog['Time'][RP_label]
         samples_per_line = Parameters['Pixels'] * RP_time
-        rawsamples_per_line = int(np.ceil(samples_per_line / 1024.) * 1024)
+        rawsamples_per_line = int(np.floor(samples_per_line / 1024.) * 1024)
+        rawsamples_per_line = max(rawsamples_per_line, 1024)
         outfile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
+        if samples_per_line != rawsamples_per_line:
+            print('Warning: %d samples per line will be skipped'%(samples_per_line-rawsamples_per_line))
     if outfile.name != '<stdout>': # don't close stdout!
         outfile.close()
 
