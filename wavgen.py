@@ -33,7 +33,7 @@ __TStypes__      = ('','waveform','sequence')
 GenerateFigs     = False # set to True to plot waveforms when loadWDL is called.
 __padmax__       = 25 # padding for comments in script
 
-def loadWDL(infile,outfile='/dev/null'):
+def loadWDL(infile,outfile='/dev/null',verbose=1):
     """Load a WDL compiled waveform, write ACF state and script files.
 Automatically generates plots for non-static signals in waveforms.
 Use 'stdout' or sys.stdout to dump to terminal. """
@@ -158,8 +158,9 @@ Use 'stdout' or sys.stdout to dump to terminal. """
         state(outfile + '.states');
         print 'Wrote states to %s.states'%outfile
     if ok:
-        print 'Catalog of timing objects:'
-        catalog()
+        if verbose > 0:
+            print 'Catalog of timing objects:'
+            catalog()
         if len(usercommands) > 0:
             print "Running user-specified commands..."
         for usercmd in usercommands:
