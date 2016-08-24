@@ -18,6 +18,7 @@
 # @modified 2016-05-06 DH parse Python commands and clean up get_subroutines()
 # @modified 2016-05-09 DH return pyextension separately from label name
 # @modified 2016-06-07 DH allow for signed values of CLAMP
+# @modified 2016-08-23 DH implemented \???_LABEL
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -199,8 +200,15 @@ def dio(slotNumber):
                 error("DIO direction " + dq(direction) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
     consume(";")
 
+    dioOutput += "MOD" + slotNumber + "\DIO_LABEL"  + dioChan + "=" + label     + "\n"
     dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
     dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
 
@@ -380,11 +388,18 @@ def hvhc(slotNumber):
                 error("HVHC enable " + dq(enable) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
     consume(";")
 
-    hvhOutput += "MOD" + slotNumber + "\HVHC_ENABLE"  + hvhChan + "=" + enable + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_V"  + hvhChan + "=" + volts   + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_IL" + hvhChan + "=" + current + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL"   + hvhChan + "=" + label   + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_ENABLE"  + hvhChan + "=" + enable  + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_V"       + hvhChan + "=" + volts   + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_IL"      + hvhChan + "=" + current + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER"   + hvhChan + "=" + order   + "\n"
 
 # -----------------------------------------------------------------------------
@@ -425,10 +440,17 @@ def hvlc(slotNumber):
                 error("HVLC order " + dq(order) + " outside range [0..24]")
         consume(NUMBER)
     consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
     consume(";")
 
-    hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
-    hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER"  + hvlChan + "=" + order + "\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + label + "\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_V"     + hvlChan + "=" + volts + "\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER" + hvlChan + "=" + order + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     drv
@@ -474,8 +496,15 @@ def drv(slotNumber):
                 error("DRV enable " + dq(enable) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
     consume(";")
 
+    drvOutput += "MOD" + slotNumber + "\LABEL"        + drvChan + "=" + label    + "\n"
     drvOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
     drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
     drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
