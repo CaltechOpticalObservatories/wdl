@@ -208,9 +208,10 @@ def dio(slotNumber):
         label=""
     consume(";")
 
-    dioOutput += "MOD" + slotNumber + "\DIO_LABEL"  + dioChan + "=" + label     + "\n"
     dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
     dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
+    if (label != ""):
+        dioOutput += "MOD" + slotNumber + "\DIO_LABEL" + dioChan + "=" + label     + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     diopower
@@ -396,11 +397,12 @@ def hvhc(slotNumber):
         label=""
     consume(";")
 
-    hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL"   + hvhChan + "=" + label   + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_ENABLE"  + hvhChan + "=" + enable  + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_V"       + hvhChan + "=" + volts   + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_IL"      + hvhChan + "=" + current + "\n"
     hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER"   + hvhChan + "=" + order   + "\n"
+    if (label != ""):
+        hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL" + hvhChan + "=" + label + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     hvlc
@@ -448,9 +450,10 @@ def hvlc(slotNumber):
         label=""
     consume(";")
 
-    hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + label + "\n"
     hvlOutput += "MOD" + slotNumber + "\HVLC_V"     + hvlChan + "=" + volts + "\n"
     hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER" + hvlChan + "=" + order + "\n"
+    if (label != ""):
+        hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + label + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     drv
@@ -504,10 +507,11 @@ def drv(slotNumber):
         label=""
     consume(";")
 
-    drvOutput += "MOD" + slotNumber + "\LABEL"        + drvChan + "=" + label    + "\n"
     drvOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
     drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
     drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
+    if (label != ""):
+        drvOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=" + label + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     slot
