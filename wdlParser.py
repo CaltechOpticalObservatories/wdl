@@ -19,6 +19,7 @@
 # @modified 2016-05-09 DH return pyextension separately from label name
 # @modified 2016-06-07 DH allow for signed values of CLAMP
 # @modified 2016-08-23 DH implemented \???_LABEL
+# @modified 2016-09-21 DH allow RETURN to alternate sequences, waveforms
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -41,7 +42,8 @@ subroutines   = []
 evalTime      = 0    # evaluated time for waveform line
 maxTime       = 0    # max time for each waveform
 wavReturnTime = 0    # time at which a waveform has manually specified a return
-wavReturn     = False
+wavReturnTo   = ""   # optional, alternate waveform name to return to (not supported by wavgen)
+wavReturn     = False # manual RETURN specified
 timeStamps    = {}   # dictionary of time stamps, timelabel:time
 drvOutput     = ""
 adcOutput     = ""
@@ -623,13 +625,20 @@ def wav_return():
     global evalTime
     global maxTime
     global wavReturnTime
+    global wavReturnTo
     global wavReturn
     global setSlew
 
+    # manual return specified
     if found("RETURN"):
         consume("RETURN")
         wavReturn = True
         wavReturnTime = evalTime
+        # alternate waveform name to return to (other than current waveform)
+        # currently not supported by wavgen.py
+        if found(IDENTIFIER):
+            wavReturnTo = token.cargo
+            consume(IDENTIFIER)
     else:
         wavReturn = False
         # If manual return not specified then remember the max time, for the RETURN
@@ -848,8 +857,10 @@ def waveform():
     global setSlew
     global wavReturn
     global wavReturnTime
+    global wavReturnTo
 
     outputText = ""
+    wavReturnTo= ""
     maxTime    = 0
     wavReturn  = False  # True if a manual waveform return is specified
 
@@ -867,7 +878,10 @@ def waveform():
         waverules()
         # If a manual waveform return was specified then write it here,
         if wavReturn:
-            outputText += str(wavReturnTime) + " RETURN " + waveformName + "\n\n"
+            # if an alternate return name not specified then the default is current waveform
+            if wavReturnTo == "":
+                wavReturnTo = waveformName
+            outputText += str(wavReturnTime) + " RETURN " + wavReturnTo + "\n\n"
         # otherwise loop through all the slots that were set and write a line for each
         else:
             for index in range(len(setSlot)):
@@ -1010,7 +1024,14 @@ def generic_sequence(*sequenceName):
                     sequenceLine += "(" + token.cargo #+ ")"
             elif found("RETURN"):
                 consume("RETURN")
-                outputText += "RETURN " + sequenceName[0] + "\n"
+                # check for an alternate sequence specified for the return
+                if found(IDENTIFIER):
+                    seqReturnTo = token.cargo
+                    consume(IDENTIFIER)
+                # use the current sequenceName as the default, if none specified
+                else:
+                    seqReturnTo = sequenceName[0]
+                outputText += "RETURN " + seqReturnTo + "\n"
                 break
             else:
                 sequenceLine += token.cargo
