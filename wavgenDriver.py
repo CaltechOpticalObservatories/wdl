@@ -15,7 +15,7 @@ import sys
 sys.dont_write_bytecode = True
 sys.tracebacklimit=0
 import fileinput
-import wavgen
+import wavgen_sparse as wavgen
 import matplotlib.pyplot as plt
 
 # -----------------------------------------------------------------------------
