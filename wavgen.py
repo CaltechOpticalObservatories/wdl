@@ -401,11 +401,10 @@ and there is no auto-generated end to the segment"""
             level[:,1::2] = 1
 
         for chan in range(n_defs): # loop over channels
-            if len(definition[chan]) > 0:   # loop over state entries (time,val)
-                for jj in range(len(definition[chan])): # loop over entries
-                    tt = definition[chan][jj][0]
-                    keep[tt,chan] = False
-                    level[tt,chan] = definition[chan][jj][1]
+            for jj in range(len(definition[chan])): # loop over entries
+                tt = definition[chan][jj][0]
+                keep[tt,chan] = False
+                level[tt,chan] = definition[chan][jj][1]
         return level, keep
 
     def __make_states(self):
