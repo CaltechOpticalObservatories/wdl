@@ -1,11 +1,12 @@
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
+import scipy.sparse as sparse # need 0.18.1
 import re,sys, os
 sys.dont_write_bytecode = True
-from IPython.core.debugger import Tracer
-from IPython.core.magic import register_line_magic
-from timeit import default_timer as timer
+#from IPython.core.debugger import Tracer
+#lfrom IPython.core.magic import register_line_magic
+#import time as t
 
 # system parameters
 period_ns        = 10  # ns
@@ -21,10 +22,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'back' : 6,
                        'hvbd' : 30 }
 UniqueStateArr   = np.array([]);
-Catalog          = {'Name':[],
-                    'Time':[],
-                    'TimeSegment': [],
-                    'Type': []}
+Catalog          = [] # list of all TimingSegment objects
 Parameters       = {} # all of the parameters
 __SignalByName__ = {}
 __SignalByIndx__ = {}
@@ -168,9 +166,10 @@ Use 'stdout' or sys.stdout to dump to terminal. """
         global GenerateFigs
         if GenerateFigs:
             print 'Generating figures...'
-            indxWaveform = mlab.find(np.array(Catalog['Type']) == 'waveform')
+            tstypes = np.array([obj.tstype for obj in Catalog])
+            indxWaveform = mlab.find(tstypes == 'waveform')
             for kk in indxWaveform:
-                Catalog['TimeSegment'][kk].plot()
+                Catalog[kk].plot()
     return
 
 def __loadMod__(ModFile):
@@ -228,7 +227,7 @@ def __loadSignals__(__SignalFile__):
     return
 
 def __get_level_index_from_chan_slot__(slotnum, channel):
-    """ given slot and channel, returns corresponding the level|keep column index """
+    """ given slot and channel, returns corresponding the level|change column index """
     global slot
     global __boardTypes__
     isDrvr = False
@@ -275,7 +274,8 @@ return the slot and channel number"""
 def __index_of__(Name):
     """ returns the Catalog index number of a named time segment in the waveform """
     global Catalog
-    return mlab.find(np.array(Catalog['Name']) == Name)[0]
+    CatalogNames = np.array([obj.name for obj in Catalog])
+    return mlab.find(CatalogNames == Name)[0]
 
 class TimingSegment(object):
     """ general timing segment object (waveforms and sequences) to generate ACF states and script"""
@@ -296,6 +296,7 @@ and there is no auto-generated end to the segment"""
         global __seq_ID__
         global __TStypes__
         global Catalog
+        CatalogNames = [obj.name for obj in Catalog]
         NotifyTSTypeChange = False
         if TStype not in __TStypes__:
             # TStype must be changed here if invalid, but notification
@@ -304,22 +305,21 @@ and there is no auto-generated end to the segment"""
             TStype_orig = TStype
             TStype = ''
 
-        if name not in Catalog['Name']: # initialize entry in Catalog
+        if name not in CatalogNames: # initialize entry in Catalog
             self.label = __seq_ID__
             __seq_ID__ += 1
-            Catalog['Name'].append(name)
-            Catalog['Time'].append(np.nan)
-            Catalog['TimeSegment'].append(self)
-            Catalog['Type'].append(TStype)
-        else: # or reinitialize entry in Catalog
+            Catalog.append(self)
+        else: # or REINITIALIZE entry in Catalog
             self.label = __index_of__(name)
-            Catalog['Time'][self.label] = np.nan
-            Catalog['TimeSegment'][self.label] = self
-            Catalog['Type'][self.label] = TStype
-                                            
+            Catalog[self.label] = self
+
+        self.name   = name
+        self.time   = np.nan
+        self.tstype = TStype
+            
         if NotifyTSTypeChange:
             print "invalid TimingSegment type (TStype) specified: %s"%TStype_orig
-            print "modifly in <ThisModule>.Catalog['Type'][%d]"%self.label
+            print "modify <ThisModule>.Catalog[%d].tstype"%self.label
 
         # target length of the sequence -- may be exceeded if timing
         # states are defined at t > nperiods
@@ -340,23 +340,23 @@ and there is no auto-generated end to the segment"""
         # all levels = 0, all driver speeds = 1, all keeps = 1
         global UniqueStateArr
         if np.size(UniqueStateArr,0) == 0: # empty condition
-            levels = np.hstack( (np.array([[0,1]*(len(self.events['drvr'])/2)]),
+            levels = np.hstack( (np.array([[0,0]*(len(self.events['drvr'])/2)]),
                                  np.zeros((1,
                                            len(self.events['lvds']) +
                                            len(self.events['adc']) +
                                            len(self.events['back']) +
                                            len(self.events['hvbd']))) ) )
-            keeps  = np.ones((1, 
-                              len(self.events['drvr']) + ## !driver-speed-keep
-                              len(self.events['lvds']) +
-                              len(self.events['adc'])  +
-                              len(self.events['back']) +
-                              len(self.events['hvbd']) ))  
-            UniqueStateArr = np.reshape(np.vstack((levels,keeps)), (1,-1), 'F')
+            changes  = np.zeros((1, 
+                                 len(self.events['drvr']) + ## !driver-speed-keep
+                                 len(self.events['lvds']) +
+                                 len(self.events['adc'])  +
+                                 len(self.events['back']) +
+                                 len(self.events['hvbd']) ))  
+            UniqueStateArr = np.reshape(np.vstack((levels,changes)), (1,-1), 'F')
 
         # Default exit state and level (not necessarily consistent!)
         self.ExitState = 0
-        self.ExitLevel = UniqueStateArr[0:1,0::2]
+        self.ExitLevel = UniqueStateArr[0:1,0::2] # :1 keeps it 2D
         # other defaults
         self.Params = {};
 
@@ -385,119 +385,112 @@ and there is no auto-generated end to the segment"""
             tmax = max(tmax,self.sequenceDef[tt][0]+1)
         return tmax
 
-    def __fill_state(self, definition, isDriver=False):
-        """ fill level and boolean keep for state definition """
+    def __fill_state(self, boardtype):
+        """ fill level and boolean change arrays (row sparse format) for state definition """
 
-        #############################################################################
-        ## this subroutine needs to be fixed in order to compress the state array. ##
-        #############################################################################
+        events = self.events[boardtype]
+        n_chan = len(events)
 
-        n_defs = len(definition)
-        level  = np.zeros((self.nperiods, n_defs))
-        keep   = np.ones((self.nperiods, n_defs)).astype('bool')
-
-        if isDriver: ## ugh.  for driver, we need to set all the odd
-                     ## numbered columns (fast slew switch) to 1
-            level[:,1::2] = 1
-
-        for chan in range(n_defs): # loop over channels
-            for jj in range(len(definition[chan])): # loop over entries
-                tt = definition[chan][jj][0]
-                keep[tt,chan] = False
-                level[tt,chan] = definition[chan][jj][1]
-        return level, keep
+        row = [];
+        col = [];
+        val = [];
+        
+        for chan in range(n_chan): # loop over channels
+            for jj in range(len(events[chan])): # loop over entries
+                time  = events[chan][jj][0]
+                if (boardtype == 'drvr') and (np.mod(chan,2) == 1):
+                    # 0 <--> 1 for FAST flags
+                    level = int(not events[chan][jj][1])
+                else:
+                    level = events[chan][jj][1]
+                
+                # level info
+                col.append(2*chan);
+                row.append(time);
+                val.append(level);
+                
+                # change/keep info
+                col.append(2*chan+1);
+                row.append(time);
+                val.append(1);
+                
+        levelchangematrix = sparse.csr_matrix((val, (row,col)), shape=(self.nperiods,2*n_chan))
+        return levelchangematrix
 
     def __make_states(self):
         """Make the state array from the event array. In here are the initial
-definitions of do_anything_tt, do_anything_dt, unique_state_ID and
-__sequence_list__.  Adds new states to UniqueStateArr.
+definitions of do_anything_tt, do_anything_dt, unique_state_ID.  Adds
+new states to UniqueStateArr.
 
         """
-
         # enlarge nperiods, if necessary, to encompass all events
         self.nperiods = self.__tmax()
 
-        drvrdef   = self.events['drvr']
-        lvdsdef   = self.events['lvds']
-        clampdef  = self.events['adc']
-        backdef   = self.events['back']
-        hvbddef   = self.events['hvbd']
-
-        num_drvr  = len(drvrdef)
-        num_lvds  = len(lvdsdef)
-        num_clamp = len(clampdef)
-        num_back  = len(backdef)
-        num_hvbd  = len(hvbddef)
-
         ## these are all nperiods X nchannel arrays
-        drvr_level , drvr_keep  = self.__fill_state(drvrdef,isDriver=True)
-        lvds_level , lvds_keep  = self.__fill_state(lvdsdef)
-        clamp_level, clamp_keep = self.__fill_state(clampdef)
-        back_level , back_keep  = self.__fill_state(backdef)
-        hvbd_level , hvbd_keep  = self.__fill_state(hvbddef)
+        drvr_level_change = self.__fill_state('drvr')
+        lvds_level_change = self.__fill_state('lvds')
+        adcs_level_change = self.__fill_state('adc')
+        back_level_change = self.__fill_state('back')
+        hvbd_level_change = self.__fill_state('hvbd')
 
         # fill the sequence array (kept separate from STATEs for now)
-        sequence_list = ['']*self.nperiods
+        call_subroutine_tt = []
         for event in range(len(self.sequenceDef)):
-            sequence_list[self.sequenceDef[event][0]] = self.sequenceDef[event][1]
-
+            call_subroutine_tt.append(self.sequenceDef[event][0])
                     
         ### GENERATE THE STATES ###
-        # even columns are levels or slew rate switches, odd columns are KEEP flags
-        # relative to Archon, i've inserted an extra keep flag for driver to produce a more regular pattern
+        # even columns are levels or slew rate switches, odd columns are CHANGE flags
+        # relative to Archon, i've inserted an extra change flag for driver to produce a more regular pattern
+        # 
+        #   L1a K1a L2a K2a L3a K3a
+        #   L1b K1b L2b K2b L3b K3b
+        #   L1c K1c L2c K2c L3c K3c
         #
-        # L1a L2a L3a 
-        # L1b L2b L3b          L1a K1a L2a K2a L3a K3a
-        # L1c L2c L3c ======>  L1b K1b L2b K2b L3b K3b
-        # K1a K2a K3a          L1c K1c L2c K2c L3c K3c
-        # K1b K2b K3b
-        # K1c K2c K3c
-        state_arr = np.hstack((np.reshape(np.vstack((drvr_level,drvr_keep)),## !driver-speed-keep 
-                                          (self.nperiods, 2*num_drvr), 'F'),## !driver-speed-keep
-                               np.reshape(np.vstack((lvds_level ,lvds_keep)) ,
-                                          (self.nperiods, 2*num_lvds)  , 'F'),
-                               np.reshape(np.vstack((clamp_level,clamp_keep)),
-                                          (self.nperiods, 2*num_clamp), 'F'),
-                               np.reshape(np.vstack((back_level ,back_keep)) ,
-                                          (self.nperiods, 2*num_back)  , 'F'),
-                               np.reshape(np.vstack((hvbd_level ,hvbd_keep)) ,
-                                          (self.nperiods, 2*num_hvbd)  , 'F')))
-
+        state_arr = sparse.hstack( ( drvr_level_change,
+                                     lvds_level_change,
+                                     adcs_level_change,
+                                     back_level_change,
+                                     hvbd_level_change ), format='csr')
+        
         # Find unique states in state_arr and store them in UniqueStateArr
         # UNIQUE_STATE_ID will hold the row in UNIQUE_STATES for each time step
-        unique_state_ID = np.zeros((self.nperiods,)).astype('int')
+
+        # unique_state_ID = np.zeros((self.nperiods,)).astype('int')
         global UniqueStateArr
-        ## this never happens, since USA is set up in __init__
-        # if np.size(UniqueStateArr,0) == 0: # empty condition
-        # UniqueStateArr = np.array([state_arr[0,:]])
-        for tt in range(self.nperiods):
-            state_matches_ustate = mlab.find(np.sum(np.abs(state_arr[tt,:] - UniqueStateArr),1) == 0)
+        (times,chans,datas) = sparse.find(state_arr)
+        times = np.unique(times)
+        unique_state_IDs = []
+        for tt in times:
+            state_matches_ustate = mlab.find(np.sum(np.abs(state_arr.getrow(tt) - UniqueStateArr),1) == 0)
             if len(state_matches_ustate) == 0:
-                unique_state_ID[tt] = len(UniqueStateArr)
-                UniqueStateArr = np.vstack((UniqueStateArr, state_arr[tt,:]))
+                # unique_state_ID[tt] = len(UniqueStateArr)
+                unique_state_IDs.append(len(UniqueStateArr))
+                UniqueStateArr = np.vstack((UniqueStateArr, state_arr.getrow(tt).toarray() ))
             elif len(state_matches_ustate) > 1:
                 print "problem: state matches multiple unique states"
             else:
-                unique_state_ID[tt] = state_matches_ustate[0]
+                # unique_state_ID[tt] = state_matches_ustate[0]
+                unique_state_IDs.append(state_matches_ustate[0])
+
+        unique_state_ID = sparse.csr_matrix(( unique_state_IDs,
+                                              (np.zeros(np.shape(times)),
+                                               times) ), shape=(1,self.nperiods), dtype='int')
 
         # identify the time steps where something happens and calculate the time gaps
-        do_nothing_state = 0; # by definition in initialization of first TS
-        do_something_tt = mlab.find(unique_state_ID != do_nothing_state)
-        call_subrtne_tt = mlab.find(np.array(sequence_list) != '')
+        ## do_nothing_state = 0; # by definition in initialization of first TS
+        ## do_something_tt = mlab.find(unique_state_ID != do_nothing_state)
+        junk,do_something_tt,more_junk = sparse.find(unique_state_ID)
         do_anything_tt  = np.unique(np.hstack(([0],                # start
                                                do_something_tt,    # states
-                                               call_subrtne_tt,    # sub calls
+                                               call_subroutine_tt, # sub calls
                                                self.nperiods-1 ))) # end
         do_anything_dt  = np.hstack((np.diff(do_anything_tt),[0]))
-
+        
         # self-ify the keeper variables
-        self.do_anything_tt   = do_anything_tt
-        self.do_anything_dt   = do_anything_dt
+        self.sequence_times   = np.array(call_subroutine_tt).astype('int')
+        self.do_anything_tt   = do_anything_tt.astype('int')
+        self.do_anything_dt   = do_anything_dt.astype('int')
         self.unique_state_ID  = unique_state_ID
-
-        # this one is a bit redundant with sequenceDef, but it saves a
-        # lot of index dereferencing in TS.script
-        self.__sequence_list__= sequence_list
 
         return
         # end of __make_states
@@ -512,20 +505,16 @@ exit state and the parameters used in Catalog """
 
         if not hasattr(self,'unique_state_ID'):
             self.__make_states()
+            
         global Catalog
         global Parameters
         global __padmax__
 
-        scriptName = Catalog['Name'][self.label]
-        scriptType = Catalog['Type'][self.label]
-        SubName = Catalog['Name']
-
-        if scriptName != '':
-            outfile.write('%s: # %s\n'%(scriptName,scriptType))
+        if self.name != '':
+            outfile.write('%s: # %s\n'%(self.name,self.tstype))
         
         do_anything_tt   = self.do_anything_tt
         do_anything_dt   = self.do_anything_dt
-        unique_state_ID  = self.unique_state_ID
         
         count  = -1
         time   = 0
@@ -538,7 +527,7 @@ exit state and the parameters used in Catalog """
             count += 1
             time  += 1
             pad   -= 11
-            this_state = unique_state_ID[do_anything_tt[jj]]
+            this_state = self.unique_state_ID[0,do_anything_tt[jj]]
             outfile.write("STATE%03d; "%(this_state))
             # over write the exit state if the unique_state_ID is nonzero
             if this_state > 0:
@@ -546,9 +535,10 @@ exit state and the parameters used in Catalog """
                 # until __make_waveform is run, this is the best guess
                 # for the exit levels
                 self.ExitLevel = UniqueStateArr[this_state:this_state+1,0::2]
-            this_sub_call = self.__sequence_list__[do_anything_tt[jj]]
-            # true condition means this is a subroutine call, not a state change.
-            if (this_sub_call != ''): 
+
+            seq_indx = mlab.find(self.sequence_times == do_anything_tt[jj])
+            if len(seq_indx): # true condition means this is a subroutine call, not a state change.
+                this_sub_call = self.sequenceDef[seq_indx][1]
                 pad -= len(this_sub_call)
                 outfile.write("%s"%(this_sub_call))
                 EOL = True
@@ -579,7 +569,7 @@ exit state and the parameters used in Catalog """
                     regexmatch = re.search(r'([\w]+)\s+([\w]+)(\(([\w]+)\))?$',this_sub_call)
                     if regexmatch == None:
                         print '*** Regular expression could not match wdl input in %s %s. ***'\
-                            %(scriptType, scriptName)
+                            %(self.tstype, self.name)
                         print "input string: '%s'"%this_sub_call
                     this_sub_command    = regexmatch.group(1)
                     this_sub_name       = regexmatch.group(2)
@@ -593,32 +583,32 @@ exit state and the parameters used in Catalog """
                                 if this_param not in Parameters.keys():
                                     Parameters.update({this_param:0}) # use 0 as default param value
                                 self.Params.update({this_param:Parameters[this_param]})
-                    if this_sub_name in Catalog['Name']:
-                        this_sub_time = Catalog['Time'][__index_of__(this_sub_name)]
+                    SubName = [obj.name for obj in Catalog]
+                    if this_sub_name in SubName:
+                        this_sub_time = Catalog[__index_of__(this_sub_name)].time
+                        ## there may be a cleaner implementation for this_sub_time.
                     else:
                         # if the called subroutine has not been defined in Catalog, then insert a holder
+                        # if the inputs are sensible, this code never gets excercised
                         global __seq_ID__
-                        __seq_ID__ += 1
                         this_sub_time = np.nan
-                        Catalog['Name'].append(this_sub_name)
-                        Catalog['Time'].append(this_sub_time)
-                        Catalog['TimeSegment'].append(None)
-                        Catalog['Type'].append('')
+                        TimingSegment(this_sub_name) # initialize a timing segment with this name
+                        print "boo!"
                     if this_sub_command.upper() == 'CALL':
                         # only add time if this is not a call to itself (usually RETURN)
                         time += this_sub_time * this_sub_iterations
                         # update the exit state and level with that of the subroutine
-                        if  Catalog['TimeSegment'][__index_of__(this_sub_name)].ExitState != 0:
-                            self.ExitState = Catalog['TimeSegment'][__index_of__(this_sub_name)].ExitState
-                            self.ExitLevel = Catalog['TimeSegment'][__index_of__(this_sub_name)].ExitLevel
+                        if  Catalog[__index_of__(this_sub_name)].ExitState != 0:
+                            self.ExitState = Catalog[__index_of__(this_sub_name)].ExitState
+                            self.ExitLevel = Catalog[__index_of__(this_sub_name)].ExitLevel
             ## END OF SUBROUTINE PARSING
             if (do_anything_tt[jj] == self.nperiods - 1):
                 if self.endline == -1:
-                    pad -= 7 + len(scriptName)
-                    outfile.write("RETURN %s"%(scriptName))
-                elif self.endline >= 0 and self.endline < len(SubName):
-                    pad -= 6 + len(SubName[self.endline])
-                    outfile.write("GOTO %s"%(SubName[self.endline]))
+                    pad -= 7 + len(self.name)
+                    outfile.write("RETURN %s"%(self.name))
+                elif self.endline >= 0 and self.endline < len(Catalog):
+                    pad -= 6 + len(Catalog[self.endline].name)
+                    outfile.write("GOTO %s"%(Catalog[self.endline].name))#SubName[self.endline]))
                 EOL = True
             if (do_anything_dt[jj] > 1) and not EOL:
                 # if the time to the next THING is more than 1 period
@@ -636,7 +626,7 @@ exit state and the parameters used in Catalog """
                 if pad < 1:
                     __padmax__ -= (pad - 1)
                 outfile.write("%s# %6d %8.0f\n"%(' '*pad,max(count,0),time))
-        Catalog['Time'][self.label] = time
+        self.time = time
         if outfile.name != '<stdout>': # don't close stdout!
             outfile.close()
 
@@ -646,8 +636,8 @@ exit state and the parameters used in Catalog """
         """ generate a signal-level matrix from the state array """
         global UniqueStateArr
         global Catalog
-        state_arr = UniqueStateArr[self.unique_state_ID.astype('int'),:]
-        keep  = state_arr[:,1::2].astype('bool')
+        state_arr = np.atleast_2d(UniqueStateArr[np.squeeze(self.unique_state_ID.toarray()),:]) # should be sparse?
+        keep  = np.invert(state_arr[:,1::2].astype('bool'))
         level = state_arr[:,0::2]
 
         if initialLevel == []:
@@ -660,10 +650,13 @@ exit state and the parameters used in Catalog """
             this_level[0, keep[tt,:]] = true_level[-1, keep[tt,:]] # keep
             this_level[0,~keep[tt,:]] =      level[tt,~keep[tt,:]] # get new values
             true_level = np.vstack((true_level,this_level))
-            if self.__sequence_list__[tt] != '':
+
+            seq_indx = mlab.find(self.sequence_times == tt)
+            if len(seq_indx): # true condition means this is a subroutine call, not a state change.
+                this_sub_call = self.sequenceDef[seq_indx][1]
                 match = re.search('(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?'+
                                   '((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?'+
-                                  '(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?', self.__sequence_list__[tt])
+                                  '(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?', this_sub_call)
                 ## REGEX labels:
                 #  N0: negation of IF test (!)
                 #  P0: IF test parameter 
@@ -682,7 +675,10 @@ exit state and the parameters used in Catalog """
                         self.Params[match.group('P0')] -= 1
                 if runcmd:
                     if match.group('P1') != None:
-                        repeats = self.Params[match.group('P1')]
+                        if match.group('P1').isdigit():
+                            repeats = int(match.group('P1'))
+                        else:
+                            repeats = self.Params[match.group('P1')]
                     else:
                         repeats = 1
                     if (match.group('D1') == '--' and  #decrement P0
@@ -692,19 +688,10 @@ exit state and the parameters used in Catalog """
                         print 'calling %s'%match.group('TS')
                         TSindx  = __index_of__(match.group('TS'))
                         for jj in range(repeats):
-                            calledLevel = Catalog['TimeSegment'][TSindx].__make_waveform(this_level)
+                            calledLevel = Catalog[TSindx].__make_waveform(this_level)
                             true_level = np.vstack((true_level,calledLevel))
                             this_level = true_level[-1:,:];
-                            
-                    
-#                match = re.search('CALL (\w+)',self.__sequence_list__[tt])
-#                if match != None and match.lastindex > 0:
-#                    callTSname = match.group(1)
-#                    print 'calling %s'%callTSname
-#                    callTSlevel = Catalog['TimeSegment'][__index_of__(callTSname)]\
-#                        .__make_waveform(initialLevel=this_level)
-#                    true_level = np.vstack((true_level,callTSlevel))
-#                    
+
         # chop off the initial condition.
         true_level = true_level[1:,:]
         # update the Exit level
@@ -716,16 +703,16 @@ exit state and the parameters used in Catalog """
 condition (default=last non-zero state) """
 
         global Catalog
-        if Catalog['Type'][self.label] == 'sequence':
+
+        if self.tstype == 'sequence':
             print 'plt_waves is intended for waveforms. this object is a sequence'
             print 'Warning: results may not make sense.'
         if not hasattr(self,'unique_state_ID'):
             self.__make_states()
 
-
         global UniqueStateArr
-        state_arr = UniqueStateArr[self.unique_state_ID.astype('int'),:]
-        keep  = state_arr[:,1::2].astype('bool')
+        state_arr = np.atleast_2d(UniqueStateArr[np.squeeze(self.unique_state_ID.toarray()),:])
+        keep  = np.invert(state_arr[:,1::2].astype('bool'))
         level = state_arr[:,0::2]
 
         if initialLevel == []:
@@ -740,7 +727,8 @@ condition (default=last non-zero state) """
         # find the commanded channels
         commanded = np.amin(keep, 0) == 0
 
-        print "--- %s"%Catalog['Name'][self.label],
+        print "--- %s"%self.name,
+
         if sum(nonstatic):
         # calculate the slot/channel numbers for the nonstatic traces.
         # drvr, lvds, adc, back, hvbd
@@ -780,7 +768,7 @@ condition (default=last non-zero state) """
                 if kk > 0:
                     axes[kk].set_xticklabels([])
             axes[0].set_xlabel('time [$\mu$s]');
-            axes[kk].set_title('non-static waveforms for %s'%(Catalog['Name'][self.label]))
+            axes[kk].set_title('non-static waveforms for %s'%self.name)
             plt.draw()
             print '(Figure %d)'%(self.label),
         print '---'
@@ -820,14 +808,15 @@ def state(outfile=sys.stdout):
             statestring = ""
             for clkchan in range(__chan_per_board__['drvr']/2):## driver-speed-keep !!!!!
                 jj_level = offset + 4*clkchan + 0
-                jj_keepL = offset + 4*clkchan + 1
+                jj_changeL = offset + 4*clkchan + 1
                 jj_fast  = offset + 4*clkchan + 2
-                jj_keepF = offset + 4*clkchan + 3
-                if UniqueStateArr[id,jj_keepL] or UniqueStateArr[id,jj_keepF]:
-                    # do not change anything UNLESS level and fast are NOT keep
+                jj_changeF = offset + 4*clkchan + 3
+                if not(UniqueStateArr[id,jj_changeL] and UniqueStateArr[id,jj_changeF]):
+                    # do not change anything UNLESS level and fast are both CHANGE
+                    # this branch keeps everything the same.
                     statestring += ",1,1,"
-                    if UniqueStateArr[id,jj_keepL] != UniqueStateArr[id,jj_keepF]:
-                        # write an error message if keep flags don't agree.
+                    if UniqueStateArr[id,jj_changeL] != UniqueStateArr[id,jj_changeF]:
+                        # write an error message if change flags don't agree.
                         if jj_level in __SignalByIndx__.keys():
                             thisSigName = __SignalByIndx__[jj_level/2]
                         else:
@@ -835,8 +824,9 @@ def state(outfile=sys.stdout):
                         print "*** WARNING: Driver signal (%s) has inconsistent KEEP flags ***"%thisSigName
                         print "*** check signals or waveform input files for consistency  ***"
                 else:
+                    # in USA, 0==FAST 1==SLOW.  IN ACF, 1==FAST, 0==SLOW.
                     statestring += "%g,%d,0,"%(UniqueStateArr[id,jj_level],
-                                               int(bool(UniqueStateArr[id,jj_fast])))
+                                               int(not bool(UniqueStateArr[id,jj_fast])))
                     
             statestring = statestring[:-1] + '"'
             outfile.write(statestring + '\n')
@@ -846,8 +836,8 @@ def state(outfile=sys.stdout):
             statestring = ""
             for lvdschan in range(__chan_per_board__['lvds']):
                 jj_level= offset + 2*lvdschan + 0
-                jj_keep = offset + 2*lvdschan + 1
-                if UniqueStateArr[id,jj_keep] == True:
+                jj_change = offset + 2*lvdschan + 1
+                if UniqueStateArr[id,jj_change] == False:
                     statestring += "1,1,"
                 else:
                     statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
@@ -858,8 +848,8 @@ def state(outfile=sys.stdout):
             outfile.write(prefix + 'MOD%d="'%adcslot)
             statestring = ""
             jj_level= offset 
-            jj_keep = offset + 1
-            if UniqueStateArr[id,jj_keep] == True:
+            jj_change = offset + 1
+            if UniqueStateArr[id,jj_change] == False:
                 statestring += "0,1,"
             else:
                 statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
@@ -870,7 +860,7 @@ def state(outfile=sys.stdout):
             n_back = __chan_per_board__['back']    
             bin = 2**np.arange(0,n_back) # to convert backplane states to hex
             level = sum(bin*UniqueStateArr[id,(offset+0):(offset+2*n_back):2])
-            keep  = sum(bin*UniqueStateArr[id,(offset+1):(offset+2*n_back):2])
+            keep  = sum(bin*(np.invert(UniqueStateArr[id,(offset+1):(offset+2*n_back):2].astype('bool')).astype('int')))
             outfile.write(prefix + 'CONTROL="%X,%X"\n'%(level,keep))
             offset += 2*n_back
         for hvbdslot in slot['hvbd']: # this is different from the other states,
@@ -880,7 +870,7 @@ def state(outfile=sys.stdout):
             statestring = ""
             n_hvbd_X_2 = 2*__chan_per_board__['hvbd']
             hvbdLevel = UniqueStateArr[id,offset:offset+n_hvbd_X_2:2]
-            hvbdKeep  = UniqueStateArr[id,offset+1:offset+n_hvbd_X_2:2]
+            hvbdKeep  = np.invert(UniqueStateArr[id,offset+1:offset+n_hvbd_X_2:2].astype('bool')).astype('int')
             # 1. check that there is only one non-keep in hvbdKeep
             KeepSum = sum(hvbdKeep)
             if KeepSum == __chan_per_board__['hvbd']: # nothing changed
@@ -897,9 +887,10 @@ def state(outfile=sys.stdout):
 
     global Catalog
     global Parameters
-    if 'RawPixel' in Catalog['Name'] and 'Pixels' in Parameters.keys():
+    CatalogNames = [obj.name for obj in Catalog]
+    if 'RawPixel' in CatalogNames and 'Pixels' in Parameters.keys():
         RP_label = __index_of__('RawPixel')
-        RP_time  = Catalog['Time'][RP_label]
+        RP_time  = Catalog[RP_label].time
         samples_per_line = Parameters['Pixels'] * RP_time
         rawsamples_per_line = int(np.floor(samples_per_line / 1024.) * 1024)
         rawsamples_per_line = max(rawsamples_per_line, 1024)
@@ -914,14 +905,15 @@ def script(outfile=sys.stdout, quiet=False):
 Catalog if a consistent script cannot be generated  """
     global Catalog
     global Parameters
-    jj_nocalc = mlab.find(np.isnan(Catalog['Time']))
+
+    jj_nocalc = mlab.find(np.isnan([obj.time for obj in Catalog]))
     N_nocalc  = len(jj_nocalc) # number of segments with uncalculated time
     while N_nocalc > 0:
         for kk in jj_nocalc: # was reversed before
-            if Catalog['TimeSegment'][kk] != None:
-                Catalog['TimeSegment'][kk].script('/dev/null')
+            if Catalog[kk] != None:
+                Catalog[kk].script('/dev/null')
         N_old = N_nocalc
-        jj_nocalc = mlab.find(np.isnan(Catalog['Time']))
+        jj_nocalc = mlab.find(np.isnan([obj.time for obj in Catalog]))
         N_nocalc  = len(jj_nocalc)
         if N_nocalc == N_old:
             break
@@ -929,7 +921,6 @@ Catalog if a consistent script cannot be generated  """
     if N_nocalc == 0:
         # remove the existing file before writing to it.
         if type(outfile) == str:
-            #os.remove(outfile)
             outfilehandle = open(outfile, 'w')
         else:
             outfilehandle = outfile
@@ -940,7 +931,7 @@ Catalog if a consistent script cannot be generated  """
         outfilehandle.write('[LINE#]\n')
         if outfilehandle.name != '<stdout>':
             outfilehandle.close();
-        for TS in Catalog['TimeSegment']:
+        for TS in Catalog:
             TS.script(outfile)
     elif not quiet:
         print "Timing did not converge:"
@@ -956,23 +947,24 @@ def catalog(MagicNullArgument=None):
     global Catalog
     print "index  label                                type  exit  time [us]"
     print "-----------------------------------------------------------------"
-    for jj in range(len(Catalog['Time'])):
-        print "%4d:  %-32s %-8s   %03d %10.2f"%(jj,Catalog['Name'][jj], 
-                                                Catalog['Type'][jj],    
-                                                Catalog['TimeSegment'][jj].ExitState,
-                                                Catalog['Time'][jj]/100.)
+    for jj in range(len(Catalog)):
+        print "%4d:  %-32s %-8s   %03d %10.2f"%(jj,
+                                                Catalog[jj].name, 
+                                                Catalog[jj].tstype,
+                                                Catalog[jj].ExitState,
+                                                Catalog[jj].time/100.)
 
 # @register_line_magic
 def wplot(TimingObjectLabel):
     """ Plot the waveform of the specified sequence """
 
     global Catalog
-
-    if TimingObjectLabel not in Catalog['Name']:
-        print Catalog['Name']
+    CatalogNames = [obj.name for obj in Catalog]
+    if TimingObjectLabel not in CatalogNames:
+        print CatalogNames
         return
 
-    Catalog['TimeSegment'][__index_of__(TimingObjectLabel)].plot()
+    Catalog[__index_of__(TimingObjectLabel)].plot()
 
     return
 
