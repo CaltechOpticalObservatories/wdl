@@ -968,6 +968,133 @@ def wplot(TimingObjectLabel):
 
     return
 
+class modegen():
+    """ Process the modes file.  This must happen AFTER the ACF has been made """
+
+    def __init__(self, modefile, acffile):
+
+        # self.wdl  = acf.wdl(acffile) # the acf file needs to be made first
+        self.modeKVpair = {} # dict of mode KEY=VALUE pairs
+        self.union      = {} # the union of mode keys
+        self.modelist   = {} # dict of non-KEY=VALUE mode statements (not propagated)
+
+        self.__read_inputfile(modefile)
+        self.__assign_defaults_from_acf(acffile)
+        self.__index_modeKVpair()
+
+        # self.write()
+        
+        for key in self.union.keys():
+            if self.union[key] == None:
+                print "WARNING: no default value for %s"%key
+
+    def __read_inputfile(self,modefile):
+        """ read the input file """
+        with open(modefile) as FILE:
+            for line in FILE:
+                # look for headers
+                match = re.search('^\[(.*?)\]',line)
+                if match:
+                    self.modeKVpair.update({match.group(1):{}}) # initialize the KVpair entry
+                    self.modelist.update({match.group(1):[]}) # init the nonKV list
+                    thismode = match.group(1)
+                else:
+                    # look for key=value pairs, matching the LAST = on the line
+                    match = re.search('^(.+:.+)\s*=\s*(.+?)\n',line)
+                    if match:
+                        # union will hold one of every key specified
+                        self.union.update({match.group(1):None})
+                        # modes only hold specified key=value pairs
+                        self.modeKVpair[thismode].update({match.group(1):match.group(2)})
+                        continue
+                    # look for non key=value statements
+                    match = re.search('^(.+:[^=]+)\n',line)
+                    if match:
+                        self.modelist[thismode].append(match.group(1))
+                        
+    def __assign_defaults_from_acf(self,acffile):
+        """ populate self.union with values from the acf file """
+
+        allkeys = np.sort(self.union.keys())
+        with open(os.path.expanduser(acffile)) as ACF:
+            for line in ACF:
+                # look for key=value pairs in ACF
+                match = re.search('^(.+)=(.+?)\n',line)
+                if match:
+                    ACFKEY = 'ACF:' + match.group(1)
+                    if ACFKEY in allkeys:
+                        self.union[ACFKEY] = match.group(2)
+                    else:
+                        for unionkey in allkeys: # do the reverse check
+                            # make regex from printf %d
+                            unionregex = re.sub('%d','(\d+)',unionkey)
+                            kmatch = re.search(unionregex,ACFKEY)
+                            if kmatch:
+                                newkey = unionkey%int(kmatch.group(1))
+                                self.union.update({newkey:match.group(2)})
+                                # default for unionkey is set now with
+                                # the proper index, so we can now
+                                # discard unionkey
+                                self.union.pop(unionkey)
+                                break
+        # the DEFAULT MODE in the input is special -- it assigns non ACF defaults to the union
+        TheDefaultMode = self.modeKVpair['MODE_DEFAULT']
+        for key in TheDefaultMode:
+            match = re.search('^ACF:',key) 
+            if not match: # any key that isn't an ACF key
+                self.union[key] = TheDefaultMode[key]
+
+    def __index_modeKVpair(self):
+        """ convert (\d+)'s into proper ACF indices """
+        allkeys = np.sort(self.union.keys())
+        for mode in self.modeKVpair:
+            for key in self.modeKVpair[mode]:
+                match = re.search('^ACF:.+?%d=(.+)', key) # search the "ACF:" keys for "%d="
+                # NOTE: the above regex wont work for keys that do not
+                # have a "=" in them, ie, this will not work for LINE
+                # or MOD ACF statements, as they would not be unique
+                if match:
+                    # now figure out which key in self.union this corresponds to
+                    keyregex = re.sub('%d','(\d+)',key)
+                    for ukey in self.union:
+                        kmatch = re.search(keyregex, ukey)
+                        if kmatch:
+                            newkey = key%int(kmatch.group(1))
+                            self.modeKVpair[mode].update({newkey:self.modeKVpair[mode].pop(key)})
+                            break
+        
+    def write(self):
+        """ write the mode sections to standard out """
+        allkeys = np.sort(self.union.keys())
+
+        for mode in self.modeKVpair:
+            print "\n[%s]"%mode
+            modekeys = self.modeKVpair[mode].keys()
+            for key in allkeys:
+                if key in modekeys:
+                    print "%s=%s"%(key,self.modeKVpair[mode][key])
+                else:
+                    print "%s=%s"%(key,self.union[key])
+            # print the non K=V entries in each mode.
+            for line in self.modelist[mode]:
+                print line
+            # propagate any non K=V in MODE_DEFAULT with neither thought or regard
+            if mode != 'MODE_DEFAULT':
+                for line in self.modelist['MODE_DEFAULT']:
+                    print line
+                
+
+    ## the grep function here needs PHM.acf.wdl()
+    # def grep(self, regex):
+    #     """ scour the wdl input files for keys used in modes """
+    #     for wdlinput in self.wdl.inputfiles:
+    #         with open(wdlinput) as WDLINPUT:
+    #             for text in WDLINPUT:
+    #                 match = re.search("(^|[^\w])%s[^\w]"%regex, text)
+    #                 if match:
+    #                     match2 = re.search('(\w+)=(.*)',text[:-1])
+    #                     self.wdl.grep(match2.group(2))
+
 #def __in_ipython__():
 #    try:
 #        __IPYTHON__
