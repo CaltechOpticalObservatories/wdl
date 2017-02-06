@@ -1018,11 +1018,16 @@ class modegen():
         allkeys = np.sort(self.union.keys())
         with open(os.path.expanduser(acffile)) as ACF:
             for line in ACF:
+                # skip [MODE_X] statments
+                if re.search('^\w+:\w',line):
+                    continue
                 # look for key=value pairs in ACF
-                match = re.search('^(ACF:.+)=(.+?)\n',line)
+                match = re.search('^(.+)=(.+?)\n',line)
                 if match:
-                    ACFKEY = match.group(1)
+                    ACFKEY = 'ACF:'+match.group(1)
                     ACFVAL = match.group(2)
+                    # if re.search('TAPLINE',ACFKEY):
+                    #     Tracer()()
                     if ACFKEY in allkeys:
                         self.union[ACFKEY] = ACFVAL
                     else:
