@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import scipy.sparse as sparse # need 0.18.1
 import re,sys, os
 sys.dont_write_bytecode = True
-#from IPython.core.debugger import Tracer
+from IPython.core.debugger import Tracer
 #lfrom IPython.core.magic import register_line_magic
 #import time as t
 
@@ -1019,11 +1019,12 @@ class modegen():
         with open(os.path.expanduser(acffile)) as ACF:
             for line in ACF:
                 # look for key=value pairs in ACF
-                match = re.search('^(.+)=(.+?)\n',line)
+                match = re.search('^(ACF:.+)=(.+?)\n',line)
                 if match:
-                    ACFKEY = 'ACF:' + match.group(1)
+                    ACFKEY = match.group(1)
+                    ACFVAL = match.group(2)
                     if ACFKEY in allkeys:
-                        self.union[ACFKEY] = match.group(2)
+                        self.union[ACFKEY] = ACFVAL
                     else:
                         for unionkey in allkeys: # do the reverse check
                             # make regex from printf %d
@@ -1031,7 +1032,7 @@ class modegen():
                             kmatch = re.search(unionregex,ACFKEY)
                             if kmatch:
                                 newkey = unionkey%int(kmatch.group(1))
-                                self.union.update({newkey:match.group(2)})
+                                self.union.update({newkey:ACFVAL})
                                 # default for unionkey is set now with
                                 # the proper index, so we can now
                                 # discard unionkey
@@ -1068,7 +1069,7 @@ class modegen():
         allkeys = np.sort(self.union.keys())
 
         for mode in self.modeKVpair:
-            print "\n[%s]"%mode
+            print "[%s]"%mode
             modekeys = self.modeKVpair[mode].keys()
             for key in allkeys:
                 if key in modekeys:
