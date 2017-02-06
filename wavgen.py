@@ -973,13 +973,16 @@ class modegen():
 
     def __init__(self, modefile, acffile):
 
+        self.modefile = os.path.expanduser(modefile)
+        self.acffile = os.path.expanduser(acffile)
+        
         # self.wdl  = acf.wdl(acffile) # the acf file needs to be made first
         self.modeKVpair = {} # dict of mode KEY=VALUE pairs
         self.union      = {} # the union of mode keys
         self.modelist   = {} # dict of non-KEY=VALUE mode statements (not propagated)
 
-        self.__read_inputfile(modefile)
-        self.__assign_defaults_from_acf(acffile)
+        self.__read_inputfile()
+        self.__assign_defaults_from_acf()
         self.__index_modeKVpair()
 
         # self.write()
@@ -988,9 +991,9 @@ class modegen():
             if self.union[key] == None:
                 print "WARNING: no default value for %s"%key
 
-    def __read_inputfile(self,modefile):
+    def __read_inputfile(self):
         """ read the input file """
-        with open(modefile) as FILE:
+        with open(self.modefile) as FILE:
             for line in FILE:
                 # look for headers
                 match = re.search('^\[(.*?)\]',line)
@@ -1012,11 +1015,11 @@ class modegen():
                     if match:
                         self.modelist[thismode].append(match.group(1))
                         
-    def __assign_defaults_from_acf(self,acffile):
+    def __assign_defaults_from_acf(self):
         """ populate self.union with values from the acf file """
 
         allkeys = np.sort(self.union.keys())
-        with open(os.path.expanduser(acffile)) as ACF:
+        with open(self.acffile) as ACF:
             for line in ACF:
                 # skip [MODE_X] statments
                 if re.search('^\w+:\w',line):
@@ -1069,11 +1072,16 @@ class modegen():
                             self.modeKVpair[mode].update({newkey:self.modeKVpair[mode].pop(key)})
                             break
         
-    def write(self):
+    def write(self,append=None):
         """ write the mode sections to standard out """
         allkeys = np.sort(self.union.keys())
 
+        if append:
+            sys.stdout = open(self.acffile,'a')
+        
         for mode in self.modeKVpair:
+            if mode == 'MODE_DEFAULT' and append:
+                continue
             print "[%s]"%mode
             modekeys = self.modeKVpair[mode].keys()
             for key in allkeys:
@@ -1088,7 +1096,9 @@ class modegen():
             if mode != 'MODE_DEFAULT':
                 for line in self.modelist['MODE_DEFAULT']:
                     print line
-                
+        if append:
+            sys.stdout.close()
+            sys.stdout = sys.__stdout__
 
     ## the grep function here needs PHM.acf.wdl()
     # def grep(self, regex):
