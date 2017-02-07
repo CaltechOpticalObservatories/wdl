@@ -976,7 +976,6 @@ class modegen():
         self.modefile = os.path.expanduser(modefile)
         self.acffile = os.path.expanduser(acffile)
         
-        # self.wdl  = acf.wdl(acffile) # the acf file needs to be made first
         self.modeKVpair = {} # dict of mode KEY=VALUE pairs
         self.union      = {} # the union of mode keys
         self.modelist   = {} # dict of non-KEY=VALUE mode statements (not propagated)
@@ -986,10 +985,14 @@ class modegen():
         self.__index_modeKVpair()
 
         # self.write()
-        
+
+        # print error messages for keys in union that are not declared in all non-default modes
+        nondefault = self.modeKVpair.copy()
+        nondefault.pop('MODE_DEFAULT')
         for key in self.union.keys():
             if self.union[key] == None:
-                print "WARNING: no default value for %s"%key
+                if not all([key in nondefault[mode] for mode in nondefault.keys()]) :
+                    print "WARNING: '%s' is undefined for some modes."%key
 
     def __read_inputfile(self):
         """ read the input file """
@@ -1099,6 +1102,7 @@ class modegen():
         if append:
             sys.stdout.close()
             sys.stdout = sys.__stdout__
+            print "Modes appended to %s"%self.acffile
 
     ## the grep function here needs PHM.acf.wdl()
     # def grep(self, regex):
