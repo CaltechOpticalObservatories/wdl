@@ -976,8 +976,6 @@ class modegen():
         self.modefile = os.path.expanduser(modefile)
         self.acffile = os.path.expanduser(acffile)
         
-        self.taplines_are_set_in_modes = False # flag for writing the TAPLINES=# mode line
-
         self.modeKVpair = {} # dict of mode KEY=VALUE pairs
         self.union      = {} # the union of mode keys
         self.modelist   = {} # dict of non-KEY=VALUE mode statements (not propagated)
@@ -1019,7 +1017,6 @@ class modegen():
                         if re.search('ACF:TAPLINE\d+="[\w,]+"',line):
                             if thismode not in self.taplines.keys():
                                 self.taplines.update({thismode:1})
-                                self.taplines_are_set_in_modes = True
                             else:
                                 self.taplines[thismode] += 1
                         continue
@@ -1031,15 +1028,11 @@ class modegen():
                     # both matches failed - issue warning
                     if re.search('[^\w]+',line[:-1]):
                         print "WARNING: '%s' in %s not recognized as a mode-setting statement"%(line[:-1],thismode)
-        ## add calculated TAPLINES to each mode if it was set for any mode
-        if self.taplines_are_set_in_modes:
+        ## add calculated TAPLINES to each mode for which at least one TAPLINE# is set
+        for mode in self.taplines.keys():
+            self.modeKVpair[mode].update({'ACF:TAPLINES':self.taplines[mode]})
             self.union.update({'ACF:TAPLINES':None}) # initialize the union dict
-            for mode in self.modeKVpair.keys():
-                if mode == 'MODE_DEFAULT': ## skip the default mode
-                    continue
-                if mode in self.taplines.keys():
-                    self.modeKVpair[mode].update({'ACF:TAPLINES':self.taplines[mode]})
-
+            
     def __assign_defaults_from_acf(self):
         """ populate self.union with values from the acf file """
 
