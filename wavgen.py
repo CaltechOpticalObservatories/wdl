@@ -993,6 +993,14 @@ class modegen():
             if self.union[key] == None:
                 if not all([key in nondefault[mode] for mode in nondefault.keys()]) :
                     print "WARNING: '%s' is undefined for some modes."%key
+        baddefault = False
+        for key in self.modeKVpair['MODE_DEFAULT']:
+            match = re.search('^ACF:',key)
+            if match:
+                print "WARNING: '%s' declared in MODE_DEFAULT does not propagate to other modes."%key
+                baddefault = True
+        if baddefault:
+            print "**NOTE** 'ACF:'-type keys use default values from %s"%self.acffile
 
     def __read_inputfile(self):
         """ read the input file """
@@ -1017,7 +1025,11 @@ class modegen():
                     match = re.search('^(.+:[^=]+)\n',line)
                     if match:
                         self.modelist[thismode].append(match.group(1))
-                        
+                        continue
+                    # both matches failed - issue warning
+                    if re.search('[^\w]+',line[:-1]):
+                        print "WARNING: '%s' in %s not recognized as a mode-setting statement"%(line[:-1],thismode)
+                    
     def __assign_defaults_from_acf(self):
         """ populate self.union with values from the acf file """
 
