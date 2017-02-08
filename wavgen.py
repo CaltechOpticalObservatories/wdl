@@ -976,9 +976,12 @@ class modegen():
         self.modefile = os.path.expanduser(modefile)
         self.acffile = os.path.expanduser(acffile)
         
+        self.taplines_are_set_in_modes = False # flag for writing the TAPLINES=# mode line
+
         self.modeKVpair = {} # dict of mode KEY=VALUE pairs
         self.union      = {} # the union of mode keys
         self.modelist   = {} # dict of non-KEY=VALUE mode statements (not propagated)
+        self.taplines   = {} # dict of taplines by mode
 
         self.__read_inputfile()
         self.__assign_defaults_from_acf()
@@ -993,14 +996,6 @@ class modegen():
             if self.union[key] == None:
                 if not all([key in nondefault[mode] for mode in nondefault.keys()]) :
                     print "WARNING: '%s' is undefined for some modes."%key
-        baddefault = False
-        for key in self.modeKVpair['MODE_DEFAULT']:
-            match = re.search('^ACF:',key)
-            if match:
-                print "WARNING: '%s' declared in MODE_DEFAULT does not propagate to other modes."%key
-                baddefault = True
-        if baddefault:
-            print "**NOTE** 'ACF:'-type keys use default values from %s"%self.acffile
 
     def __read_inputfile(self):
         """ read the input file """
@@ -1020,6 +1015,13 @@ class modegen():
                         self.union.update({match.group(1):None})
                         # modes only hold specified key=value pairs
                         self.modeKVpair[thismode].update({match.group(1):match.group(2)})
+                        # if the key is a non-empty TAPLINE setting, then increment self.taplines[thismode]
+                        if re.search('ACF:TAPLINE\d+="[\w,]+"',line):
+                            if thismode not in self.taplines.keys():
+                                self.taplines.update({thismode:1})
+                                self.taplines_are_set_in_modes = True
+                            else:
+                                self.taplines[thismode] += 1
                         continue
                     # look for non key=value statements
                     match = re.search('^(.+:[^=]+)\n',line)
@@ -1029,7 +1031,15 @@ class modegen():
                     # both matches failed - issue warning
                     if re.search('[^\w]+',line[:-1]):
                         print "WARNING: '%s' in %s not recognized as a mode-setting statement"%(line[:-1],thismode)
-                    
+        ## add calculated TAPLINES to each mode if it was set for any mode
+        if self.taplines_are_set_in_modes:
+            self.union.update({'ACF:TAPLINES':None}) # initialize the union dict
+            for mode in self.modeKVpair.keys():
+                if mode == 'MODE_DEFAULT': ## skip the default mode
+                    continue
+                if mode in self.taplines.keys():
+                    self.modeKVpair[mode].update({'ACF:TAPLINES':self.taplines[mode]})
+
     def __assign_defaults_from_acf(self):
         """ populate self.union with values from the acf file """
 
@@ -1044,11 +1054,10 @@ class modegen():
                 if match:
                     ACFKEY = 'ACF:'+match.group(1)
                     ACFVAL = match.group(2)
-                    # if re.search('TAPLINE',ACFKEY):
-                    #     Tracer()()
                     if ACFKEY in allkeys:
                         self.union[ACFKEY] = ACFVAL
                     else:
+                        # Parse the '%d' that typically shows up in 'ACF:PARAMETER'-keys
                         for unionkey in allkeys: # do the reverse check
                             # make regex from printf %d
                             unionregex = re.sub('%d','(\d+)',unionkey)
@@ -1061,13 +1070,21 @@ class modegen():
                                 # discard unionkey
                                 self.union.pop(unionkey)
                                 break
+
         # the DEFAULT MODE in the input is special -- it assigns non ACF defaults to the union
         TheDefaultMode = self.modeKVpair['MODE_DEFAULT']
+        baddefault = False # flag for bad default setting warning
         for key in TheDefaultMode:
             match = re.search('^ACF:',key) 
             if not match: # any key that isn't an ACF key
                 self.union[key] = TheDefaultMode[key]
-
+            else:
+                print "WARNING: '%s' declared in MODE_DEFAULT does not propagate to other modes."%key
+                baddefault = True
+        if baddefault:
+            print "**NOTE** 'ACF:'-type keys use default values from %s"%self.acffile
+                
+                
     def __index_modeKVpair(self):
         """ convert (\d+)'s into proper ACF indices """
         allkeys = np.sort(self.union.keys())
