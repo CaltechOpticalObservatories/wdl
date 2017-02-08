@@ -11,6 +11,7 @@
 # @modified 2016-04-07 add plotting option and check for WAVGEN exit code
 # @modified 2016-04-19 changes to implement INCLUDE_FILE= in *.conf
 # @modified 2016-04-20 read CDS_FILE and MODULE_FILE from .conf
+# @modified 2017-02-08 added modegen
 #
 # This Makefile uses the general preprocessor GPP 2.24 for macro processing.
 # It also requires the ini2acf.pl Perl script for creating an Archon acf file.
@@ -21,13 +22,14 @@
 GPP       = /usr/local/bin/gpp
 WDLPATH   = /home/ztf/devel/wdl
 
-PLOT      = True    # show waveform plots by default, True | False
+PLOT      = False   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
 SEQPARSER = $(WDLPATH)/seqParserDriver.py
 INCPARSER = $(WDLPATH)/incParserDriver.py
 WDLPARSER = $(WDLPATH)/wdlParserDriver.py
 MODPARSER = $(WDLPATH)/modParserDriver.py
 WAVGEN    = $(WDLPATH)/wavgenDriver.py
+MODEGEN   = $(WDLPATH)/modegenDriver.py
 I2A       = $(WDLPATH)/ini2acf.pl
 INCL      = -I$(CURDIR)
 
@@ -35,6 +37,8 @@ SCAN_CDSFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
 		awk -F= '{gsub(" |\t","",$$1)} $$1=="CDS_FILE"{print $$2}' | cut -d'"' -f2
 SCAN_MODFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
 		awk -F= '{gsub(" |\t","",$$1)} $$1=="MODULE_FILE"{print $$2}' | cut -d'"' -f2
+SCAN_MODEFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
+		awk -F= '{gsub(" |\t","",$$1)} $$1=="MODE_FILE"{print $$2}' | cut -d'"' -f2
 
 F_TMP = $(@F)_TMP
 
@@ -57,3 +61,5 @@ F_TMP = $(@F)_TMP
 	@test -f $(CDSFILE) && cat $(@F).conf | $(INCPARSER) - | cat - $(CDSFILE) | $(GPP) $(GFLAGS) $(INCL) | \
 		cat - $(F_TMP).script $(F_TMP).modules $(F_TMP).states $(F_TMP).system | \
 		$(I2A) - > $(@F).acf
+	$(eval MODEFILE := $(shell $(SCAN_MODEFILE)))
+	@$(MODEGEN) $(MODEFILE) $(@F).acf

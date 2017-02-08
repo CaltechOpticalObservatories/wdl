@@ -1112,6 +1112,31 @@ def param():
     paramList.append(line)
 
 # -----------------------------------------------------------------------------
+# @fn     print
+# @brief  prints a formatted string
+# @param  
+# @return none
+# -----------------------------------------------------------------------------
+def PRINT():
+    """
+    """
+    global token
+    global paramList
+    global paramNames
+
+    consume("PRINT")
+    consume("(")
+    if found(STRING):
+        outputFile = token.cargo.strip('"')
+    consume(STRING)
+    with open(outputFile, "w") as file:
+        file.write(outputFile)
+    while not found(";"):
+        getToken()
+        if token.type == EOF: break
+    consume(";")
+
+# -----------------------------------------------------------------------------
 # @fn     parse_sequence
 # @brief  
 # @param  sourceText
@@ -1126,12 +1151,14 @@ def parse_sequence(sourceText):
     lexer.initialize(sourceText)
 
     getToken()
+    PRINT()
     param()
 
     while True:
         getToken()
         if token.type == EOF: break
         param()
+        PRINT()
         sequence()
 
 # -----------------------------------------------------------------------------
@@ -1310,6 +1337,8 @@ def parse(sourceText):
             consume("}")
         elif found("WAVEFORM"):
             waveformText += waveform()
+        elif found("PRINT"):
+            PRINT()
         elif found("param"):
             param()
         elif found("SEQUENCE"):
@@ -1390,8 +1419,13 @@ def make_include(sourceText):
             consume("CDS_FILE")
             consume("=")
             consume(STRING)
+        # MODE_FILE is specific to ZTF (i.e. ROBO-AO)
+        elif found("MODE_FILE"):
+            consume("MODE_FILE")
+            consume("=")
+            consume(STRING)
         else:
-            error("unrecognized keyword: " + dq(token.cargo))
+            error("make_include: unrecognized keyword: " + dq(token.cargo))
 
 # -----------------------------------------------------------------------------
 # @fn     make_include_sequence
@@ -1452,8 +1486,13 @@ def make_include_sequence(sourceText):
             consume("CDS_FILE")
             consume("=")
             consume(STRING)
+        # MODE_FILE is specific to ZTF (i.e. ROBO-AO)
+        elif found("MODE_FILE"):
+            consume("MODE_FILE")
+            consume("=")
+            consume(STRING)
         else:
-            error("unrecognized keyword: " + dq(token.cargo))
+            error("make_include_sequence: unrecognized keyword: " + dq(token.cargo))
 
     if len(waveformFile) == 0:
         raise ParserError("missing WAVEFORM_FILE")
