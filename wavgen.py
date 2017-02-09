@@ -1052,17 +1052,21 @@ class modegen():
                     else:
                         # Parse the '%d' that typically shows up in 'ACF:PARAMETER'-keys
                         for unionkey in allkeys: # do the reverse check
-                            # make regex from printf %d
-                            unionregex = re.sub('%d','(\d+)',unionkey)
-                            kmatch = re.search(unionregex,ACFKEY)
-                            if kmatch:
-                                newkey = unionkey%int(kmatch.group(1))
-                                self.union.update({newkey:ACFVAL})
-                                # default for unionkey is set now with
-                                # the proper index, so we can now
-                                # discard unionkey
-                                self.union.pop(unionkey)
-                                break
+                            if re.search('%d',unionkey):
+                                # make regex from printf %d ONLY IF it appears in the key
+                                unionregex = re.sub('%d','(\d+)',unionkey)
+                                kmatch = re.search(unionregex,ACFKEY)
+                                if kmatch:
+                                    try:
+                                        newkey = unionkey%int(kmatch.group(1))
+                                    except:
+                                        Tracer()()
+                                    self.union.update({newkey:ACFVAL})
+                                    # default for unionkey is set now with
+                                    # the proper index, so we can now
+                                    # discard unionkey
+                                    self.union.pop(unionkey)
+                                    break
 
         # the DEFAULT MODE in the input is special -- it assigns non ACF defaults to the union
         TheDefaultMode = self.modeKVpair['MODE_DEFAULT']
