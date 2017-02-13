@@ -973,6 +973,8 @@ class modegen():
 
     def __init__(self, modefile, acffile):
 
+        self.__OK2write = True
+
         self.modefile = os.path.expanduser(modefile)
         self.acffile = os.path.expanduser(acffile)
         
@@ -985,15 +987,19 @@ class modegen():
         self.__assign_defaults_from_acf()
         self.__index_modeKVpair()
 
-        # self.write()
+        # # print error messages for keys in union that are not declared in all non-default modes
+        # nondefault = self.modeKVpair.copy()
+        # nondefault.pop('MODE_DEFAULT')
+        # for key in self.union.keys():
+        #     if self.union[key] == None:
+        #         if not all([key in nondefault[mode] for mode in nondefault.keys()]) :
+        #             print "WARNING: '%s' is undefined for some modes."%key
 
-        # print error messages for keys in union that are not declared in all non-default modes
-        nondefault = self.modeKVpair.copy()
-        nondefault.pop('MODE_DEFAULT')
+        # print error messages for keys in union that are not declared the default mode
         for key in self.union.keys():
             if self.union[key] == None:
-                if not all([key in nondefault[mode] for mode in nondefault.keys()]) :
-                    print "WARNING: '%s' is undefined for some modes."%key
+                print "WARNING: '%s' needs to be defined in MODE_DEFAULT."%key
+                self.__OK2write = False
 
     def __read_inputfile(self):
         """ read the input file """
@@ -1103,22 +1109,28 @@ class modegen():
         
     def write(self,append=None):
         """ write the mode sections to standard out """
+        if not self.__OK2write:
+            print "** Something is wrong -- check error messages from initialization."
+            if append:
+                print "WARNING: no modes written to %s."%self.acffile
+            return False
+
         allkeys = np.sort(self.union.keys())
 
         if append:
             sys.stdout = open(self.acffile,'a')
         
         for mode in self.modeKVpair:
-            if mode == 'MODE_DEFAULT' and append:
-                continue
+            # loop over all modes declared
             print "[%s]"%mode
             modekeys = self.modeKVpair[mode].keys()
+            # first, print the K=V entries for this mode.
             for key in allkeys:
                 if key in modekeys:
                     print "%s=%s"%(key,self.modeKVpair[mode][key])
                 else:
                     print "%s=%s"%(key,self.union[key])
-            # print the non K=V entries in each mode.
+            # print the non K=V entries for this mode.
             for line in self.modelist[mode]:
                 print line
             # propagate any non K=V in MODE_DEFAULT with neither thought or regard
