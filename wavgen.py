@@ -977,6 +977,13 @@ class modegen():
 
         self.modefile = os.path.expanduser(modefile)
         self.acffile = os.path.expanduser(acffile)
+
+        if not os.path.isfile(self.modefile):
+            print "MODE FILE NOT FOUND: %s"%self.modefile
+            return False
+        if not os.path.isfile(self.acffile):
+            print "ACF FILE NOT FOUND: %s"%self.acffile
+            return False
         
         self.modeKVpair = {} # dict of mode KEY=VALUE pairs
         self.union      = {} # the union of mode keys
