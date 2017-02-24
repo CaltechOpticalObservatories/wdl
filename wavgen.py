@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import scipy.sparse as sparse # need 0.18.1
-import re,sys, os
+import re,sys, os, collections
 sys.dont_write_bytecode = True
 from IPython.core.debugger import Tracer
 #lfrom IPython.core.magic import register_line_magic
@@ -23,7 +23,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'hvbd' : 30 }
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
-Parameters       = {} # all of the parameters
+Parameters       = collections.OrderedDict() # all of the parameters
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
