@@ -47,6 +47,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     __SignalFile__ = ''
 
     # read through file to find the mod file
+    infile = os.path.abspath(os.path.expanduser(infile))
     wdl_file_did_not_specify_mod_file = True
     with open(infile,'r') as f:
         for line in f:
@@ -127,7 +128,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                                         %(chan,board_type,nslot,f.name)
                                     continue
                                 TSchan = __chan_per_board__[board_type] \
-                                         * mlab.find(np.array(slot[board_type]) == nslot) \
+                                         * mlab.find(np.array(slot[board_type]) == nslot)[0] \
                                          + chan
                                 # uncomment below to debug waveform read-in
                                 # print '%s[%d] <-- (%d,%g)'%(board_type,TSchan,time,value)
