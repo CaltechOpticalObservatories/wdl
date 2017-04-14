@@ -21,6 +21,7 @@
 
 GPP       = /usr/local/bin/gpp
 WDLPATH   = /home/ztf/devel/wdl
+ACFPATH   = /home/ztf/Software/acf
 
 PLOT      = False   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
@@ -63,3 +64,8 @@ F_TMP = $(@F)_TMP
 		$(I2A) - > $(@F).acf
 	$(eval MODEFILE := $(shell $(SCAN_MODEFILE)))
 	@$(MODEGEN) $(MODEFILE) $(@F).acf
+	@scp -p $(@F).acf 192.168.1.2:$(ACFPATH)
+	@scp -p $(@F).acf 192.168.1.3:$(ACFPATH)
+	@scp -p $(@F).acf 192.168.1.4:$(ACFPATH)
+	@scp -p $(@F).acf 192.168.1.5:$(ACFPATH)
+	@scp -p $(@F).acf 192.168.1.6:$(ACFPATH)
