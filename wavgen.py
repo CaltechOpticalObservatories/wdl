@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import scipy.sparse as sparse # need 0.18.1
-import re,sys, os
-sys.dont_write_bytecode = True
+import re,sys, os, collections
 from IPython.core.debugger import Tracer
 #lfrom IPython.core.magic import register_line_magic
 #import time as t
@@ -23,7 +22,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'hvbd' : 30 }
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
-Parameters       = {} # all of the parameters
+Parameters       = collections.OrderedDict() # all of the parameters
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
@@ -43,10 +42,11 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     usercommands = []
     
     #default mod file
-    ModFile = '/home/ztf/devel/wdl/test.mod'
+    ModFile = '/home/ztf/devel/python/wdl/test.mod'
     __SignalFile__ = ''
 
     # read through file to find the mod file
+    infile = os.path.abspath(os.path.expanduser(infile))
     wdl_file_did_not_specify_mod_file = True
     with open(infile,'r') as f:
         for line in f:
@@ -127,7 +127,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                                         %(chan,board_type,nslot,f.name)
                                     continue
                                 TSchan = __chan_per_board__[board_type] \
-                                         * mlab.find(np.array(slot[board_type]) == nslot) \
+                                         * mlab.find(np.array(slot[board_type]) == nslot)[0] \
                                          + chan
                                 # uncomment below to debug waveform read-in
                                 # print '%s[%d] <-- (%d,%g)'%(board_type,TSchan,time,value)
@@ -538,7 +538,7 @@ exit state and the parameters used in Catalog """
 
             seq_indx = mlab.find(self.sequence_times == do_anything_tt[jj])
             if len(seq_indx): # true condition means this is a subroutine call, not a state change.
-                this_sub_call = self.sequenceDef[seq_indx][1]
+                this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 pad -= len(this_sub_call)
                 outfile.write("%s"%(this_sub_call))
                 EOL = True
@@ -619,7 +619,7 @@ exit state and the parameters used in Catalog """
                 outfile.write("STATE000") # the do-nothing-state
                 if do_anything_dt[jj] > 2:
                     # add the repeat counter if more than 1 are required.
-                    pad -= np.ceil(np.log10(do_anything_dt[jj]-1)) + 2
+                    pad -= np.ceil(np.log10(do_anything_dt[jj]-1)).astype(int) + 2
                     outfile.write("(%d)"%(do_anything_dt[jj]-1))
             if pad < __padmax__:
                 # comment line with the counter, END LINE
@@ -653,7 +653,7 @@ exit state and the parameters used in Catalog """
 
             seq_indx = mlab.find(self.sequence_times == tt)
             if len(seq_indx): # true condition means this is a subroutine call, not a state change.
-                this_sub_call = self.sequenceDef[seq_indx][1]
+                this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 match = re.search('(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?'+
                                   '((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?'+
                                   '(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?', this_sub_call)
@@ -897,6 +897,12 @@ def state(outfile=sys.stdout):
         outfile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
         if samples_per_line != rawsamples_per_line:
             print('Warning: %d samples per line will be skipped'%(samples_per_line-rawsamples_per_line))
+        if 'Lines' in Parameters.keys():
+            cds_size = Parameters['Pixels']*Parameters['Lines']*4**3;
+            rawspace = 768*2**20 - cds_size;
+            maxrawlines = rawspace/(rawsamples_per_line*2);
+            if maxrawlines < Parameters['Lines']:
+                outfile.write('RAWENDLINE=%d\n'%(maxrawlines-1));
     if outfile.name != '<stdout>': # don't close stdout!
         outfile.close()
 
