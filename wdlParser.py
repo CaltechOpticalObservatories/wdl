@@ -553,6 +553,8 @@ def slot():
     consume("{")
     while not found("}"):
         if token.type == EOF: break
+        if found("PRINT"):
+            PRINT()
         if found("DRV"):
             consume("DRV")
             drv(slotNumber)
@@ -1273,6 +1275,8 @@ def parse_modules(sourceText):
         elif found("SLOT"):
             # parse the rules for the SLOT keyword
             slot()
+        elif found("PRINT"):
+            PRINT()
         else:
             # We should only be parsing modules now
             error("unrecognized token " + token.show(align=False) )
