@@ -1113,24 +1113,21 @@ def param():
 
 # -----------------------------------------------------------------------------
 # @fn     print
-# @brief  prints a formatted string
-# @param  
+# @brief  prints a string to stderr
+# @param  string to print
 # @return none
 # -----------------------------------------------------------------------------
 def PRINT():
     """
     """
     global token
-    global paramList
-    global paramNames
 
     consume("PRINT")
     consume("(")
     if found(STRING):
-        outputFile = token.cargo.strip('"')
+        message = token.cargo.strip('"')
     consume(STRING)
-    with open(outputFile, "w") as file:
-        file.write(outputFile)
+    sys.stderr.write(message + "\n")
     while not found(";"):
         getToken()
         if token.type == EOF: break
