@@ -901,7 +901,7 @@ def state(outfile=sys.stdout):
             cds_size = Parameters['Pixels']*Parameters['Lines']*4**3;
             rawspace = 768*2**20 - cds_size;
             maxrawlines = rawspace/(rawsamples_per_line*2);
-            if maxrawlines < Parameters['Lines']:
+            if maxrawlines < Parameters['Lines'] and maxrawlines > 0:
                 outfile.write('RAWENDLINE=%d\n'%(maxrawlines-1));
     if outfile.name != '<stdout>': # don't close stdout!
         outfile.close()
