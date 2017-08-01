@@ -335,11 +335,11 @@ def clamp(slotNumber):
             sign = -1
 
         if found(NUMBER):
-            clamp = sign * token.cargo
+            clamp = sign * float(token.cargo)
         consume(NUMBER)
     consume(";")
 
-    adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + clamp + "\n"
+    adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + str(clamp) + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     hvhc
