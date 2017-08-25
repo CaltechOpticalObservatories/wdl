@@ -62,7 +62,8 @@ Use 'stdout' or sys.stdout to dump to terminal. """
         if wdl_file_did_not_specify_mod_file:
             print "Using default MOD file: %s"%ModFile
         else:
-            print "Using MOD file: %s"%ModFile
+            if verbose > 0:
+                print "Using MOD file: %s"%ModFile
         __loadMod__(ModFile);
 
     ## global slot is now well defined, read in the file again for WDL content.
@@ -140,12 +141,14 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                         thisTS.nperiods = int(match.group(1))
                         if thisTS.nperiods == 0:
                             print 'WARNING: nperiods for %s %s is 0'%(TStype,acfLabel)
-    print 'Loading signal mnemonics from %s'%__SignalFile__
+    if verbose > 0:
+        print 'Loading signal mnemonics from %s'%__SignalFile__
     __loadSignals__(__SignalFile__)
     if outfile == '/dev/null': #default condition
         ok = script(outfile)
         state(outfile)
-        print "Specify base file name to generate output, or 'stdout' to print to screen."
+        if verbose > 0:
+            print "Specify base file name to generate output, or 'stdout' to print to screen."
     elif outfile == 'stdout' or outfile == sys.stdout:
         ok = script();
         state();
@@ -888,21 +891,39 @@ def state(outfile=sys.stdout):
     global Catalog
     global Parameters
     CatalogNames = [obj.name for obj in Catalog]
-    if 'RawPixel' in CatalogNames and 'Pixels' in Parameters.keys():
-        RP_label = __index_of__('RawPixel')
-        RP_time  = Catalog[RP_label].time
-        samples_per_line = Parameters['Pixels'] * RP_time
-        rawsamples_per_line = int(np.floor(samples_per_line / 1024.) * 1024)
-        rawsamples_per_line = max(rawsamples_per_line, 1024)
-        outfile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
-        if samples_per_line != rawsamples_per_line:
-            print('Warning: %d samples per line will be skipped'%(samples_per_line-rawsamples_per_line))
-        if 'Lines' in Parameters.keys():
-            cds_size = Parameters['Pixels']*Parameters['Lines']*4**3;
-            rawspace = 768*2**20 - cds_size;
-            maxrawlines = rawspace/(rawsamples_per_line*2);
-            if maxrawlines < Parameters['Lines'] and maxrawlines > 0:
-                outfile.write('RAWENDLINE=%d\n'%(maxrawlines-1));
+    # easter egg activated by existence of a sequence or waveform named 'RawPixel'.  Parameter
+    # 'Pixels' and the wdl-calculated clocks for 'RawPixel' determines the maximum safe number of
+    # raw samples to take on a line (the largest multiple of 1024 samples).
+    #
+    # Note that the Parameters 'Pixels' and 'Lines' determine the action of the ACF loop, whereas
+    # the ACF keywords 'LINECOUNT' and 'PIXELCOUNT' determine the size of the cds image.
+    # Generally, they are the same, but the keyword values can be smaller than the parameter
+    # values.
+    #
+    # In specifying the raw data section, everything counts from 0, except for the number of
+    # RAWSAMPLES.  In specifying the CDS image or the loop, the values count from 1.
+    #
+    # The number of RAWSAMPLES is maximized UNLESS the ACF keyword 'RAWENDLINE' is greater than the
+    # Parameter 'Lines' - 1.
+    #
+    # This easter egg may be abandoned in favor of a post-processing script that looks at the ACF
+    # and the WDL files and adjusts the ACF accordingly.
+    ###
+    # if 'RawPixel' in CatalogNames and 'Pixels' in Parameters.keys():
+    #     RP_label = __index_of__('RawPixel')
+    #     RP_time  = Catalog[RP_label].time
+    #     samples_per_line = Parameters['Pixels'] * RP_time
+    #     rawsamples_per_line = int(np.floor(samples_per_line / 1024.) * 1024)
+    #     rawsamples_per_line = max(rawsamples_per_line, 1024)
+    #     outfile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
+    #     if samples_per_line != rawsamples_per_line:
+    #         print('Warning: %d samples per line will be skipped'%(samples_per_line-rawsamples_per_line))
+    #     if 'Lines' in Parameters.keys():
+    #         cds_size = Parameters['Pixels']*Parameters['Lines']*4**3;
+    #         rawspace = 768*2**20 - cds_size;
+    #         maxrawlines = rawspace/(rawsamples_per_line*2);
+    #         if maxrawlines < Parameters['Lines'] and maxrawlines > 0:
+    #             outfile.write('RAWENDLINE=%d\n'%(maxrawlines-1));
     if outfile.name != '<stdout>': # don't close stdout!
         outfile.close()
 
