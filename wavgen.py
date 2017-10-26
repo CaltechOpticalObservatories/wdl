@@ -416,8 +416,20 @@ and there is no auto-generated end to the segment"""
                 col.append(2*chan+1);
                 row.append(time);
                 val.append(1);
-                
-        levelchangematrix = sparse.csr_matrix((val, (row,col)), shape=(self.nperiods,2*n_chan))
+
+        if len(row) > 0:
+            # the first bit here is to handle multple entries in the waveform
+            # this takes the last value requested.
+            rc  = np.array(row) + 1j * np.array(col);
+            uniq_j = len(rc) - np.unique(rc[::-1], return_index=True)[1] - 1; # index of last unique element
+            val = np.array(val)[uniq_j]; # only arrays can be indexed, not lists????
+            row = np.array(row)[uniq_j];
+            col = np.array(col)[uniq_j];
+            levelchangematrix = sparse.csc_matrix((val, (row,col)), shape=(self.nperiods,2*n_chan))
+        else:
+            # if the levelchangematrix is all zeros
+            levelchangematrix = sparse.csc_matrix((self.nperiods,2*n_chan))
+
         return levelchangematrix
 
     def __make_states(self):
@@ -453,7 +465,7 @@ new states to UniqueStateArr.
                                      lvds_level_change,
                                      adcs_level_change,
                                      back_level_change,
-                                     hvbd_level_change ), format='csr')
+                                     hvbd_level_change ), format='csc')
         
         # Find unique states in state_arr and store them in UniqueStateArr
         # UNIQUE_STATE_ID will hold the row in UNIQUE_STATES for each time step
@@ -475,7 +487,7 @@ new states to UniqueStateArr.
                 # unique_state_ID[tt] = state_matches_ustate[0]
                 unique_state_IDs.append(state_matches_ustate[0])
 
-        unique_state_ID = sparse.csr_matrix(( unique_state_IDs,
+        unique_state_ID = sparse.csc_matrix(( unique_state_IDs,
                                               (np.zeros(np.shape(times)),
                                                times) ), shape=(1,self.nperiods), dtype='int')
 
