@@ -177,7 +177,6 @@ Use 'stdout' or sys.stdout to dump to terminal. """
 
 def __loadMod__(ModFile):
     """ load the module definition file to configure global variable slot """
-    global __ModFile__
     global slot
     typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds'}
     slotnum = []
@@ -832,12 +831,13 @@ def state(outfile=sys.stdout):
                     statestring += ",1,1,"
                     if UniqueStateArr[id,jj_changeL] != UniqueStateArr[id,jj_changeF]:
                         # write an error message if change flags don't agree.
-                        if jj_level in __SignalByIndx__.keys():
+                        if jj_level/2 in __SignalByIndx__.keys():
                             thisSigName = __SignalByIndx__[jj_level/2]
                         else:
                             thisSigName = '%d:%d'%(clkslot,clkchan+1)
                         print "*** WARNING: Driver signal (%s) has inconsistent KEEP flags ***"%thisSigName
                         print "*** check signals or waveform input files for consistency  ***"
+                        print "*** For clock waveforms, 'FAST' or 'SLOW' needs to be specified ***"
                 else:
                     # in USA, 0==FAST 1==SLOW.  IN ACF, 1==FAST, 0==SLOW.
                     statestring += "%g,%d,0,"%(UniqueStateArr[id,jj_level],
