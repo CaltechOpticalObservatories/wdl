@@ -23,6 +23,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
 Parameters       = collections.OrderedDict() # all of the parameters
+Constants        = collections.OrderedDict() # all of the constants
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__       = 0
@@ -37,6 +38,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     global slot
     global __chan_per_board__
     global Parameters
+    global Constants
 
     # user command and arguments for feedback
     usercommands = []
@@ -84,10 +86,15 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                 continue
             match = re.search('^parameter\s+(\w+)=(\d+)\s*$',line) # look for parameters
             if match != None:
-                #                Parameters.append(match.group(1))
                 pname = match.group(1)
                 pval  = int(match.group(2))
                 Parameters.update({pname:pval})
+                continue
+            match = re.search('^constant\s+(\w+)=(\d+)\s*$',line) # look for constants
+            if match != None:
+                cname = match.group(1)
+                cval  = int(match.group(2))
+                Constants.update({cname:cval})
                 continue
             match = re.search(r'^(sequence|waveform)\s+(\w+)(\.(\w+)\((.*)\))?:\s*$',line) # look for a label
             if match != None:
@@ -361,6 +368,7 @@ and there is no auto-generated end to the segment"""
         self.ExitLevel = UniqueStateArr[0:1,0::2] # :1 keeps it 2D
         # other defaults
         self.Params = {};
+        self.Consts = {};
 
     def __tmax(self,reset=False):
         """ determines the number of periods in the timing script """
@@ -944,6 +952,7 @@ def script(outfile=sys.stdout, quiet=False):
 Catalog if a consistent script cannot be generated  """
     global Catalog
     global Parameters
+    global Constants
 
     jj_nocalc = mlab.find(np.isnan([obj.time for obj in Catalog]))
     N_nocalc  = len(jj_nocalc) # number of segments with uncalculated time
@@ -967,6 +976,10 @@ Catalog if a consistent script cannot be generated  """
             outfilehandle.write('[PARAMETER#]\n')
             for param in Parameters.keys():
                 outfilehandle.write('%s=%d\n'%(param,Parameters[param]))
+        if len(Constants) > 0:
+            outfilehandle.write('[CONSTANT#]\n')
+            for const in Constants.keys():
+                outfilehandle.write('%s=%d\n'%(const,Constants[const]))
         outfilehandle.write('[LINE#]\n')
         if outfilehandle.name != '<stdout>':
             outfilehandle.close();
