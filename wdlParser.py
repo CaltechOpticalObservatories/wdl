@@ -20,6 +20,7 @@
 # @modified 2016-06-07 DH allow for signed values of CLAMP
 # @modified 2016-08-23 DH implemented \???_LABEL
 # @modified 2016-09-21 DH allow RETURN to alternate sequences, waveforms
+# @modified 2018-03-15 DH throw error if an undefined param is used in a sequence
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -36,6 +37,8 @@ setSlot       = []   # SET slot
 setChan       = []   # SET chan
 setSlew       = -1   # SET slew
 setLevel      = 0
+constList     = []
+constNames    = []
 paramList     = []
 paramNames    = []
 subroutines   = []
@@ -1024,6 +1027,9 @@ def generic_sequence(*sequenceName):
                 # if next token isn't a closing paren then assume it's a number or param
                 if not found(")"):
                     sequenceLine += "(" + token.cargo #+ ")"
+                    # and if it's not a number then it must be a defined param
+                    if not found(NUMBER) and token.cargo not in paramNames:
+                        error("undefined param " + token.show(align=False) )
             elif found("RETURN"):
                 consume("RETURN")
                 # check for an alternate sequence specified for the return
@@ -1114,6 +1120,30 @@ def param():
     paramList.append(line)
 
 # -----------------------------------------------------------------------------
+# @fn     const
+# @brief  pulls out constants from anywhere in .seq file and stores in a list
+# @param  none
+# @return none
+# -----------------------------------------------------------------------------
+def const():
+    """
+    """
+    global token
+    global constList
+    global constNames
+
+    line = "constant "
+    consume("const")
+    constNames.append(token.cargo)
+    line += token.cargo
+    consume(IDENTIFIER)
+    line += token.cargo
+    consume("=")
+    line += token.cargo
+    consume(NUMBER)
+    constList.append(line)
+
+# -----------------------------------------------------------------------------
 # @fn     print
 # @brief  prints a string to stderr
 # @param  string to print
@@ -1152,11 +1182,13 @@ def parse_sequence(sourceText):
     getToken()
     PRINT()
     param()
+    const()
 
     while True:
         getToken()
         if token.type == EOF: break
         param()
+        const()
         PRINT()
         sequence()
 
@@ -1279,7 +1311,7 @@ def parse_modules(sourceText):
             PRINT()
         else:
             # We should only be parsing modules now
-            error("unrecognized token " + token.show(align=False) )
+            error("parse_modules: unrecognized token " + token.show(align=False) )
             break
 
     retval = ""
@@ -1320,6 +1352,7 @@ def parse(sourceText):
     """
     global token
     global paramList
+    global constList
 
     lexer.initialize(sourceText)
 
@@ -1342,6 +1375,8 @@ def parse(sourceText):
             PRINT()
         elif found("param"):
             param()
+        elif found("const"):
+            const()
         elif found("SEQUENCE"):
             sequenceText += sequence()
         elif found("MODULE_FILE"):
@@ -1353,7 +1388,7 @@ def parse(sourceText):
             signalFile = token.cargo.strip('"')
             consume(STRING)
         else:
-            error("unrecognized token " + token.show(align=False) )
+            error("parse: unrecognized token " + token.show(align=False) )
             break
 
     retval =""
@@ -1363,6 +1398,8 @@ def parse(sourceText):
     retval += waveformText
     for p in paramList:
         retval += p + "\n"
+    for c in constList:
+        retval += c + "\n"
 
     return retval
 
