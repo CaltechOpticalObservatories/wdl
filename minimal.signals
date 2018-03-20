@@ -1,0 +1,110 @@
+/* -*- C -*- */
+/** ---------------------------------------------------------------------------
+ * @file   wasp.signals
+ * @brief  WaSP signal names and module/channel assignments
+ * 
+ * syntax:
+ *
+ * #define signallabel slot : channel
+ *
+ * where signallabel   is any ASCII text string to identify the signal name
+ *       slot          is the slot number containing the module,
+ *       channel       is the channel number on the module
+ * 
+ * Combinations of signals can also be made by creating a comma-separated
+ * list enclosed in square brackets as follows:
+ *
+ * #define newlabel [ signallabel, signallabel [, signallabel] ]
+ *
+ * where newlabel    is any ASCII text string to define a new signal
+ *       signallabel is any signal already defined above
+ *
+ * any number can be combined in a comma-separated list between square brackets,
+ * or a single signal can be defined in square brackets to effectively asign
+ * a different name to the signal
+ *
+ */
+
+#define SHUTTER	0 : 1  /* INT signal from the backplane - controls the shutter	*/
+#define FRAME	0 : 2  /* FRAME signal from the backplane			*/
+#define LINE	0 : 3  /* LINE signal from the backplane			*/
+#define PIXEL	0 : 4  /* PIXEL signal from the backplane			*/
+
+#define SREGOUT  3 : 1 /* Focus/guider reset gate                */
+#define SWITCHP  3 : 2 /* fast switch for + ADC                  */
+#define SWITCHN  3 : 3 /* fast switch for - ADC        */
+#define TXFRCLK  3 : 9 /* Guider image phase 3 bottom                */
+#define LATCH_ENABLE   3 : 10 /* Guider image phase 2 top                */
+#define TRIG     3 : 11 /*dio 1, trigger for dnl, shorted input noise */
+                
+#define RG1	3 : 1          /* Quadrant 1 reset gate	        	*/
+#define RG3	3 : 2          /* Quadrant 3 reset gate   		*/
+#define BLC_OS	3 : 3  /* Focus/guider serial phase 2 bottom	*/
+#define NOP	3 : 4          /* No Operation state			*/
+#define BLC_DOS	3 : 9  /* Guider image phase 3 bottom		*/
+#define RG4	3 : 10         /* Quadrant 4 reset gate  		*/
+#define RG2	3 : 11         /* Quadrant 2 reset gate 		*/
+
+                
+#define R2EH34	4 : 1 /* Focus/guider serial phase 3 left/bottom	*/
+#define R3EF34	4 : 2 /* Focus/guider serial phase 3 left/top		*/
+#define R1EH34	4 : 3 /* Focus/guider serial phase 3 right/bottom	*/
+#define R3GH34	4 : 4 /* Focus/guider serial phase 3 right/top		*/
+#define SW34	4 : 5 /* Focus/guider serial phase 1 left/bottom	*/
+#define R1FG34	4 : 6 /* Focus/guider serial phase 1 right/top		*/
+#define TG34	4 : 7 /* Focus/guider serial phase 1 right/bottom	*/
+#define R2FG34	4 : 8 /* Focus/guider serial phase 1 left/top		*/
+                
+#define AD5	5 : 1 /* AD board in slot 5.  Access to the clamp	*/
+                
+#define AD6	6 : 1 /* AD board in slot 6.  Access to the clamp	*/
+                
+#define AD7	7 : 1 /* AD board in slot 7.  Access to the clamp	*/
+                
+#define AD8	8 : 1 /* AD board in slot 8.  Access to the clamp	*/
+
+/* These are the biases which can now be commanded in states            */
+#define RDG4     9 : 1  /* Reset Drain amplifier G CCD 4                */
+#define RDF4     9 : 2  /* Reset Drain amplifier F CCD 4                */
+#define RDE4     9 : 3  /* Reset Drain amplifier E CCD 4                */
+#define RDH3     9 : 4  /* Reset Drain amplifier H CCD 3                */
+#define RDG3     9 : 5  /* Reset Drain amplifier G CCD 3                */
+#define RDF3     9 : 6  /* Reset Drain amplifier F CCD 3                */
+#define RDE3     9 : 7  /* Reset Drain amplifier E CCD 3                */
+#define RDH2     9 : 8  /* Reset Drain amplifier H CCD 2                */
+#define RDG2     9 : 9  /* Reset Drain amplifier G CCD 2                */
+#define RDH1     9 : 10 /* Reset Drain amplifier H CCD 1                */
+#define RDE2     9 : 11 /* Reset Drain amplifier E CCD 2                */
+#define RDF2     9 : 12 /* Reset Drain amplifier F CCD 2                */
+#define RDH4     9 : 13 /* Reset Drain amplifier H CCD 4                */
+#define DG34     9 : 22 /* Dump gate for CCDs 3 and 4                   */
+#define DG12     9 : 24 /* Dump gate for CCDs 1 and 2                   */
+#define RDE1     9 : 19 /* Reset Drain amplifier E CCD 1                */
+#define RDF1     9 : 21 /* Reset Drain amplifier F CCD 1                */
+#define RDG1     9 : 23 /* Reset Drain amplifier G CCD 1                */
+
+                
+#define AB1	10 : 1 /* Science transfer gate				*/
+#define CD4	10 : 2 /* Science summing well				*/
+#define AB2	10 : 3 /* Science serial phase 3 G and H registers	*/
+#define CD3	10 : 4 /* Science serial phase 2 F and G registers	*/
+#define AB3	10 : 5 /* Science serial phase 1 E and H registers	*/
+#define CD2	10 : 6 /* Science serial phase 1 F and G registers	*/
+#define AB4	10 : 7 /* Science serial phase 2 E and H registers	*/
+#define CD1	10 : 8 /* Science serial phase 3 E and F registers	*/
+                
+#define R2EH12	11 : 1 /* This LVDS does nothing, so I'm presently using it as a NOP */
+#define R3EF12	11 : 2 /* Reset gate LVDS signal			*/
+#define R1EH12	11 : 3 /* Black level clamp for focus signal		*/
+#define R3GH12	11 : 4 /* Black level clamp for focus dummy signal	*/
+#define SW12	11 : 5 /* Black level clamp for guider signal		*/
+#define R1FG12	11 : 6 /* Black level clamp for guider dummy signal	*/
+#define TG12	11 : 7 /* Black level clamp for science signal		*/
+#define R2FG12	11 : 8 /* Black level clamp for science dummy signal	*/
+                
+/*#define PhiR     [RG2,RG3]*/  /* Only do reset for the present CCD, stop the others */
+
+#define ALL      [SHUTTER,FRAME,LINE,PIXEL,RG1,RG3,BLC_OS,NOP,BLC_DOS,RG4,RG2,R2EH34,R3EF34,R1EH34,R3GH34,SW34  ,R1FG34,TG34,R2FG34,AD5,AD6,AD7,AD8,AB1,CD4,AB2,CD3,AB3,CD2,AB4,CD1,R2EH12,R3EF12,R1EH12,R3GH12,SW12,R1FG12,TG12,R2FG12]
+
+#define FSClock2 [RG1, RG3]
+#define GSClock2 [RG1, RG3]
