@@ -182,7 +182,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                 Catalog[kk].plot()
     return
 
-def __loadMod__(ModFile):
+def __loadMod__(ModFile): #subroutine of loadWDL()
     """ load the module definition file to configure global variable slot """
     global slot
     typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds'}
@@ -204,7 +204,7 @@ def __loadMod__(ModFile):
                         (thisBoardLabel,ModFile)
     return
     
-def __loadSignals__(__SignalFile__):
+def __loadSignals__(__SignalFile__): #subroutine of loadWDL()
     """ load the signals file """
     global __boardTypes__
     global __SignalbyName__
@@ -235,7 +235,7 @@ def __loadSignals__(__SignalFile__):
                     print "*** Error in signal file %s ***"%__SignalFile__
     return
 
-def __get_level_index_from_chan_slot__(slotnum, channel):
+def __get_level_index_from_chan_slot__(slotnum, channel): # subroutine of __loadSignals__()
     """ given slot and channel, returns corresponding the level|change column index """
     global slot
     global __boardTypes__
@@ -261,7 +261,7 @@ def __get_level_index_from_chan_slot__(slotnum, channel):
             # 4. add the channel offset
             return (indx_base + channel)
 
-def __get_slot_chan_from_level_index__(levelColumnIndex):
+def __get_slot_chan_from_level_index__(levelColumnIndex): # only used in TimingSegment.plot()
     """given the column index in the level subset (even columns) of the UniqueStateArr,
 return the slot and channel number"""
     global slot
@@ -280,7 +280,7 @@ return the slot and channel number"""
     thisSlot = slot[boardname][rawindex/__chan_per_board__[boardname]]
     return thisSlot, thisChan, boardname
 
-def __index_of__(Name):
+def __index_of__(Name): # access Catalog elements by name instead of index
     """ returns the Catalog index number of a named time segment in the waveform """
     global Catalog
     CatalogNames = np.array([obj.name for obj in Catalog])
@@ -336,7 +336,7 @@ and there is no auto-generated end to the segment"""
 
         self.sequenceDef  = [] # subroutine calls
 
-        # this is meant to replace self.XXXdef except sequenceDef.
+        # this is meant to replace self.XXXDef except sequenceDef.
         global __chan_per_board__
         self.events = {}
         for kk in __chan_per_board__.keys():
@@ -370,7 +370,7 @@ and there is no auto-generated end to the segment"""
         self.Params = {};
         self.Consts = {};
 
-    def __tmax(self,reset=False):
+    def __tmax(self,reset=False): # subroutine of __make_states()
         """ determines the number of periods in the timing script """
         if reset:
             tmax = 1
@@ -395,8 +395,9 @@ and there is no auto-generated end to the segment"""
             tmax = max(tmax,self.sequenceDef[tt][0]+1)
         return tmax
 
-    def __fill_state(self, boardtype):
-        """ fill level and boolean change arrays (row sparse format) for state definition """
+    def __fill_state(self, boardtype): # subroutine of __make_states()
+        """fill level and boolean change arrays (row sparse format) for state
+        definition.  Called in __make_states() for each board type."""
 
         events = self.events[boardtype]
         n_chan = len(events)
@@ -655,7 +656,8 @@ exit state and the parameters used in Catalog """
         return True
 
     def __make_waveform(self, initialLevel=[]):
-        """ generate a signal-level matrix from the state array """
+        """generate a signal-level matrix from the state array.  called by
+        TimingSegment.plot() or by recursion"""
         global UniqueStateArr
         global Catalog
         state_arr = np.atleast_2d(UniqueStateArr[np.squeeze(self.unique_state_ID.toarray()),:]) # should be sparse?
