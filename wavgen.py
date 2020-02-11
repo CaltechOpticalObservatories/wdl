@@ -66,7 +66,8 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     usercommands = []
     
     #default mod file
-    ModFile = '/home/ztf/devel/python/wdl/test.mod'
+    # ModFile = '/home/ztf/devel/python/wdl/test.mod'
+    ModFile = '/home/user/wdl/test.mod'
     __SignalFile__ = ''
 
     # read through file to find the mod file
@@ -157,7 +158,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
                                         %(chan,board_type,nslot,f.name)
                                     continue
                                 TSchan = __chan_per_board__[board_type] \
-                                         * mlab.find(np.array(slot[board_type]) == nslot)[0] \
+                                         * np.where(np.array(slot[board_type]) == nslot)[0][0] \
                                          + chan
                                 # uncomment below to debug waveform read-in
                                 # print '%s[%d] <-- (%d,%g)'%(board_type,TSchan,time,value)
@@ -199,7 +200,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
         if GenerateFigs:
             print 'Generating figures...'
             tstypes = np.array([obj.tstype for obj in Catalog])
-            indxWaveform = mlab.find(tstypes == 'waveform')
+            indxWaveform = np.where(tstypes == 'waveform')[0]
             for kk in indxWaveform:
                 Catalog[kk].plot()
     return
@@ -270,7 +271,7 @@ def __get_level_index_from_chan_slot__(slotnum, channel): # subroutine of __load
                 print "*** INVALID channel (%d) specified for slot (%d,%s) ***"%(channel,slotnum,boardname)
                 return -1
             # 2. determine index in global slot for board type (0 for the first board of that type, etc)
-            indx_slot = mlab.find(np.array(slot[boardname]) == slotnum)[0]
+            indx_slot = np.where(np.array(slot[boardname]) == slotnum)[0][0]
             # 3. calculate the base index (boardname index * slot index)
             signalPartitions = np.cumsum([ 0,
                                            __chan_per_board__['drvr'] * len(slot['drvr']), ## !driver-speed-keep
@@ -278,7 +279,7 @@ def __get_level_index_from_chan_slot__(slotnum, channel): # subroutine of __load
                                            __chan_per_board__['adc']  * len(slot['adc']),
                                            __chan_per_board__['back'] * len(slot['back']),
                                            __chan_per_board__['hvbd'] * len(slot['hvbd']) ])
-            indx_LVL_boardname = mlab.find(np.array(__boardTypes__) == boardname)[0]
+            indx_LVL_boardname = np.where(np.array(__boardTypes__) == boardname)[0][0]
             indx_base = signalPartitions[indx_LVL_boardname] + indx_slot * __chan_per_board__[boardname]
             # 4. add the channel offset
             return (indx_base + channel)
@@ -295,7 +296,7 @@ return the slot and channel number"""
                                    __chan_per_board__['adc']  * len(slot['adc']),
                                    __chan_per_board__['back'] * len(slot['back']),
                                    __chan_per_board__['hvbd'] * len(slot['hvbd']) ])
-    bin = mlab.find( levelColumnIndex >= signalPartitions )[-1]
+    bin = np.where( levelColumnIndex >= signalPartitions )[-1]
     boardname = __boardTypes__[bin]
     rawindex  = levelColumnIndex - signalPartitions[bin]
     thisChan = np.mod(rawindex,__chan_per_board__[boardname])
@@ -306,7 +307,7 @@ def __index_of__(Name): # access Catalog elements by name instead of index
     """ returns the Catalog index number of a named time segment in the waveform """
     global Catalog
     CatalogNames = np.array([obj.name for obj in Catalog])
-    return mlab.find(CatalogNames == Name)[0]
+    return np.where(CatalogNames == Name)[0][0]
 
 class TimingSegment(object):
     """ general timing segment object (waveforms and sequences) to generate ACF states and script"""
@@ -506,7 +507,11 @@ new states to UniqueStateArr.
         times = np.unique(times)
         unique_state_IDs = []
         for tt in times:
-            state_matches_ustate = mlab.find(np.sum(np.abs(state_arr.getrow(tt) - UniqueStateArr),1) == 0)
+            print "state_arr.getrow(tt)=", state_arr.getrow(tt)
+            print "UniqueStateArr=", UniqueStateArr
+            print "SUB = ", np.sum(np.abs(state_arr.getrow(tt) - UniqueStateArr),1)
+            state_matches_ustate = np.where(np.sum(np.abs(state_arr.getrow(tt) - UniqueStateArr),1) == 0)[0]
+            print "state_matches_ustate=", state_matches_ustate
             if len(state_matches_ustate) == 0:
                 # unique_state_ID[tt] = len(UniqueStateArr)
                 unique_state_IDs.append(len(UniqueStateArr))
@@ -581,7 +586,7 @@ exit state and the parameters used in Catalog """
                 # for the exit levels
                 self.ExitLevel = UniqueStateArr[this_state:this_state+1,0::2]
 
-            seq_indx = mlab.find(self.sequence_times == do_anything_tt[jj])
+            seq_indx = np.where(self.sequence_times == do_anything_tt[jj])[0]
             if len(seq_indx): # true condition means this is a subroutine call, not a state change.
                 this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 pad -= len(this_sub_call)
@@ -697,7 +702,7 @@ exit state and the parameters used in Catalog """
             this_level[0,~keep[tt,:]] =      level[tt,~keep[tt,:]] # get new values
             true_level = np.vstack((true_level,this_level))
 
-            seq_indx = mlab.find(self.sequence_times == tt)
+            seq_indx = np.where(self.sequence_times == tt)[0]
             if len(seq_indx): # true condition means this is a subroutine call, not a state change.
                 this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 match = re.search('(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?'+
@@ -778,7 +783,7 @@ condition (default=last non-zero state) """
         if sum(nonstatic):
         # calculate the slot/channel numbers for the nonstatic traces.
         # drvr, lvds, adc, back, hvbd
-            signalID = mlab.find(nonstatic)
+            signalID = np.where(nonstatic)[0]
             nsignals = len(signalID)
 
             fig = plt.figure(self.label)
@@ -819,7 +824,7 @@ condition (default=last non-zero state) """
             print '(Figure %d)'%(self.label),
         print '---'
         # report levels of signals that are commanded, but static
-        staticID = mlab.find(commanded & ~nonstatic)
+        staticID = np.where(commanded & ~nonstatic)[0]
         for thisID in staticID:
             if thisID in __SignalByIndx__.keys():
                 thisLabel = __SignalByIndx__[thisID]
@@ -827,7 +832,7 @@ condition (default=last non-zero state) """
                 (thisSlot, thisChan, boardname) = __get_slot_chan_from_level_index__(thisID)
                 thisLabel = "%s[%d:%d]"%(boardname,thisSlot,thisChan+1)
             try:
-                thisLevel = level[mlab.find(keep[:,thisID]==0)[0], thisID]
+                thisLevel = level[np.where(keep[:,thisID]==0)[0][0], thisID]
                 print "  %s %s= %3g"%(thisLabel,' '*(16-len(thisLabel)),thisLevel)
             except:
                 Tracer()()
@@ -924,7 +929,7 @@ def state(outfile=sys.stdout):
                 statestring += "0,1,0"                
             elif (KeepSum + 1) == __chan_per_board__['hvbd']: # proper change 
                 # 2. get the level corresponding to the non-keep.
-                hvbd_chan = mlab.find(hvbdKeep == 0)
+                hvbd_chan = np.where(hvbdKeep == 0)[0]
                 statestring += "1,%d,%g"%(hvbd_chan+1,hvbdLevel[hvbd_chan])
             else: 
                 print "Error in HVBD state call -- multiple changes in a state"
@@ -978,14 +983,14 @@ Catalog if a consistent script cannot be generated  """
     global Parameters
     global Constants
 
-    jj_nocalc = mlab.find(np.isnan([obj.time for obj in Catalog]))
+    jj_nocalc = np.where(np.isnan([obj.time for obj in Catalog]))[0]
     N_nocalc  = len(jj_nocalc) # number of segments with uncalculated time
     while N_nocalc > 0:
         for kk in jj_nocalc: # was reversed before
             if Catalog[kk] != None:
                 Catalog[kk].script('/dev/null')
         N_old = N_nocalc
-        jj_nocalc = mlab.find(np.isnan([obj.time for obj in Catalog]))
+        jj_nocalc = np.where(np.isnan([obj.time for obj in Catalog]))[0]
         N_nocalc  = len(jj_nocalc)
         if N_nocalc == N_old:
             break
