@@ -507,11 +507,7 @@ new states to UniqueStateArr.
         times = np.unique(times)
         unique_state_IDs = []
         for tt in times:
-            print "state_arr.getrow(tt)=", state_arr.getrow(tt)
-            print "UniqueStateArr=", UniqueStateArr
-            print "SUB = ", np.sum(np.abs(state_arr.getrow(tt) - UniqueStateArr),1)
-            state_matches_ustate = np.where(np.sum(np.abs(state_arr.getrow(tt) - UniqueStateArr),1) == 0)[0]
-            print "state_matches_ustate=", state_matches_ustate
+            state_matches_ustate = np.where(np.sum(np.abs( np.asarray(state_arr.getrow(tt).todense()) - UniqueStateArr ),1) == 0)[0]
             if len(state_matches_ustate) == 0:
                 # unique_state_ID[tt] = len(UniqueStateArr)
                 unique_state_IDs.append(len(UniqueStateArr))
