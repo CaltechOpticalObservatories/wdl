@@ -75,6 +75,8 @@ drvOutput     = ""
 adcOutput     = ""
 hvlOutput     = ""
 hvhOutput     = ""
+lvlOutput     = ""
+lvhOutput     = ""
 dioOutput     = ""
 sysOutput     = ""
 
@@ -483,6 +485,134 @@ def hvlc(slotNumber):
     if (label != ""):
         hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + label + "\n"
 
+
+# -----------------------------------------------------------------------------
+# @fn     lvhc
+# @brief  rules for the LVHC keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "lvhOutput"
+# -----------------------------------------------------------------------------
+def lvhc(slotNumber):
+    """
+    These are the rules for the LVHC keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    LVHC # [#,#,#,#];
+
+    where # is any number
+    format of numbers is channel [volts, current_limit, order, enable]
+    """
+    global token
+    global lvhOutput
+
+    if found(NUMBER):
+        lvhChan = token.cargo
+        if int(lvhChan) < 1 or int(lvhChan) > 6:
+            error("LVHC channel " + dq(lvhChan) + " outside range [1..6]")
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            volts = token.cargo
+            if float(volts) < -14 or float(volts) > 14:
+                error("LVHC volts " + dq(volts) + " outside range [-14..14] V")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            current = token.cargo
+            if float(current) < 0 or float(current) > 250:
+                error("LVHC current " + dq(current) + " outside range [0..250] mA")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            order = token.cargo
+            if int(order) < 0 or int(order) > 6:
+                error("LVHC order " + dq(order) + " outside range [0..6]")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            enable = token.cargo
+            if enable != "0" and enable != "1":
+                error("LVHC enable " + dq(enable) + " must be 0 or 1")
+        consume(NUMBER)
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    lvhOutput += "MOD" + slotNumber + "\LVHC_ENABLE"  + lvhChan + "=" + enable  + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_V"       + lvhChan + "=" + volts   + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_IL"      + lvhChan + "=" + current + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_ORDER"   + lvhChan + "=" + order   + "\n"
+    if (label != ""):
+        lvhOutput += "MOD" + slotNumber + "\LVHC_LABEL" + lvhChan + "=" + label + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     lvlc
+# @brief  rules for the LVLC keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "lvlOutput"
+# -----------------------------------------------------------------------------
+def lvlc(slotNumber):
+    """
+    These are the rules for the LVLC keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    LVLC # [#,#];
+
+    where # is any number
+    format of numbers is [volts, order]
+    """
+    global token
+    global lvlOutput
+
+    if found(NUMBER):
+        lvlChan = token.cargo
+        if int(lvlChan) < 1 or int(lvlChan) > 24:
+            error("LVLC channel " + dq(lvlChan) + " outside range [1..24]")
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if token.type == EOF: break
+
+        # could have a negative number...
+        sign = +1
+        signstr = ""
+        if found("-"):
+            consume("-")
+            sign = -1
+            signstr = "-"
+
+        if found(NUMBER):
+            volts = token.cargo
+            if (sign*float(volts)) < -14 or (sign*float(volts)) > 14:
+                error("LVLC volts " + dq(signstr+volts) + " outside range [-14..14] V")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            order = token.cargo
+            if int(order) < 0 or int(order) > 24:
+                error("LVLC order " + dq(order) + " outside range [0..24]")
+        consume(NUMBER)
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    lvlOutput += "MOD" + slotNumber + "\LVLC_V"     + lvlChan + "=" + signstr+volts + "\n"
+    lvlOutput += "MOD" + slotNumber + "\LVLC_ORDER" + lvlChan + "=" + order + "\n"
+    if (label != ""):
+        lvlOutput += "MOD" + slotNumber + "\LVLC_LABEL" + lvlChan + "=" + label + "\n"
+
+
+
 # -----------------------------------------------------------------------------
 # @fn     drv
 # @brief  rules for the DRV keyword
@@ -554,7 +684,7 @@ def slot():
 
     SLOT # type { param }
 
-    where param is DRV, CLAMP, PREAMPGAIN, HVLC, HVHC, DIO, DIOPOWER
+    where param is DRV, CLAMP, PREAMPGAIN, HVLC, HVHC, LVLC, LVHC, DIO, DIOPOWER
                 followed by param specific rules,
           type  is a valid Archon module type,
           #     is any number.
@@ -596,6 +726,12 @@ def slot():
         if found("HVHC"):
             consume("HVHC")
             hvhc(slotNumber)
+        if found("LVLC"):
+            consume("LVLC")
+            lvlc(slotNumber)
+        if found("LVHC"):
+            consume("LVHC")
+            lvhc(slotNumber)
         if found("DIO"):
             consume("DIO")
             dio(slotNumber)
@@ -1312,6 +1448,8 @@ def parse_modules(sourceText):
     global adcOutput
     global hvlOutput
     global hvhOutput
+    global lvlOutput
+    global lvhOutput
     global sysOutput
 
     lexer.initialize(sourceText)
@@ -1342,6 +1480,8 @@ def parse_modules(sourceText):
     retval += adcOutput
     retval += hvlOutput
     retval += hvhOutput
+    retval += lvlOutput
+    retval += lvhOutput
     retval += dioOutput
 
     return retval

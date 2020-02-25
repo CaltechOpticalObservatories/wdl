@@ -35,13 +35,15 @@ slot = { 'drvr' : [],
          'lvds' : [], 
          'adc'  : [],
          'back' : [0], 
-         'hvbd' : [] }
-__boardTypes__     = ('drvr','lvds','adc','back','hvbd')
+         'hvbd' : [],
+         'lvbd' : [] }
+__boardTypes__     = ('drvr','lvds','adc','back','hvbd','lvbd')
 __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'lvds' : 20,
                        'adc'  : 1,
                        'back' : 6,
-                       'hvbd' : 30 }
+                       'hvbd' : 30,
+                       'lvbd' : 30 }
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
 Parameters       = collections.OrderedDict() # all of the parameters
@@ -208,7 +210,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
 def __loadMod__(ModFile): #subroutine of loadWDL()
     """ load the module definition file to configure global variable slot """
     global slot
-    typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds'}
+    typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds', 'lvbias' : 'lvbd'}
     slotnum = []
     btype   = []
     with open(ModFile,'r') as f:
@@ -219,6 +221,8 @@ def __loadMod__(ModFile): #subroutine of loadWDL()
                 thisBoardLabel = match.group(2)
                 if thisBoardLabel == 'hvxbias':
                     thisBoardLabel = 'hvbias'
+                if thisBoardLabel == 'lvxbias':
+                    thisBoardLabel = 'lvbias'
                 if thisBoardLabel in typeID.keys():
                     thisBoardType = typeID[thisBoardLabel]
                     slot[thisBoardType].append(thisSlotNum)
@@ -278,7 +282,8 @@ def __get_level_index_from_chan_slot__(slotnum, channel): # subroutine of __load
                                            __chan_per_board__['lvds'] * len(slot['lvds']),
                                            __chan_per_board__['adc']  * len(slot['adc']),
                                            __chan_per_board__['back'] * len(slot['back']),
-                                           __chan_per_board__['hvbd'] * len(slot['hvbd']) ])
+                                           __chan_per_board__['hvbd'] * len(slot['hvbd']),
+                                           __chan_per_board__['lvbd'] * len(slot['lvbd']) ])
             indx_LVL_boardname = np.where(np.array(__boardTypes__) == boardname)[0][0]
             indx_base = signalPartitions[indx_LVL_boardname] + indx_slot * __chan_per_board__[boardname]
             # 4. add the channel offset
@@ -295,7 +300,8 @@ return the slot and channel number"""
                                    __chan_per_board__['lvds'] * len(slot['lvds']),
                                    __chan_per_board__['adc']  * len(slot['adc']),
                                    __chan_per_board__['back'] * len(slot['back']),
-                                   __chan_per_board__['hvbd'] * len(slot['hvbd']) ])
+                                   __chan_per_board__['hvbd'] * len(slot['hvbd']),
+                                   __chan_per_board__['lvbd'] * len(slot['lvbd'])  ])
     bin = np.where( levelColumnIndex >= signalPartitions )[-1]
     boardname = __boardTypes__[bin]
     rawindex  = levelColumnIndex - signalPartitions[bin]
@@ -377,13 +383,15 @@ and there is no auto-generated end to the segment"""
                                            len(self.events['lvds']) +
                                            len(self.events['adc']) +
                                            len(self.events['back']) +
-                                           len(self.events['hvbd']))) ) )
+                                           len(self.events['hvbd']) +
+                                           len(self.events['lvbd']) )) ) )
             changes  = np.zeros((1, 
                                  len(self.events['drvr']) + ## !driver-speed-keep
                                  len(self.events['lvds']) +
                                  len(self.events['adc'])  +
                                  len(self.events['back']) +
-                                 len(self.events['hvbd']) ))  
+                                 len(self.events['hvbd']) +
+                                 len(self.events['lvbd']) ))  
             UniqueStateArr = np.reshape(np.vstack((levels,changes)), (1,-1), 'F')
 
         # Default exit state and level (not necessarily consistent!)
@@ -414,6 +422,9 @@ and there is no auto-generated end to the segment"""
         for chan in range(len(self.events['hvbd'])):
             for tt in range(len(self.events['hvbd'][chan])):
                 tmax = max(tmax, self.events['hvbd'][chan][tt][0]+1)
+        for chan in range(len(self.events['lvbd'])):
+            for tt in range(len(self.events['lvbd'][chan])):
+                tmax = max(tmax, self.events['lvbd'][chan][tt][0]+1)
         for tt in range(len(self.sequenceDef)):
             tmax = max(tmax,self.sequenceDef[tt][0]+1)
         return tmax
@@ -478,6 +489,7 @@ new states to UniqueStateArr.
         adcs_level_change = self.__fill_state('adc')
         back_level_change = self.__fill_state('back')
         hvbd_level_change = self.__fill_state('hvbd')
+        lvbd_level_change = self.__fill_state('lvbd')
 
         # fill the sequence array (kept separate from STATEs for now)
         call_subroutine_tt = []
@@ -496,7 +508,8 @@ new states to UniqueStateArr.
                                      lvds_level_change,
                                      adcs_level_change,
                                      back_level_change,
-                                     hvbd_level_change ), format='csc')
+                                     hvbd_level_change,
+                                     lvbd_level_change ), format='csc')
         
         # Find unique states in state_arr and store them in UniqueStateArr
         # UNIQUE_STATE_ID will hold the row in UNIQUE_STATES for each time step
@@ -778,7 +791,7 @@ condition (default=last non-zero state) """
 
         if sum(nonstatic):
         # calculate the slot/channel numbers for the nonstatic traces.
-        # drvr, lvds, adc, back, hvbd
+        # drvr, lvds, adc, back, hvbd, lvbd
             signalID = np.where(nonstatic)[0]
             nsignals = len(signalID)
 
@@ -931,6 +944,27 @@ def state(outfile=sys.stdout):
                 print "Error in HVBD state call -- multiple changes in a state"
             outfile.write(statestring + '"\n')
             offset += n_hvbd_X_2
+        for lvbdslot in slot['lvbd']: # this is different from the other states,
+            # in the acf, there is only one entry and it is
+            # (!KEEP, chan, value)
+            outfile.write(prefix + 'MOD%d="'%lvbdslot)
+            statestring = ""
+            n_lvbd_X_2 = 2*__chan_per_board__['lvbd']
+            lvbdLevel = UniqueStateArr[id,offset:offset+n_lvbd_X_2:2]
+            lvbdKeep  = np.invert(UniqueStateArr[id,offset+1:offset+n_lvbd_X_2:2].astype('bool')).astype('int')
+            # 1. check that there is only one non-keep in lvbdKeep
+            KeepSum = sum(lvbdKeep)
+            if KeepSum == __chan_per_board__['lvbd']: # nothing changed
+                statestring += "0,1,0"                
+            elif (KeepSum + 1) == __chan_per_board__['lvbd']: # proper change 
+                # 2. get the level corresponding to the non-keep.
+                lvbd_chan = np.where(lvbdKeep == 0)[0]
+                statestring += "1,%d,%g"%(lvbd_chan+1,lvbdLevel[lvbd_chan])
+            else: 
+                print "Error in LVBD state call -- multiple changes in a state"
+            outfile.write(statestring + '"\n')
+            offset += n_lvbd_X_2
+
     outfile.write('STATES=%d\n'%(id+1))
 
     global Catalog
