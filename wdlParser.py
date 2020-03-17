@@ -512,10 +512,15 @@ def lvhc(slotNumber):
     consume("[")
     while not found("]"):
         if token.type == EOF: break
+        # could have a negative number here...
+        sign = +1
+        if found("-"):
+            consume("-")
+            sign = -1
         if found(NUMBER):
-            volts = token.cargo
+            volts = sign * float(token.cargo)
             if float(volts) < -14 or float(volts) > 14:
-                error("LVHC volts " + dq(volts) + " outside range [-14..14] V")
+                error("LVHC volts " + dq(str(volts)) + " outside range [-14..14] V")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -545,7 +550,7 @@ def lvhc(slotNumber):
     consume(";")
 
     lvhOutput += "MOD" + slotNumber + "\LVHC_ENABLE"  + lvhChan + "=" + enable  + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_V"       + lvhChan + "=" + volts   + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_V"       + lvhChan + "=" + str(volts) + "\n"
     lvhOutput += "MOD" + slotNumber + "\LVHC_IL"      + lvhChan + "=" + current + "\n"
     lvhOutput += "MOD" + slotNumber + "\LVHC_ORDER"   + lvhChan + "=" + order   + "\n"
     if (label != ""):
