@@ -220,10 +220,10 @@ def dio(slotNumber, type):
 
     if found(NUMBER):
         dioChan = token.cargo
-        if type == 3 or type == 5:
-            if int(dioChan) != 12 and int(dioChan) != 34 and int(dioChan) != 56 and int(dioChan) != 78:
-                error("DIO channel " + dq(dioChan) + " outside range {12,34,56,78} for module: " + module_name.upper())
-        elif type == 7 or type == 10:
+        if module_name.upper() == "LVBIAS" or module_name.upper() == "HEATER":
+            if int(dioChan) < 1 or int(dioChan) > 8:
+                error("DIO channel " + dq(dioChan) + " outside range {1:8} for module: " + module_name.upper())
+        elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
             if int(dioChan) < 1 or int(dioChan) > 4:
                 error("DIO channel " + dq(dioChan) + " outside range for HS, LVDS {1:4}")
         else:
@@ -253,7 +253,15 @@ def dio(slotNumber, type):
     consume(";")
 
     dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
-    dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
+
+    # for LVBIAS and HEATER cards there are 8 DIO outputs but only 4 directions
+    if module_name.upper() == "LVBIAS" or module_name.upper() == "HEATER":
+        chan = int(dioChan)
+        # for odd number channels 1,3,5,7 then DIO_DIR is DIO_DIR12, 34, 56, 78
+        if chan % 2 == 1:
+            dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + str(chan) + str(chan+1) + "=" + direction + "\n"
+    elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
+        dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
     if (label != ""):
         dioOutput += "MOD" + slotNumber + "\DIO_LABEL" + dioChan + "=" + label     + "\n"
 
