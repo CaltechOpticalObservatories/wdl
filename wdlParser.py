@@ -21,6 +21,7 @@
 # @modified 2016-08-23 DH implemented \???_LABEL
 # @modified 2016-09-21 DH allow RETURN to alternate sequences, waveforms
 # @modified 2018-03-15 DH throw error if an undefined param is used in a sequence
+# @modified 2020-03-20 DH added support for HEATER card
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -56,6 +57,7 @@ from Symbols import *
 class ParserError(Exception): pass
 
 token         = None
+module_name   = None
 setSlot       = []   # SET slot
 setChan       = []   # SET chan
 setSlew       = -1   # SET slew
@@ -79,6 +81,10 @@ lvlOutput     = ""
 lvhOutput     = ""
 dioOutput     = ""
 sysOutput     = ""
+sensorOutput  = ""
+heaterOutput  = ""
+pidOutput     = ""
+rampOutput    = ""
 
 __SLEW_FAST   =  1
 __SLEW_SLOW   =  0
@@ -163,7 +169,7 @@ def consume(argTokenType):
     if token.type.upper() == argTokenType.upper():
         getToken()
     else:
-        error("expected " + argTokenType + 
+        error("(wdlParser.py::consume) expected " + argTokenType + 
               " but got " + token.show(align=False) )
 
 # -----------------------------------------------------------------------------
@@ -177,6 +183,7 @@ def module():
     return an integer type for the module of the current token
     """
     global token
+    global module_name
     module_name = token.cargo
     # convert all comparisons to upper for case-insensitivity
     if   module_name.upper() == "DRIVER"  : type = 1
@@ -189,16 +196,17 @@ def module():
     elif module_name.upper() == "LVXBIAS" : type = 9
     elif module_name.upper() == "LVDS"    : type = 10
     else:
-        error("unrecognized module type: " + dq(module_name))
+        error("(wdlParser.py::module) unrecognized module type: " + dq(module_name))
     return(type)
 
 # -----------------------------------------------------------------------------
 # @fn     dio
 # @brief  rules for the DIO keyword
 # @param  string slotNumber
+# @param  int type
 # @return none, appends to global variable "dioOutput"
 # -----------------------------------------------------------------------------
-def dio(slotNumber):
+def dio(slotNumber, type):
     """
     These are the rules for the DIO keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -212,8 +220,14 @@ def dio(slotNumber):
 
     if found(NUMBER):
         dioChan = token.cargo
-        if int(dioChan) < 1 or int(dioChan) > 4:
-            error("DIO channel " + dq(dioChan) + " outside range [1..4]")
+        if type == 3 or type == 5:
+            if int(dioChan) != 12 and int(dioChan) != 34 and int(dioChan) != 56 and int(dioChan) != 78:
+                error("DIO channel " + dq(dioChan) + " outside range {12,34,56,78} for module: " + module_name.upper())
+        elif type == 7 or type == 10:
+            if int(dioChan) < 1 or int(dioChan) > 4:
+                error("DIO channel " + dq(dioChan) + " outside range for HS, LVDS {1:4}")
+        else:
+                error("DIO is invalid keyword for module: " + module_name.upper())
     consume(NUMBER)
     consume("[")
     while not found("]"):
@@ -270,21 +284,51 @@ def diopower(slotNumber):
             elif token.cargo == "1":
                 diopower = "1"
             else:
-                error("unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("DIOPOWER unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
             consume(NUMBER)
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
-            if token.cargo.upper() == "ENABLED":
+            if "ENABLE" in token.cargo.upper():
                 diopower = "0"
-            elif token.cargo.upper() == "DISABLED":
+            elif "DISABLE" in token.cargo.upper():
                 diopower = "1"
             else:
-                error("unrecognized value: " + dq(token.cargo) +\
+                error("DIOPOWER unrecognized value: " + dq(token.cargo) +\
                       "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
     dioOutput += "MOD" + slotNumber + "\DIO_POWER=" + diopower + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     updatetime
+# @brief  rules for the UPDATETIME keyword
+# @param  string slotNumber
+# @return none, appends to global variable "heaterOutput"
+# -----------------------------------------------------------------------------
+def updatetime(slotNumber):
+    """
+    These are the rules for the UPDATETIME keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    UPDATETIME=#;
+
+    where # is {1:30000}
+    """
+    global token
+    global heaterOutput
+
+    consume("=")
+    while not found(";"):
+        if token.type == EOF: break
+        # if it's a number then allow a 0 or 1
+        if found(NUMBER):
+            updateTime = int(token.cargo)
+            if updateTime < 1 or updateTime > 30000:
+                error("UPDATETIME: " + dq(str(updateTime)) + " outside range {1:30000}")
+            consume(NUMBER)
+    consume(";")
+
+    heaterOutput += "MOD" + slotNumber + "\HEATERUPDATETIME=" + str(updateTime) + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     preampgain
@@ -313,7 +357,7 @@ def preampgain(slotNumber):
             elif token.cargo == "1":
                 preampgain = "1"
             else:
-                error("unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("PREAMPGAIN unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
             consume(NUMBER)
         # or "low" or "high", converted to upper for case-insensitivity
         elif found(IDENTIFIER):
@@ -322,7 +366,7 @@ def preampgain(slotNumber):
             elif token.cargo.upper() == "HIGH":
                 preampgain = "1"
             else:
-                error("unrecognized value: " + dq(token.cargo) +\
+                error("PREAMPGAIN unrecognized value: " + dq(token.cargo) +\
                       "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
@@ -585,16 +629,14 @@ def lvlc(slotNumber):
 
         # could have a negative number...
         sign = +1
-        signstr = ""
         if found("-"):
             consume("-")
             sign = -1
-            signstr = "-"
 
         if found(NUMBER):
-            volts = token.cargo
-            if (sign*float(volts)) < -14 or (sign*float(volts)) > 14:
-                error("LVLC volts " + dq(signstr+volts) + " outside range [-14..14] V")
+            volts = sign*float(token.cargo)
+            if volts < -14 or volts > 14:
+                error("LVLC volts " + dq(str(volts)) + " outside range [-14..14] V")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -611,12 +653,318 @@ def lvlc(slotNumber):
         label=""
     consume(";")
 
-    lvlOutput += "MOD" + slotNumber + "\LVLC_V"     + lvlChan + "=" + signstr+volts + "\n"
+    lvlOutput += "MOD" + slotNumber + "\LVLC_V"     + lvlChan + "=" + str(volts) + "\n"
     lvlOutput += "MOD" + slotNumber + "\LVLC_ORDER" + lvlChan + "=" + order + "\n"
     if (label != ""):
         lvlOutput += "MOD" + slotNumber + "\LVLC_LABEL" + lvlChan + "=" + label + "\n"
 
+# -----------------------------------------------------------------------------
+# @fn     sensor
+# @brief  rules for the HEATER keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "sensorOutput"
+# -----------------------------------------------------------------------------
+def sensor(slotNumber):
+    """
+    These are the rules for the SENSOR keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    SENSOR n [s,#,#,#,#,#];
 
+    where n is sensor = {A,B,C}
+    and   # is any number
+    format of numbers is [type, current, lolim, hilim, filter]
+    """
+    global token
+    global sensorOutput
+
+    if found(IDENTIFIER):
+        sensorChan = token.cargo
+        if sensorChan != 'A' and sensorChan != 'B' and sensorChan != 'C':
+            error("SENSOR channel " + sensorChan + ": must be {A,B,C}")
+    consume(IDENTIFIER)
+    consume("[")
+    while not found ("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            sensorType = token.cargo
+            if int(sensorType) < 0 or int(sensorType) > 5:
+                error("SENSOR type: " + sensorType + ": must be in range {0:5}")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            sensorCurrent = token.cargo
+        consume(NUMBER)
+        consume(",")
+        # sensorLoLim could have a negative number...
+        sign = +1
+        if found("-"):
+            consume("-")
+            sign = -1
+        if found(NUMBER):
+            sensorLoLim = sign * float(token.cargo)
+            if sensorLoLim < -150.0 or sensorLoLim > 50.0:
+                error("SENSOR lower limit " + str(sensorLoLim) + ": must be in range {-150:50} deg C")
+        consume(NUMBER)
+        consume(",")
+        # sensorHiLim could have a negative number...
+        sign = +1
+        if found("-"):
+            consume("-")
+            sign = -1
+        if found(NUMBER):
+            sensorHiLim = sign * float(token.cargo)
+            if sensorHiLim < -150.0 or sensorHiLim > 50.0:
+                error("SENSOR upper limit " + str(sensorHiLim) + ": must be in range {-150:50} deg C")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            sensorFilter = token.cargo
+            if int(sensorFilter) < 0 or int(sensorFilter) > 8:
+                error("SENSOR filter " + sensorFilter + ": must be in range {0:8}")
+        consume(NUMBER)
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "TYPE"       + "=" + sensorType       + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "CURRENT"    + "=" + sensorCurrent    + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "LOWERLIMIT" + "=" + str(sensorLoLim) + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "UPPERLIMIT" + "=" + str(sensorHiLim) + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "FILTER"     + "=" + sensorFilter     + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "LABEL"      + "=" + label            + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     pid
+# @brief  rules for the PID keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "pidOutput"
+# -----------------------------------------------------------------------------
+def pid(slotNumber):
+    """
+    These are the rules for the PID keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    PID c [#,#,#,#];
+
+    where # is any number
+    format of numbers is [
+    """
+    global token
+    global pidOutput
+
+    if found(IDENTIFIER):
+        heaterChan = token.cargo
+        if heaterChan != 'A' and heaterChan != 'B':
+            error("PID invalid heater: " + heaterChan + ": must be {A,B}")
+    consume(IDENTIFIER)
+    consume("[")
+    while not found ("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            heaterP = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            heaterI = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            heaterD = token.cargo
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            heaterIlim = token.cargo
+        consume(NUMBER)
+    consume("]")
+    consume(";")
+
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "P"  + "=" + heaterP    + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "I"  + "=" + heaterI    + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "D"  + "=" + heaterD    + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "IL" + "=" + heaterIlim + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     ramp
+# @brief  rules for the RAMP keyword
+# @param  string slotNumber
+# @return none, appends to global variable "rampOutput"
+# -----------------------------------------------------------------------------
+def ramp(slotNumber):
+    """
+    These are the rules for the RAMP keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    RAMP n [#,#];
+
+    where n is heater {A,B}
+    and   # is any number
+    format of numbers is channel [source, direction]
+    """
+    global token
+    global rampOutput
+
+    if found(IDENTIFIER):
+        rampChan = token.cargo
+        if rampChan != 'A' and rampChan != 'B':
+            error("RAMP heater channel " + rampChan + ": must be {A,B}")
+    consume(IDENTIFIER)
+    consume("[")
+    while not found("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            ramprate = int(token.cargo)
+            if ramprate < 1 or ramprate > 32767:
+                error("RAMP rate " + dq(str(ramprate)) + " must be in range {1:32767}")
+        consume(NUMBER)
+        consume(",")
+        # if it's a number then allow a 0 or 1
+        if found(NUMBER):
+            if token.cargo == "0":
+                rampEnable = "0"
+            elif token.cargo == "1":
+                rampEnable = "1"
+            else:
+                error("RAMP enable unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+            consume(NUMBER)
+        # or "enabled" or "disabled", convert to upper for case-insensitivity
+        elif found(IDENTIFIER):
+            if "ENABLE" in token.cargo.upper():
+                rampEnable = "1"
+            elif "DISABLE" in token.cargo.upper():
+                rampEnable = "0"
+            else:
+                error("RAMP enable unrecognized value: " + dq(token.cargo) +\
+                      "\nexpected "+dq("enable")+" or "+dq("disable"))
+            consume(IDENTIFIER)
+    consume("]")
+    consume(";")
+
+    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMPRATE=" + str(ramprate) + "\n"
+    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMP="     + rampEnable    + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     heater
+# @brief  rules for the HEATER keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "heaterOutput"
+# -----------------------------------------------------------------------------
+def heater(slotNumber):
+    """
+    These are the rules for the HEATER keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    HEATER n [#,c,#,#,#,#] "label";
+
+    where # is any number
+    format of numbers is [ ]
+    """
+    global token
+    global heaterOutput
+
+    if found(IDENTIFIER):
+        heaterChan = token.cargo
+        if heaterChan != 'A' and heaterChan != 'B':
+            error("HEATER channel " + heaterChan + ": must be {A,B}")
+    consume(IDENTIFIER)
+    consume("[")
+    while not found ("]"):
+        if token.type == EOF: break
+        # heaterTarget could have a negative number...
+        sign = +1
+        if found("-"):
+            consume("-")
+            sign = -1
+        if found(NUMBER):
+            heaterTarget = sign * float(token.cargo)
+            if heaterTarget < -150.0 or heaterTarget > 50.0:
+                error("HEATER target " + str(heaterTarget) + ": must be in range {-150:50}")
+        consume(NUMBER)
+        consume(",")
+        # heaterSensor
+        if found(IDENTIFIER):
+            heaterSensor = token.cargo
+            if heaterSensor == 'A':
+                heaterSensor = '0'
+            elif heaterSensor == 'B':
+                heaterSensor = '1'
+            elif heaterSensor == 'C':
+                heaterSensor = '2'
+            else:
+                error("HEATER sensor " + heaterSensor + ": must be {A,B,C}")
+        consume(IDENTIFIER)
+        consume(",")
+        # heaterLimit
+        if found(NUMBER):
+            heaterLimit = float(token.cargo)
+            if heaterLimit < 0.0 or heaterLimit > 25.0:
+                error("HEATER volt limit " + str(heaterLimit) + ": must be in range {0:25}")
+        consume(NUMBER)
+        consume(",")
+        # heaterForcelevel
+        if found(NUMBER):
+            heaterForcelevel = float(token.cargo)
+            if heaterForcelevel < 0.0 or heaterForcelevel > 25.0:
+                error("HEATER volt force level " + str(heaterForcelevel) + ": must be in range {0:25}")
+        consume(NUMBER)
+        consume(",")
+        # heaterForce
+        # if it's a number then allow a 0 or 1
+        if found(NUMBER):
+            if token.cargo == "0":
+                heaterForce = "0"
+            elif token.cargo == "1":
+                heaterForce = "1"
+            else:
+                error("HEATER force unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+            consume(NUMBER)
+        # or "force" or "normal", convert to upper for case-insensitivity
+        elif found(IDENTIFIER):
+            if "FORCE" in token.cargo.upper():
+                heaterForce = "1"
+            elif "NORMAL" in token.cargo.upper():
+                heaterForce = "0"
+            else:
+                error("HEATER force unrecognized value: " + dq(token.cargo) +\
+                      "\nexpected "+dq("force")+" or "+dq("normal"))
+            consume(IDENTIFIER)
+        consume(",")
+        # heaterEnable
+        # if it's a number then allow a 0 or 1
+        if found(NUMBER):
+            if token.cargo == "0":
+                heaterEnable = "0"
+            elif token.cargo == "1":
+                heaterEnable = "1"
+            else:
+                error("HEATER enable unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+            consume(NUMBER)
+        # or "enabled" or "disabled", convert to upper for case-insensitivity
+        elif found(IDENTIFIER):
+            if "ENABLE" in token.cargo.upper():
+                heaterEnable = "1"
+            elif "DISABLE" in token.cargo.upper():
+                heaterEnable = "0"
+            else:
+                error("HEATER enable unrecognized value: " + dq(token.cargo) +\
+                      "\nexpected "+dq("enable")+" or "+dq("disable"))
+            consume(IDENTIFIER)
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "TARGET"     + "=" + str(heaterTarget) + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "SENSOR"     + "=" + heaterSensor      + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "LIMIT"      + "=" + str(heaterLimit)      + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "FORCELEVEL" + "=" + str(heaterForcelevel) + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "FORCE"      + "=" + heaterForce       + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "ENABLE"     + "=" + heaterEnable      + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     drv
@@ -739,10 +1087,28 @@ def slot():
             lvhc(slotNumber)
         if found("DIO"):
             consume("DIO")
-            dio(slotNumber)
+            dio(slotNumber,type)
         if found("DIOPOWER"):
             consume("DIOPOWER")
             diopower(slotNumber)
+        if found("UPDATETIME"):
+            consume("UPDATETIME")
+            updatetime(slotNumber)
+        if found("PID"):
+            consume("PID")
+            pid(slotNumber)
+        if found("SENSOR"):
+            consume("SENSOR")
+            sensor(slotNumber)
+        if found("HTR"):
+            consume("HTR")
+            heater(slotNumber)
+        if found("RAMP"):
+            consume("RAMP")
+            ramp(slotNumber)
+        if found("HEATER"):
+            consume("HEATER")
+            heater(slotNumber)
         else:
             pass
     consume("}")
@@ -956,7 +1322,7 @@ def slew():
         consume("FAST")
         setSlew = __SLEW_FAST
     else:
-        error("expected SLOW | FAST but got: " + dq(token.cargo))
+        error("SLEW expected SLOW | FAST but got: " + dq(token.cargo))
 
 # -----------------------------------------------------------------------------
 # @fn     eol
@@ -1166,14 +1532,14 @@ def generic_sequence(*sequenceName):
             if  ( found(IDENTIFIER) ) and \
                 ( token.cargo not in subroutines ) and \
                 ( token.cargo not in paramNames ):
-                error("undefined symbol " + token.show(align=False) )
+                error("(wdlParser.py::generic_sequence) undefined symbol " + token.show(align=False) )
             # If token is a GOTO then the next token must be in the list
             # of subroutines() with open and close parentheses and nothing else
             if found("GOTO"):
                 consume("GOTO")
                 # Check next token against list of subroutines
                 if token.cargo not in subroutines:
-                    error("undefined waveform or sequence: " + dq(token.cargo))
+                    error("(wdlParser.py::generic_sequence) undefined waveform or sequence: " + dq(token.cargo))
                 else:
                     sequenceLine += "GOTO " + token.cargo
                     # then consume the IDENTIFIER and the open/close parentheses
@@ -1193,7 +1559,7 @@ def generic_sequence(*sequenceName):
                     sequenceLine += "(" + token.cargo #+ ")"
                     # and if it's not a number then it must be a defined param
                     if not found(NUMBER) and token.cargo not in paramNames:
-                        error("undefined param " + token.show(align=False) )
+                        error("(wdlParser.py::generic_sequence) undefined param " + token.show(align=False) )
             elif found("RETURN"):
                 consume("RETURN")
                 # check for an alternate sequence specified for the return
@@ -1456,6 +1822,10 @@ def parse_modules(sourceText):
     global lvlOutput
     global lvhOutput
     global sysOutput
+    global sensorOutput
+    global heaterOutput
+    global pidOutput
+    global rampOutput
 
     lexer.initialize(sourceText)
 
@@ -1477,7 +1847,7 @@ def parse_modules(sourceText):
             PRINT()
         else:
             # We should only be parsing modules now
-            error("parse_modules: unrecognized token " + token.show(align=False) )
+            error("(wdlParser.py::parse_modules) unrecognized token " + token.show(align=False) )
             break
 
     retval = ""
@@ -1488,6 +1858,10 @@ def parse_modules(sourceText):
     retval += lvlOutput
     retval += lvhOutput
     retval += dioOutput
+    retval += sensorOutput
+    retval += heaterOutput
+    retval += pidOutput
+    retval += rampOutput
 
     return retval
 
@@ -1556,7 +1930,7 @@ def parse(sourceText):
             signalFile = token.cargo.strip('"')
             consume(STRING)
         else:
-            error("parse: unrecognized token " + token.show(align=False) )
+            error("(wdlParser.py::parse) unrecognized token " + token.show(align=False) )
             break
 
     retval =""
@@ -1631,7 +2005,7 @@ def make_include(sourceText):
             consume("=")
             consume(STRING)
         else:
-            error("make_include: unrecognized keyword: " + dq(token.cargo))
+            error("(wdlParser.py::make_include) unrecognized keyword: " + dq(token.cargo))
 
 # -----------------------------------------------------------------------------
 # @fn     make_include_sequence
@@ -1698,7 +2072,7 @@ def make_include_sequence(sourceText):
             consume("=")
             consume(STRING)
         else:
-            error("make_include_sequence: unrecognized keyword: " + dq(token.cargo))
+            error("(wdlParser.py::make_include_sequence) unrecognized keyword: " + dq(token.cargo))
 
     if len(waveformFile) == 0:
         raise ParserError("missing WAVEFORM_FILE")

@@ -33,13 +33,15 @@ from IPython.core.debugger import Tracer
 period_ns        = 10  # ns
 slot = { 'drvr' : [], 
          'lvds' : [], 
+         'htr'  : [], 
          'adc'  : [],
          'back' : [0], 
          'hvbd' : [],
          'lvbd' : [] }
-__boardTypes__     = ('drvr','lvds','adc','back','hvbd','lvbd')
+__boardTypes__     = ('drvr','lvds','htr','adc','back','hvbd','lvbd')
 __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'lvds' : 20,
+                       'htr'  : 8,
                        'adc'  : 1,
                        'back' : 6,
                        'hvbd' : 30,
@@ -210,7 +212,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
 def __loadMod__(ModFile): #subroutine of loadWDL()
     """ load the module definition file to configure global variable slot """
     global slot
-    typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds', 'lvbias' : 'lvbd'}
+    typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds', 'heater': 'htr', 'lvbias' : 'lvbd'}
     slotnum = []
     btype   = []
     with open(ModFile,'r') as f:
@@ -280,6 +282,7 @@ def __get_level_index_from_chan_slot__(slotnum, channel): # subroutine of __load
             signalPartitions = np.cumsum([ 0,
                                            __chan_per_board__['drvr'] * len(slot['drvr']), ## !driver-speed-keep
                                            __chan_per_board__['lvds'] * len(slot['lvds']),
+                                           __chan_per_board__['htr']  * len(slot['htr']),
                                            __chan_per_board__['adc']  * len(slot['adc']),
                                            __chan_per_board__['back'] * len(slot['back']),
                                            __chan_per_board__['hvbd'] * len(slot['hvbd']),
@@ -298,6 +301,7 @@ return the slot and channel number"""
     signalPartitions = np.cumsum([ 0,
                                    __chan_per_board__['drvr'] * len(slot['drvr']), ## !driver-speed-keep
                                    __chan_per_board__['lvds'] * len(slot['lvds']),
+                                   __chan_per_board__['htr']  * len(slot['htr']),
                                    __chan_per_board__['adc']  * len(slot['adc']),
                                    __chan_per_board__['back'] * len(slot['back']),
                                    __chan_per_board__['hvbd'] * len(slot['hvbd']),
@@ -381,6 +385,7 @@ and there is no auto-generated end to the segment"""
             levels = np.hstack( (np.array([[0,0]*(len(self.events['drvr'])/2)]),
                                  np.zeros((1,
                                            len(self.events['lvds']) +
+                                           len(self.events['htr']) +
                                            len(self.events['adc']) +
                                            len(self.events['back']) +
                                            len(self.events['hvbd']) +
@@ -388,6 +393,7 @@ and there is no auto-generated end to the segment"""
             changes  = np.zeros((1, 
                                  len(self.events['drvr']) + ## !driver-speed-keep
                                  len(self.events['lvds']) +
+                                 len(self.events['htr']) +
                                  len(self.events['adc'])  +
                                  len(self.events['back']) +
                                  len(self.events['hvbd']) +
@@ -413,6 +419,9 @@ and there is no auto-generated end to the segment"""
         for chan in range(len(self.events['lvds'])):
             for tt in range(len(self.events['lvds'][chan])):
                 tmax = max(tmax, self.events['lvds'][chan][tt][0]+1)
+        for chan in range(len(self.events['htr'])):
+            for tt in range(len(self.events['htr'][chan])):
+                tmax = max(tmax, self.events['htr'][chan][tt][0]+1)
         for chan in range(len(self.events['adc'])):
             for tt in range(len(self.events['adc'][chan])):
                 tmax = max(tmax, self.events['adc'][chan][tt][0]+1)
@@ -486,6 +495,7 @@ new states to UniqueStateArr.
         ## these are all nperiods X nchannel arrays
         drvr_level_change = self.__fill_state('drvr')
         lvds_level_change = self.__fill_state('lvds')
+        htr_level_change  = self.__fill_state('htr')
         adcs_level_change = self.__fill_state('adc')
         back_level_change = self.__fill_state('back')
         hvbd_level_change = self.__fill_state('hvbd')
@@ -506,6 +516,7 @@ new states to UniqueStateArr.
         #
         state_arr = sparse.hstack( ( drvr_level_change,
                                      lvds_level_change,
+                                     htr_level_change,
                                      adcs_level_change,
                                      back_level_change,
                                      hvbd_level_change,
@@ -905,6 +916,32 @@ def state(outfile=sys.stdout):
             statestring = statestring[:-1] + '"'
             outfile.write(statestring + '\n')
             offset += 2 * __chan_per_board__['lvds']
+        for htrslot in slot['htr']:
+            outfile.write(prefix + 'MOD%d="'%htrslot)
+            statestring = ""
+            for htrchan in range(__chan_per_board__['htr']):
+                jj_level= offset + 2*htrchan + 0
+                jj_change = offset + 2*htrchan + 1
+                if UniqueStateArr[id,jj_change] == False:
+                    statestring += "1,1,"
+                else:
+                    statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
+            statestring = statestring[:-1] + '"'
+            outfile.write(statestring + '\n')
+            offset += 2 * __chan_per_board__['htr']
+        for lvbdslot in slot['lvbd']:
+            outfile.write(prefix + 'MOD%d="'%lvbdslot)
+            statestring = ""
+            for lvbdchan in range(__chan_per_board__['lvbd']):
+                jj_level= offset + 2*lvbdchan + 0
+                jj_change = offset + 2*lvbdchan + 1
+                if UniqueStateArr[id,jj_change] == False:
+                    statestring += "1,1,"
+                else:
+                    statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
+            statestring = statestring[:-1] + '"'
+            outfile.write(statestring + '\n')
+            offset += 2 * __chan_per_board__['lvbd']
         for adcslot in slot['adc']:
             outfile.write(prefix + 'MOD%d="'%adcslot)
             statestring = ""
@@ -944,26 +981,6 @@ def state(outfile=sys.stdout):
                 print "Error in HVBD state call -- multiple changes in a state"
             outfile.write(statestring + '"\n')
             offset += n_hvbd_X_2
-        for lvbdslot in slot['lvbd']: # this is different from the other states,
-            # in the acf, there is only one entry and it is
-            # (!KEEP, chan, value)
-            outfile.write(prefix + 'MOD%d="'%lvbdslot)
-            statestring = ""
-            n_lvbd_X_2 = 2*__chan_per_board__['lvbd']
-            lvbdLevel = UniqueStateArr[id,offset:offset+n_lvbd_X_2:2]
-            lvbdKeep  = np.invert(UniqueStateArr[id,offset+1:offset+n_lvbd_X_2:2].astype('bool')).astype('int')
-            # 1. check that there is only one non-keep in lvbdKeep
-            KeepSum = sum(lvbdKeep)
-            if KeepSum == __chan_per_board__['lvbd']: # nothing changed
-                statestring += "0,1,0"                
-            elif (KeepSum + 1) == __chan_per_board__['lvbd']: # proper change 
-                # 2. get the level corresponding to the non-keep.
-                lvbd_chan = np.where(lvbdKeep == 0)[0]
-                statestring += "1,%d,%g"%(lvbd_chan+1,lvbdLevel[lvbd_chan])
-            else: 
-                print "Error in LVBD state call -- multiple changes in a state"
-            outfile.write(statestring + '"\n')
-            offset += n_lvbd_X_2
 
     outfile.write('STATES=%d\n'%(id+1))
 
