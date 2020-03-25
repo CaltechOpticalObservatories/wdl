@@ -39,8 +39,29 @@
 #define ResetGateHi     12
 /*#include ztf_science.def*/
 
+SLOT 1 heater {
+  DIO 1 [0,0];                                /* [source, direction] */
+  DIO 2 [0,0];
+  DIO 3 [0,0];
+  DIO 4 [0,0];
+  DIO 5 [0,0];
+  DIO 6 [0,0];
+  DIO 7 [0,0];
+  DIO 8 [0,0];
+  DIOPOWER = enabled;                         /* {enabled,disabled} or {0,1} */
+  SENSOR A [0,0,-50,0,0] "sensorA";           /* [type,current,lolim,hilim,filter] "label" */
+  HTR A [-100,A,25,5,force,1] "heaterA";      /* [target,sensor,vlimit,vforcelevel,force,enable] "label" */
+  PID A [10,100,1,0];                         /* [P,I,D,I_limit] */
+  RAMP A [1,disabled];                        /* [ramprate,enable] */
+  SENSOR B [0,0,-50,0,0] "sensorB";           /* [type,current,lolim,hilim,filter] "label" */
+  HTR B [-100,A,25,0,normal,1] "heaterB";     /* [target,sensor,vlimit,vforcelevel,force,enable] "label" */
+  PID B [10,100,1,0];                         /* [P,I,D,I_limit] */
+  RAMP B [1,disabled];                        /* [ramprate,enable] */
+  UPDATETIME = 1000;                          /* update time for control loops in msec */
+}
+
 SLOT 3 lvds {
-  DIO 1 [0,0];
+  DIO 1 [0,0] "LVDS_DIO_1";
   DIO 2 [0,0];
   DIO 3 [0,0];
   DIO 4 [0,0];
@@ -91,7 +112,7 @@ SLOT 8 ad {
 }
 
 SLOT 9 hvbias {
-  HVLC 1  [ResetDrain,0]; /* Reset Drain 4 G */
+  HVLC 1  [ResetDrain,0] "ResetDrain_4G"; /* Reset Drain 4 G */
   HVLC 2  [ResetDrain,0]; /* Reset Drain 4 F */
   HVLC 3  [ResetDrain,0]; /* Reset Drain 4 E */
   HVLC 4  [ResetDrain,0]; /* Reset Drain 3 H */
@@ -115,7 +136,7 @@ SLOT 9 hvbias {
   HVLC 22 [0,0];  /* Dump Gate CCD3, CCD4 */
   HVLC 23 [ResetDrain,0]; /* Reset Drain 1 G */
   HVLC 24 [0,0];  /* Dump Drain CCD1, CCD2 */
-  HVHC  1 [0,100,0,0]; /* Reset Gate Low  */
+  HVHC  1 [0,100,0,0] "ResetGateLow"; /* Reset Gate Low  */
   HVHC  2 [0,100,0,0];/* Reset Gate High */
   HVHC  3 [0,100,0,0];/* Output Drain CCD4 */
   HVHC  4 [0,100,0,0];/* Output Drain CCD1 */
@@ -135,7 +156,7 @@ SLOT 10 driver {
 }
 
 SLOT 11 driver {
-  DRV 1 [Rphi_slew_fast,Rphi_slew_slow,1];
+  DRV 1 [Rphi_slew_fast,Rphi_slew_slow,1] "mydriver";
   DRV 2 [Rphi_slew_fast,Rphi_slew_slow,1];
   DRV 3 [Rphi_slew_fast,Rphi_slew_slow,1];
   DRV 4 [Rphi_slew_fast,Rphi_slew_slow,1];
@@ -143,5 +164,47 @@ SLOT 11 driver {
   DRV 6 [Rphi_slew_fast,Rphi_slew_slow,1];
   DRV 7 [TG_slew_fast,TG_slew_slow,1];
   DRV 8 [Rphi_slew_fast,Rphi_slew_slow,1];
+}
+
+/* This is a LVbias card, maybe have to put in wdl  */
+SLOT 12 lvbias {
+  LVLC 1  [0,0];  /* Spare                           */
+  LVLC 2  [0,0];  /* Spare                           */
+  LVLC 3  [0,0];  /* Spare                           */
+  LVLC 4  [0,0];  /* Spare                           */
+  LVLC 5  [0,0];  /* Spare                           */
+  LVLC 6  [0,0];  /* Spare                           */
+  LVLC 7  [0,0];  /* Spare                           */
+  LVLC 8  [0,0];  /* Spare                           */
+  LVLC 9  [0,0];  /* Spare                           */
+  LVLC 10 [0,0];  /* Spare                           */
+  LVLC 11 [0,0];  /* Spare                           */
+  LVLC 12 [0,0];  /* Spare                           */
+  LVLC 13 [0,0];  /* Spare                           */
+  LVLC 14 [0,0];  /* Spare                           */
+  LVLC 15 [0,0];  /* Spare                           */
+  LVLC 16 [0,0];  /* Spare                           */
+  LVLC 17 [0,0];  /* Spare                           */
+  LVLC 18 [0,0];  /* Spare                           */
+  LVLC 19 [0,0];  /* Spare                           */
+  LVLC 20 [0,0];  /* Spare                           */
+  LVLC 21 [0,0];  /* Spare                           */
+  LVLC 22 [0,0];  /* Spare                           */
+  LVLC 23 [0,0];  /* Spare                           */
+  LVLC 24 [1,0]; /* Output Transfer Gate            */
+  LVHC  1 [RGLow,10,0,1];   /* Reset Gate Low Rail   */
+  LVHC  2 [SWLow,10,0,1];   /* Summing Well Low Rail */
+  LVHC  3 [0,100,0,1]; /* Spare                      */
+  LVHC  4 [0,100,0,1]; /* Spare                      */
+  LVHC  5 [0,100,0,1]; /* Spare                      */
+  LVHC  6 [0,100,0,1]; /* Spare                      */
+  DIO 1 [0,0] "mylabel";                                /* [source, direction] "label */
+  DIO 2 [0,0];
+  DIO 3 [0,0];
+  DIO 4 [0,0];
+  DIO 5 [0,0];
+  DIO 6 [0,0];
+  DIO 7 [0,0];
+  DIO 8 [0,0];
 }
 
