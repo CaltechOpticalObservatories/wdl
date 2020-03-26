@@ -45,7 +45,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'adc'  : 1,
                        'back' : 6,
                        'hvbd' : 30,
-                       'lvbd' : 30 }
+                       'lvbd' : 8+30 } # 8 DIO's + 30 bias (like hvbd)
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
 Parameters       = collections.OrderedDict() # all of the parameters
@@ -929,19 +929,6 @@ def state(outfile=sys.stdout):
             statestring = statestring[:-1] + '"'
             outfile.write(statestring + '\n')
             offset += 2 * __chan_per_board__['htr']
-        for lvbdslot in slot['lvbd']:
-            outfile.write(prefix + 'MOD%d="'%lvbdslot)
-            statestring = ""
-            for lvbdchan in range(__chan_per_board__['lvbd']):
-                jj_level= offset + 2*lvbdchan + 0
-                jj_change = offset + 2*lvbdchan + 1
-                if UniqueStateArr[id,jj_change] == False:
-                    statestring += "1,1,"
-                else:
-                    statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
-            statestring = statestring[:-1] + '"'
-            outfile.write(statestring + '\n')
-            offset += 2 * __chan_per_board__['lvbd']
         for adcslot in slot['adc']:
             outfile.write(prefix + 'MOD%d="'%adcslot)
             statestring = ""
@@ -981,6 +968,36 @@ def state(outfile=sys.stdout):
                 print "Error in HVBD state call -- multiple changes in a state"
             outfile.write(statestring + '"\n')
             offset += n_hvbd_X_2
+        for lvbdslot in slot['lvbd']:
+            # this is an ugly amalgamation of lvds and hvbd...
+            outfile.write(prefix + 'MOD%d="'%lvbdslot)
+            statestring = ""
+            n_LVBIAS = 30
+            # the "-30" in the for loop below is to exclude the 30 bias channels
+            for lvbdchan in range(__chan_per_board__['lvbd'] - n_LVBIAS):
+                jj_level  = offset + 2*lvbdchan + 0
+                jj_change = offset + 2*lvbdchan + 1
+                if UniqueStateArr[id,jj_change] == False:
+                    statestring += "1,1,"
+                else:
+                    statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
+            offset += 2*(__chan_per_board__['lvbd'] - n_LVBIAS) # move the offset past the 8 DIO's
+            # now for the "HVBD"-style part of this board
+            n_lvbd_X_2 = 2*n_LVBIAS
+            lvbdLevel = UniqueStateArr[id,offset:offset+n_lvbd_X_2:2]
+            lvbdKeep  = np.invert(UniqueStateArr[id,offset+1:offset+n_lvbd_X_2:2].astype('bool')).astype('int')
+            # 1. check that there is only one non-keep in lvbdKeep
+            KeepSum = sum(lvbdKeep)
+            if KeepSum == __chan_per_board__['lvbd']: # nothing changed
+                statestring += "0,1,0"
+            elif (KeepSum + 1) == __chan_per_board__['lvbd']: # proper change
+                # 2. get the level corresponding to the non-keep.
+                lvbd_chan = np.where(lvbdKeep == 0)[0]
+                statestring += "1,%d,%g"%(lvbd_chan+1,lvbdLevel[lvbd_chan])
+            else:
+                print "Error in LVBD state call -- multiple changes in a state"
+            outfile.write(statestring + '\n')
+            offset += n_lvbd_X_2
 
     outfile.write('STATES=%d\n'%(id+1))
 
