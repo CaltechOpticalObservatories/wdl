@@ -878,9 +878,9 @@ def state(outfile=sys.stdout):
             outfile.write(prefix + 'MOD%d="'%clkslot)
             statestring = ""
             for clkchan in range(__chan_per_board__['drvr']/2):## driver-speed-keep !!!!!
-                jj_level = offset + 4*clkchan + 0
+                jj_level   = offset + 4*clkchan + 0
                 jj_changeL = offset + 4*clkchan + 1
-                jj_fast  = offset + 4*clkchan + 2
+                jj_fast    = offset + 4*clkchan + 2
                 jj_changeF = offset + 4*clkchan + 3
                 if not(UniqueStateArr[id,jj_changeL] and UniqueStateArr[id,jj_changeF]):
                     # do not change anything UNLESS level and fast are both CHANGE
@@ -907,7 +907,7 @@ def state(outfile=sys.stdout):
             outfile.write(prefix + 'MOD%d="'%lvdsslot)
             statestring = ""
             for lvdschan in range(__chan_per_board__['lvds']):
-                jj_level= offset + 2*lvdschan + 0
+                jj_level  = offset + 2*lvdschan + 0
                 jj_change = offset + 2*lvdschan + 1
                 if UniqueStateArr[id,jj_change] == False:
                     statestring += "1,1,"
@@ -920,7 +920,7 @@ def state(outfile=sys.stdout):
             outfile.write(prefix + 'MOD%d="'%htrslot)
             statestring = ""
             for htrchan in range(__chan_per_board__['htr']):
-                jj_level= offset + 2*htrchan + 0
+                jj_level  = offset + 2*htrchan + 0
                 jj_change = offset + 2*htrchan + 1
                 if UniqueStateArr[id,jj_change] == False:
                     statestring += "1,1,"
@@ -932,7 +932,7 @@ def state(outfile=sys.stdout):
         for adcslot in slot['adc']:
             outfile.write(prefix + 'MOD%d="'%adcslot)
             statestring = ""
-            jj_level= offset 
+            jj_level  = offset 
             jj_change = offset + 1
             if UniqueStateArr[id,jj_change] == False:
                 statestring += "0,1,"
