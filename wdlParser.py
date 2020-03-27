@@ -85,6 +85,8 @@ sensorOutput  = ""
 heaterOutput  = ""
 pidOutput     = ""
 rampOutput    = ""
+pbiasOutput   = ""
+nbiasOutput   = ""
 
 __SLEW_FAST   =  1
 __SLEW_SLOW   =  0
@@ -195,6 +197,11 @@ def module():
     elif module_name.upper() == "HVXBIAS" : type = 8
     elif module_name.upper() == "LVXBIAS" : type = 9
     elif module_name.upper() == "LVDS"    : type = 10
+    elif module_name.upper() == "HEATERX" : type = 11
+    elif module_name.upper() == "XVBIAS"  : type = 12
+    elif module_name.upper() == "ADF"     : type = 13
+    elif module_name.upper() == "ADX"     : type = 14
+    elif module_name.upper() == "ADLN"    : type = 15
     else:
         error("(wdlParser.py::module) unrecognized module type: " + dq(module_name))
     return(type)
@@ -220,7 +227,8 @@ def dio(slotNumber, type):
 
     if found(NUMBER):
         dioChan = token.cargo
-        if module_name.upper() == "LVBIAS" or module_name.upper() == "HEATER":
+        if module_name.upper()=="LVBIAS" or module_name.upper()=="LVXBIAS" \
+        or module_name.upper()=="HEATER" or module_name.upper()=="HEATERX":
             if int(dioChan) < 1 or int(dioChan) > 8:
                 error("DIO channel " + dq(dioChan) + " outside range {1:8} for module: " + module_name.upper())
         elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
@@ -255,7 +263,8 @@ def dio(slotNumber, type):
     dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
 
     # for LVBIAS and HEATER cards there are 8 DIO outputs but only 4 directions
-    if module_name.upper() == "LVBIAS" or module_name.upper() == "HEATER":
+    if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
+    or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
         chan = int(dioChan)
         # for odd number channels 1,3,5,7 then DIO_DIR is DIO_DIR12, 34, 56, 78
         if chan % 2 == 1:
@@ -975,6 +984,118 @@ def heater(slotNumber):
     heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "ENABLE"     + "=" + heaterEnable      + "\n"
 
 # -----------------------------------------------------------------------------
+# @fn     pbias
+# @brief  rules for the PBIAS keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "pbiasOutput"
+# -----------------------------------------------------------------------------
+def pbias(slotNumber):
+    """
+    These are the rules for the PBIAS keyword, encountered while parsing
+    the xvbias command for the modules (.mod) file. Required format is
+    PBIAS # # "label";
+
+    where # is any number
+    format of numbers is 
+    """
+    global token
+    global pbiasOutput
+
+    if found(NUMBER):
+        biasChan = token.cargo
+        if int(biasChan) < 1 or int(biasChan) > 4:
+            error("PBIAS channel " + dq(biasChan) + " outside range {1:4}")
+    consume(NUMBER)
+
+    consume("[")
+
+    while not found("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            order = token.cargo
+            if int(order) < 0:
+                error("PBIAS order " + order + " must be >= 0")
+        consume(NUMBER)
+
+        consume(",")
+
+        if found(NUMBER):
+            cmd = token.cargo
+        consume(NUMBER)
+
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    pbiasOutput += "MOD" + slotNumber + "\XVP_V"      + biasChan + "=" + cmd   + "\n"
+    pbiasOutput += "MOD" + slotNumber + "\XVP_ORDER"  + biasChan + "=" + order + "\n"
+    pbiasOutput += "MOD" + slotNumber + "\XVP_ENABLE" + biasChan + "=1\n"
+    if (label != ""):
+        pbiasOutput += "MOD" + slotNumber + "\XVPLABEL" + biasChan + "=" + label + "\n"
+
+# -----------------------------------------------------------------------------
+# @fn     nbias
+# @brief  rules for the NBIAS keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "nbiasOutput"
+# -----------------------------------------------------------------------------
+def nbias(slotNumber):
+    """
+    These are the rules for the NBIAS keyword, encountered while parsing
+    the xvbias command for the modules (.mod) file. Required format is
+    NBIAS n [#,#] "label";
+
+    where # is any number
+    format of numbers is 
+    """
+    global token
+    global nbiasOutput
+
+    if found(NUMBER):
+        biasChan = token.cargo
+        if int(biasChan) < 1 or int(biasChan) > 4:
+            error("NBIAS channel " + dq(biasChan) + " outside range {1:4}")
+    consume(NUMBER)
+
+    consume("[")
+
+    while not found("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            order = token.cargo
+            if int(order) < 0:
+                error("NBIAS order " + order + " must be >= 0")
+        consume(NUMBER)
+
+        consume(",")
+
+        # must be a negative number...
+        consume("-")
+        if found(NUMBER):
+            cmd = token.cargo
+        consume(NUMBER)
+
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    nbiasOutput += "MOD" + slotNumber + "\XVN_V"      + biasChan + "=-"+ cmd   + "\n"
+    nbiasOutput += "MOD" + slotNumber + "\XVN_ORDER"  + biasChan + "=" + order + "\n"
+    nbiasOutput += "MOD" + slotNumber + "\XVN_ENABLE" + biasChan + "=1\n"
+    if (label != ""):
+        nbiasOutput += "MOD" + slotNumber + "\XVNLABEL" + biasChan + "=" + label + "\n"
+
+# -----------------------------------------------------------------------------
 # @fn     drv
 # @brief  rules for the DRV keyword
 # @param  string slotNumber
@@ -1114,9 +1235,15 @@ def slot():
         if found("RAMP"):
             consume("RAMP")
             ramp(slotNumber)
-        if found("HEATER"):
+        if found ("HEATER"):
             consume("HEATER")
             heater(slotNumber)
+        if found ("PBIAS"):
+            consume("PBIAS")
+            pbias(slotNumber)
+        if found ("NBIAS"):
+            consume("NBIAS")
+            nbias(slotNumber)
         else:
             pass
     consume("}")
@@ -1834,6 +1961,8 @@ def parse_modules(sourceText):
     global heaterOutput
     global pidOutput
     global rampOutput
+    global pbiasOutput
+    global nbiasOutput
 
     lexer.initialize(sourceText)
 
@@ -1870,6 +1999,8 @@ def parse_modules(sourceText):
     retval += heaterOutput
     retval += pidOutput
     retval += rampOutput
+    retval += pbiasOutput
+    retval += nbiasOutput
 
     return retval
 

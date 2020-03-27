@@ -34,14 +34,16 @@ period_ns        = 10  # ns
 slot = { 'drvr' : [], 
          'lvds' : [], 
          'htr'  : [], 
+         'xvbd' : [], 
          'adc'  : [],
          'back' : [0], 
          'hvbd' : [],
          'lvbd' : [] }
-__boardTypes__     = ('drvr','lvds','htr','adc','back','hvbd','lvbd')
+__boardTypes__     = ('drvr','lvds','htr','xvbd','adc','back','hvbd','lvbd')
 __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'lvds' : 20,
                        'htr'  : 8,
+                       'xvbd' : 8,
                        'adc'  : 1,
                        'back' : 6,
                        'hvbd' : 30,
@@ -212,7 +214,7 @@ Use 'stdout' or sys.stdout to dump to terminal. """
 def __loadMod__(ModFile): #subroutine of loadWDL()
     """ load the module definition file to configure global variable slot """
     global slot
-    typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds', 'heater': 'htr', 'lvbias' : 'lvbd'}
+    typeID  = {'driver': 'drvr', 'ad': 'adc', 'hvbias': 'hvbd', 'lvds': 'lvds', 'heater': 'htr', 'xvbias':'xvbd', 'lvbias' : 'lvbd'}
     slotnum = []
     btype   = []
     with open(ModFile,'r') as f:
@@ -225,6 +227,8 @@ def __loadMod__(ModFile): #subroutine of loadWDL()
                     thisBoardLabel = 'hvbias'
                 if thisBoardLabel == 'lvxbias':
                     thisBoardLabel = 'lvbias'
+                if thisBoardLabel == 'heaterx':
+                    thisBoardLabel = 'heater'
                 if thisBoardLabel in typeID.keys():
                     thisBoardType = typeID[thisBoardLabel]
                     slot[thisBoardType].append(thisSlotNum)
@@ -283,6 +287,7 @@ def __get_level_index_from_chan_slot__(slotnum, channel): # subroutine of __load
                                            __chan_per_board__['drvr'] * len(slot['drvr']), ## !driver-speed-keep
                                            __chan_per_board__['lvds'] * len(slot['lvds']),
                                            __chan_per_board__['htr']  * len(slot['htr']),
+                                           __chan_per_board__['xvbd'] * len(slot['xvbd']),
                                            __chan_per_board__['adc']  * len(slot['adc']),
                                            __chan_per_board__['back'] * len(slot['back']),
                                            __chan_per_board__['hvbd'] * len(slot['hvbd']),
@@ -302,6 +307,7 @@ return the slot and channel number"""
                                    __chan_per_board__['drvr'] * len(slot['drvr']), ## !driver-speed-keep
                                    __chan_per_board__['lvds'] * len(slot['lvds']),
                                    __chan_per_board__['htr']  * len(slot['htr']),
+                                   __chan_per_board__['xvbd'] * len(slot['xvbd']),
                                    __chan_per_board__['adc']  * len(slot['adc']),
                                    __chan_per_board__['back'] * len(slot['back']),
                                    __chan_per_board__['hvbd'] * len(slot['hvbd']),
@@ -386,6 +392,7 @@ and there is no auto-generated end to the segment"""
                                  np.zeros((1,
                                            len(self.events['lvds']) +
                                            len(self.events['htr']) +
+                                           len(self.events['xvbd']) +
                                            len(self.events['adc']) +
                                            len(self.events['back']) +
                                            len(self.events['hvbd']) +
@@ -394,6 +401,7 @@ and there is no auto-generated end to the segment"""
                                  len(self.events['drvr']) + ## !driver-speed-keep
                                  len(self.events['lvds']) +
                                  len(self.events['htr']) +
+                                 len(self.events['xvbd']) +
                                  len(self.events['adc'])  +
                                  len(self.events['back']) +
                                  len(self.events['hvbd']) +
@@ -422,6 +430,9 @@ and there is no auto-generated end to the segment"""
         for chan in range(len(self.events['htr'])):
             for tt in range(len(self.events['htr'][chan])):
                 tmax = max(tmax, self.events['htr'][chan][tt][0]+1)
+        for chan in range(len(self.events['xvbd'])):
+            for tt in range(len(self.events['xvbd'][chan])):
+                tmax = max(tmax, self.events['xvbd'][chan][tt][0]+1)
         for chan in range(len(self.events['adc'])):
             for tt in range(len(self.events['adc'][chan])):
                 tmax = max(tmax, self.events['adc'][chan][tt][0]+1)
@@ -496,6 +507,7 @@ new states to UniqueStateArr.
         drvr_level_change = self.__fill_state('drvr')
         lvds_level_change = self.__fill_state('lvds')
         htr_level_change  = self.__fill_state('htr')
+        xvbd_level_change = self.__fill_state('xvbd')
         adcs_level_change = self.__fill_state('adc')
         back_level_change = self.__fill_state('back')
         hvbd_level_change = self.__fill_state('hvbd')
@@ -517,6 +529,7 @@ new states to UniqueStateArr.
         state_arr = sparse.hstack( ( drvr_level_change,
                                      lvds_level_change,
                                      htr_level_change,
+                                     xvbd_level_change,
                                      adcs_level_change,
                                      back_level_change,
                                      hvbd_level_change,
@@ -932,7 +945,7 @@ def state(outfile=sys.stdout):
         for lvbdslot in slot['lvbd']:
             outfile.write(prefix + 'MOD%d="'%lvbdslot)
             statestring = ""
-            for lvbdchan in range(__chan_per_board__['lvbd']):
+            for lvbdchan in range(8):
                 jj_level= offset + 2*lvbdchan + 0
                 jj_change = offset + 2*lvbdchan + 1
                 if UniqueStateArr[id,jj_change] == False:
