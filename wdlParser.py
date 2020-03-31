@@ -1036,7 +1036,7 @@ def pbias(slotNumber):
     pbiasOutput += "MOD" + slotNumber + "\XVP_ORDER"  + biasChan + "=" + order + "\n"
     pbiasOutput += "MOD" + slotNumber + "\XVP_ENABLE" + biasChan + "=1\n"
     if (label != ""):
-        pbiasOutput += "MOD" + slotNumber + "\XVPLABEL" + biasChan + "=" + label + "\n"
+        pbiasOutput += "MOD" + slotNumber + "\XVP_LABEL" + biasChan + "=" + label + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     nbias
@@ -1093,7 +1093,7 @@ def nbias(slotNumber):
     nbiasOutput += "MOD" + slotNumber + "\XVN_ORDER"  + biasChan + "=" + order + "\n"
     nbiasOutput += "MOD" + slotNumber + "\XVN_ENABLE" + biasChan + "=1\n"
     if (label != ""):
-        nbiasOutput += "MOD" + slotNumber + "\XVNLABEL" + biasChan + "=" + label + "\n"
+        nbiasOutput += "MOD" + slotNumber + "\XVN_LABEL" + biasChan + "=" + label + "\n"
 
 # -----------------------------------------------------------------------------
 # @fn     drv
