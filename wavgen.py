@@ -47,7 +47,7 @@ __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'adc'  : 1,
                        'back' : 6,
                        'hvbd' : 30,
-                       'lvbd' : 8+30 } # 8 DIO's + 30 bias (like hvbd)
+                       'lvbd' : 30 } # 8 DIO's + 30 bias (like hvbd)
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
 Parameters       = collections.OrderedDict() # all of the parameters
