@@ -43,11 +43,11 @@ __boardTypes__     = ('drvr','lvds','htr','xvbd','adc','back','hvbd','lvbd')
 __chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
                        'lvds' : 20,
                        'htr'  : 8,
-                       'xvbd' : 8,
+                       'xvbd' : 8, # why is this 8? oh yes, 8 voltages: 4pos, 4neg
                        'adc'  : 1,
                        'back' : 6,
                        'hvbd' : 30,
-                       'lvbd' : 30 } # 8 DIO's + 30 bias (like hvbd)
+                       'lvbd' : 38 } # 8 DIO's + 30 bias (like hvbd)
 UniqueStateArr   = np.array([]);
 Catalog          = [] # list of all TimingSegment objects
 Parameters       = collections.OrderedDict() # all of the parameters
@@ -942,6 +942,44 @@ def state(outfile=sys.stdout):
             statestring = statestring[:-1] + '"'
             outfile.write(statestring + '\n')
             offset += 2 * __chan_per_board__['htr']
+        for xvslot in slot['xvbd']: # this is similar to the hvbd states
+            # In teh acf there are two entries and they are
+            # (!pKEEP,pchan,pvalue,!nKeep,nchan,nvalue)
+            outfile.write(prefix + 'MOD%d="'%xvslot)
+            statestring=""
+            # Do just like the hvbd processing, but on positive bits (first half)
+            # and then the negative bits (second half)
+            n_xvbd_pos_X_2 = 2*__chan_per_board__['xvbd']/2 # really only want the first half of all xvbd states
+            pxvbdLevel = UniqueStateArr[id,offset:offset+n_xvbd_pos_X_2:2]
+            pxvbdKeep = np.invert(UniqueStateArr[id,offset+1:offset+n_xvbd_pos_X_2:2].astype('bool')).astype('int')
+            # Check that there is only one non-keep for the positive voltages in pxvbdKeep
+            pKeepSum = sum(pxvbdKeep)
+            if pKeepSum == (__chan_per_board__['xvbd']/2): # nothing changed and only first half of xvbd channels
+                statestring += "0,1,0," # need a comma at the end of string since negative bits will come after
+            elif (pKeepSum + 1) == (__chan_per_board__['xvbd']/2): # proper change for positive voltage
+                # 2. get the level corresponding to on the non-keep.
+                pxvbd_chan = np.where(pxvbdKeep == 0)[0]
+                statestring += "1,%d,%g,"%(pxvbd_chan+1,pxvbdLevel[pxvbd_chan]) # again need comma at end of pops string
+            else:
+                print "Error in positive XVBD state call -- multiple changes in a state"
+            # Do just like hvbd processing, but now on the negative bits (second half)
+            offset += 2 * __chan_per_board__['xvbd']/2 # skip over the positive xvbd voltages
+            n_xvbd_neg_X_2 = 2*__chan_per_board__['xvbd']/2 # really only want the second half of all xvbd states
+            nxvbdLevel = UniqueStateArr[id,offset:offset+n_xvbd_neg_X_2:2]
+            nxvbdKeep = np.invert(UniqueStateArr[id,offset+1:offset+n_xvbd_neg_X_2:2].astype('bool')).astype('int')
+            # Check that there is only one non-keep for the negative voltages in nxvbdKeep
+            nKeepSum = sum(nxvbdKeep)
+            if nKeepSum == (__chan_per_board__['xvbd']/2): # nothing changed and only second half of xvbd channels
+                statestring += "0,1,0"
+            elif (nKeepSum + 1) == (__chan_per_board__['xvbd']/2): # proper change for positive voltage
+                # 2. get the level corresponding to on the non-keep.
+                nxvbd_chan = np.where(nxvbdKeep == 0)[0]
+                statestring += "1,%d,%g"%(nxvbd_chan+1,nxvbdLevel[nxvbd_chan])
+            else:
+                print "Error in negative XVBD state call -- multiple changes in a state"
+#            statestring = statestring[:-1] + '"'
+            outfile.write(statestring + '"\n')
+            offset += 2 * __chan_per_board__['xvbd']/2 # skip over the last half of the xvbd channels
         for adcslot in slot['adc']:
             outfile.write(prefix + 'MOD%d="'%adcslot)
             statestring = ""
@@ -986,7 +1024,14 @@ def state(outfile=sys.stdout):
             outfile.write(prefix + 'MOD%d="'%lvbdslot)
             statestring = ""
             n_LVBIAS = 30
+            n_LVDIO = 8
             # the "-30" in the for loop below is to exclude the 30 bias channels
+            # This will always evaluate to 0, maybe chan_per_board should be 38
+            # this loop is supposed to create the DIO states
+            # maybe we'll make it range(30:38) to put the DIO at the end
+            # and the voltages at the beginning, but as of now 7/23/2020 it's DIO then voltages
+            # Make the DIO the buts after the voltages, set offset = 8
+            offset += 2*(__chan_per_board__['lvbd'] - n_LVDIO) # move offset to past voltages
             for lvbdchan in range(__chan_per_board__['lvbd'] - n_LVBIAS):
                 jj_level  = offset + 2*lvbdchan + 0
                 jj_change = offset + 2*lvbdchan + 1
@@ -994,23 +1039,25 @@ def state(outfile=sys.stdout):
                     statestring += "1,1,"
                 else:
                     statestring += "%d,0,"%(UniqueStateArr[id,jj_level])
-            offset += 2*(__chan_per_board__['lvbd'] - n_LVBIAS) # move the offset past the 8 DIO's
+            offset -= 2*(__chan_per_board__['lvbd'] - n_LVDIO) # move back to beginning of voltages
+            #offset += 2*(__chan_per_board__['lvbd'] - n_LVBIAS) # move the offset past the 8 DIO's
             # now for the "HVBD"-style part of this board
-            n_lvbd_X_2 = 2*n_LVBIAS
-            lvbdLevel = UniqueStateArr[id,offset:offset+n_lvbd_X_2:2]
+            n_lvbd_X_2 = 2*n_LVBIAS # there are only 30 channels of voltages
+            lvbdLevel = UniqueStateArr[id,offset:offset+n_lvbd_X_2:2] # the offset will be 
             lvbdKeep  = np.invert(UniqueStateArr[id,offset+1:offset+n_lvbd_X_2:2].astype('bool')).astype('int')
             # 1. check that there is only one non-keep in lvbdKeep
             KeepSum = sum(lvbdKeep)
-            if KeepSum == __chan_per_board__['lvbd']: # nothing changed
+            if KeepSum == n_LVBIAS: # __chan_per_board__['lvbd']: # nothing changed
                 statestring += "0,1,0"
-            elif (KeepSum + 1) == __chan_per_board__['lvbd']: # proper change
+            elif (KeepSum + 1) == n_LVBIAS: # __chan_per_board__['lvbd']: # proper change
                 # 2. get the level corresponding to the non-keep.
                 lvbd_chan = np.where(lvbdKeep == 0)[0]
                 statestring += "1,%d,%g"%(lvbd_chan+1,lvbdLevel[lvbd_chan])
             else:
                 print "Error in LVBD state call -- multiple changes in a state"
-            outfile.write(statestring + '\n')
-            offset += n_lvbd_X_2
+            outfile.write(statestring + '"\n')
+            #offset += n_lvbd_X_2 # this is fine for voltages after DIO
+            offset += 2*(__chan_per_board__['lvbd']) # use for DIO after voltages
 
     outfile.write('STATES=%d\n'%(id+1))
 
