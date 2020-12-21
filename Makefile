@@ -12,6 +12,7 @@
 # @modified 2016-04-19 changes to implement INCLUDE_FILE= in *.conf
 # @modified 2016-04-20 read CDS_FILE and MODULE_FILE from .conf
 # @modified 2017-02-08 added modegen
+# @modified 2020-12-21 added insert_hash
 #
 # This Makefile uses the general preprocessor GPP 2.24 for macro processing.
 # It also requires the ini2acf.pl Perl script for creating an Archon acf file.
@@ -41,9 +42,9 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-GPP       = /usr/local/bin/gpp
-WDLPATH   = /home/ztf/Software/wdl
-ACFPATH   = /home/ztf/Software/acf
+GPP       = /usr/bin/gpp
+WDLPATH   = /home/user/Software/wdl
+ACFPATH   = /home/user/Software/acf
 
 PLOT      = False   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
@@ -86,9 +87,9 @@ F_TMP = $(@F)_TMP
 		$(I2A) - > $(@F).acf
 	$(eval MODEFILE := $(shell $(SCAN_MODEFILE)))
 	@$(MODEGEN) $(MODEFILE) $(@F).acf
-	@echo copying $(@F).acf to each camera...
-	@scp -q -p $(@F).acf 192.168.1.2:$(ACFPATH)
-	@scp -q -p $(@F).acf 192.168.1.3:$(ACFPATH)
-	@scp -q -p $(@F).acf 192.168.1.4:$(ACFPATH)
-	@scp -q -p $(@F).acf 192.168.1.5:$(ACFPATH)
-	@scp -q -p $(@F).acf 192.168.1.6:$(ACFPATH)
+	@if [ -d ".git" ]; \
+	then echo "inserting REV keyword ..."; $(WDLPATH)/insert_hash $(@F).acf; \
+	else echo "not a git archive, skipping REV keyword"; \
+	fi
+	@echo "done"
+
