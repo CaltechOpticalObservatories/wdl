@@ -1,11 +1,22 @@
 # wdl
 waveform definition language for Archons
 
-scraped from oculus:Software/wdl on Feb 13, 2018.
 
-with instructions from https://help.github.com/articles/splitting-a-subfolder-out-into-a-new-repository/
+Requirements:
+ - any version of make
+ - GPP (https://logological.org/gpp)
+ 
+Instructions:
 
-Continue development here.
+ - It is advised that wdl be in a separate directory from you ACF source files.
+ - Copy the Makefile from the wdl directory to the directory which contains your ACF source files.
+ - Edit the following three lines in your Makefile to indicate the correct locations of
+ GPP, the path to your WDL directory (this directory), and the path to your ACF source files.
+ 
+GPP       = /usr/local/bin/gpp
+WDLPATH   = $(HOME)/Software/wdl
+ACFPATH   = $(HOME)/Software/acf
+
 
 # Copyright (C) <2018> California Institute of Technology
 # Software written by: <Dave Hale and Peter Mao>
