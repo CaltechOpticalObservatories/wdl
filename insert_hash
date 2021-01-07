@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# file:    insert_hash
+# brief:   insert a REV keyword into ACF file
+# details: called from WDL Makefile with the newly created ACF as the argument
+# author:  David Hale <dhale@astro.caltech.edu>
+#
+# This script is called from the WDL Makefile for the purpose of
+# inserting a REV keyword command to help identify the revision.
+
+# Check the git status
+#
+gitstatus=`git status --porcelain`
+
+if [ -z "$gitstatus" ]
+then
+	# git status empty means no changes since the last commit
+	# so the REV is the git hash
+	#
+	rev=`git rev-parse --verify HEAD`
+else
+	# otherwise the rev is the modification date and time of the ACF
+	#
+	rev=`date -r $1 "+%Y-%m-%d %H:%M:%S"`
+fi
+
+# now insert the FITS command into the DEFAULT mode section of the ACF file
+#
+sed -i "/^\[MODE_DEFAULT\]/a FITS:REV=$rev" $1
