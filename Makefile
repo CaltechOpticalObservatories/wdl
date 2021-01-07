@@ -13,8 +13,7 @@
 # @modified 2016-04-20 read CDS_FILE and MODULE_FILE from .conf
 # @modified 2017-02-08 added modegen
 # @modified 2017-11-09 remove copying of acf files to camera computers
-# @modified 2020-12-03 add call to insert_hash
-#
+# @modified 2020-12-21 added insert_hash
 #
 # This Makefile uses the general preprocessor GPP 2.24 for macro processing.
 # It also requires the ini2acf.pl Perl script for creating an Archon acf file.
@@ -89,4 +88,9 @@ F_TMP = $(@F)_TMP
 		$(I2A) - > $(@F).acf
 	$(eval MODEFILE := $(shell $(SCAN_MODEFILE)))
 	@$(MODEGEN) $(MODEFILE) $(@F).acf
-	@$(WDLPATH)/insert_hash $(@F).acf
+	@if [ -d ".git" ]; \
+	then echo "inserting REV keyword ..."; $(WDLPATH)/insert_hash $(@F).acf; \
+	else echo "not a git archive, skipping REV keyword"; \
+	fi
+	@echo "done"
+
