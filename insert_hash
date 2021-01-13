@@ -26,8 +26,4 @@ fi
 
 # now insert the FITS command into the DEFAULT mode section of the ACF file
 #
-<<<<<<< HEAD
-sed -i "/^\[MODE_DEFAULT\]/a FITS:REV=$rev" $1
-=======
 sed -i "/^\[MODE_DEFAULT\]/a FITS:REV=$rev/git hash or revision of ACF" $1
->>>>>>> fea5def4235f9bb48d27c5324b0a900bac7218e0

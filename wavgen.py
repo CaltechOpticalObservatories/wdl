@@ -1265,6 +1265,10 @@ class modegen():
                 if match:
                     ACFKEY = 'ACF:'+match.group(1)
                     ACFVAL = match.group(2)
+                    temp = ACFKEY.split('"')
+                    if (re.search('PARAMETER',temp[0])):
+                        ACFKEY = 'ACF:'+temp[-1]
+
                     if ACFKEY in allkeys:
                         self.union[ACFKEY] = ACFVAL
                     else:
