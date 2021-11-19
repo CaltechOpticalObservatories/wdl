@@ -636,7 +636,7 @@ exit state and the parameters used in Catalog """
                             if this_param not in Parameters.keys():
                                 Parameters.update({this_param:0}) # use 0 as default param value
                             self.Params.update({this_param:Parameters[this_param]})
-                if '--' in this_sub_call: # increment count for Param--'s
+                if ( '--' in this_sub_call or '++' in this_sub_call ): # increment count for Param-- or Param++
                     # this assumes that the decrement is not happening in the IF TEST part of a call
                     # is something like IF TEST-- TEST2-- even legal in ACF?
                     count += 1
