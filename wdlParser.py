@@ -22,6 +22,7 @@
 # @modified 2016-09-21 DH allow RETURN to alternate sequences, waveforms
 # @modified 2018-03-15 DH throw error if an undefined param is used in a sequence
 # @modified 2020-03-20 DH added support for HEATER card
+# @modified 2022-06-08 DH added DriverX support (copy of Driver)
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -74,6 +75,7 @@ wavReturnTo   = ""   # optional, alternate waveform name to return to (not suppo
 wavReturn     = False # manual RETURN specified
 timeStamps    = {}   # dictionary of time stamps, timelabel:time
 drvOutput     = ""
+drvxOutput    = ""
 adcOutput     = ""
 hvlOutput     = ""
 hvhOutput     = ""
@@ -1154,6 +1156,64 @@ def drv(slotNumber):
         drvOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=" + label + "\n"
 
 # -----------------------------------------------------------------------------
+# @fn     drvx
+# @brief  rules for the DRVX keyword
+# @param  string slotNumber
+# @return none, appends to the global variable "drvxOutput"
+# -----------------------------------------------------------------------------
+def drvx(slotNumber):
+    """
+    These are the rules for the DRVX keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    DRVX # [#,#,#];
+
+    where # is any number
+    format of numbers is [slewfast, slewslow, enable]
+    """
+    global token
+    global drvxOutput
+
+    if found(NUMBER):
+        drvChan = token.cargo
+        if int(drvChan) < 0 or int(drvChan) > 12:
+            error("DRVX channel " + dq(drvChan) + " outside range [1..12]")
+    consume(NUMBER)
+    consume("[")
+    while not found("]"):
+        if token.type == EOF: break
+        if found(NUMBER):
+            slewfast = token.cargo
+            if float(slewfast) < 0.001 or float(slewfast) > 1000:
+                error("DRVX Fast Slew Rate " + dq(slewfast) + " outside range [0.001..1000] V/us")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            slewslow = token.cargo
+            if float(slewslow) < 0.001 or float(slewslow) > 1000:
+                error("DRVX Slow Slew Rate " + dq(slewslow) + " outside range [0.001..1000] V/us")
+        consume(NUMBER)
+        consume(",")
+        if found(NUMBER):
+            enable = token.cargo
+            if enable != "0" and enable != "1":
+                error("DRVX enable " + dq(enable) + " must be 0 or 1")
+        consume(NUMBER)
+    consume("]")
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label=""
+    consume(";")
+
+    drvxOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
+    drvxOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
+    drvxOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
+    if (label != ""):
+        drvxOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=" + label + "\n"
+
+# -----------------------------------------------------------------------------
 # @fn     slot
 # @brief  rules for the SLOT Keyword
 # @param  none
@@ -1166,7 +1226,7 @@ def slot():
 
     SLOT # type { param }
 
-    where param is DRV, CLAMP, PREAMPGAIN, HVLC, HVHC, LVLC, LVHC, DIO, DIOPOWER
+    where param is DRV, DRVX, CLAMP, PREAMPGAIN, HVLC, HVHC, LVLC, LVHC, DIO, DIOPOWER
                 followed by param specific rules,
           type  is a valid Archon module type,
           #     is any number.
@@ -1196,6 +1256,9 @@ def slot():
         if found("DRV"):
             consume("DRV")
             drv(slotNumber)
+        if found("DRVX"):
+            consume("DRVX")
+            drvx(slotNumber)
         elif found("CLAMP"):
             consume("CLAMP")
             clamp(slotNumber)
@@ -1951,6 +2014,7 @@ def parse_modules(sourceText):
     """
     global token
     global drvOutput
+    global drvxOutput
     global adcOutput
     global hvlOutput
     global hvhOutput
@@ -1989,6 +2053,7 @@ def parse_modules(sourceText):
 
     retval = ""
     retval += drvOutput
+    retval += drvxOutput
     retval += adcOutput
     retval += hvlOutput
     retval += hvhOutput
