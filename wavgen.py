@@ -25,7 +25,7 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import scipy.sparse as sparse # need 0.18.1
 import re,sys, os, collections
-from IPython.core.debugger import Tracer
+#from IPython.core.debugger import Tracer
 #lfrom IPython.core.magic import register_line_magic
 #import time as t
 
@@ -40,7 +40,7 @@ slot = { 'drvr' : [],
          'hvbd' : [],
          'lvbd' : [] }
 __boardTypes__     = ('drvr','lvds','htr','xvbd','adc','back','hvbd','lvbd')
-__chan_per_board__ = { 'drvr' : 2*8, # 2* to take care of level and slew flag
+__chan_per_board__ = { 'drvr' : 2*12, # 2* to take care of level and slew flag
                        'lvds' : 20,
                        'htr'  : 8,
                        'xvbd' : 8, # why is this 8? oh yes, 8 voltages: 4pos, 4neg
@@ -223,6 +223,8 @@ def __loadMod__(ModFile): #subroutine of loadWDL()
             if match != None:
                 thisSlotNum    = int(match.group(1));
                 thisBoardLabel = match.group(2)
+                if thisBoardLabel == 'driverx':
+                    thisBoardLabel = 'driver'
                 if thisBoardLabel == 'hvxbias':
                     thisBoardLabel = 'hvbias'
                 if thisBoardLabel == 'lvxbias':
@@ -868,7 +870,8 @@ condition (default=last non-zero state) """
                 thisLevel = level[np.where(keep[:,thisID]==0)[0][0], thisID]
                 print "  %s %s= %3g"%(thisLabel,' '*(16-len(thisLabel)),thisLevel)
             except:
-                Tracer()()
+                print "error"
+#               Tracer()()
         return
 
 def state(outfile=sys.stdout):
@@ -1282,7 +1285,8 @@ class modegen():
                                     try:
                                         newkey = unionkey%int(kmatch.group(1))
                                     except:
-                                        Tracer()()
+                                        print "error"
+#                                       Tracer()()
                                     self.union.update({newkey:ACFVAL})
                                     # default for unionkey is set now with
                                     # the proper index, so we can now

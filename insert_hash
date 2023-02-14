@@ -21,7 +21,7 @@ then
 else
 	# otherwise the rev is the modification date and time of the ACF
 	#
-	rev=`date -r $1 "+%Y-%m-%d %H:%M:%S"`
+	rev=`date -r $1 "+%Y-%m-%dT%H:%M:%S"`
 fi
 
 # now insert the FITS command into the DEFAULT mode section of the ACF file

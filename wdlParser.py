@@ -23,6 +23,7 @@
 # @modified 2018-03-15 DH throw error if an undefined param is used in a sequence
 # @modified 2020-03-20 DH added support for HEATER card
 # @modified 2022-06-08 DH added DriverX support (copy of Driver)
+# @modified 2022-09-28 DH fixed DriverX support (added type=16 to module function)
 # 
 # This is the parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -204,6 +205,7 @@ def module():
     elif module_name.upper() == "ADF"     : type = 13
     elif module_name.upper() == "ADX"     : type = 14
     elif module_name.upper() == "ADLN"    : type = 15
+    elif module_name.upper() == "DRIVERX" : type = 16
     else:
         error("(wdlParser.py::module) unrecognized module type: " + dq(module_name))
     return(type)
