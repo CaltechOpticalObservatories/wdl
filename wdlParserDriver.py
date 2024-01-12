@@ -34,7 +34,7 @@ subroutines=[]
 # -----------------------------------------------------------------------------
 # @fn     main
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
 def main(sourceText):
@@ -57,7 +57,7 @@ def main(sourceText):
 #           __main__
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    sourceText=""
+    source_text= ""
     for line in fileinput.input():
-        sourceText += line
-    main(sourceText)
+        source_text += line
+    main(source_text)

@@ -32,7 +32,7 @@ import wdlParser as parser
 # -----------------------------------------------------------------------------
 # @fn     main
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
 def main(sourceName, sourceText):
@@ -59,11 +59,11 @@ def main(sourceName, sourceText):
 #           __main__
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    sourceText=""
+    source_text= ""
     for line in fileinput.input():
         if fileinput.isfirstline():
             # the first line of the input must be the name of the project to build
             sourceName = line
         else:
-            sourceText += line
-    main(sourceName, sourceText)
+            source_text += line
+    main(sourceName, source_text)

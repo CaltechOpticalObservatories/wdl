@@ -22,50 +22,52 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-import Lexer   as     lexer
-from   Symbols import EOF
+import Lexer
+from Symbols import EOF
 import fileinput
 
 
-#-------------------------------------------------
-# support for writing output to a file
-#-------------------------------------------------
-def writeln(*args):
-    for arg in args:
-        f.write(str(arg))
-    f.write("\n")
-
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 #
 #                    main
 #
-#-----------------------------------------------------------------------
-def main(sourceText):
-    global f
+# -----------------------------------------------------------------------
+def main(input_source_text):
+    # -------------------------------------------------
+    # support for writing output to a file
+    # -------------------------------------------------
+
     f = open(outputFilename, "w")
-    writeln("Here are the tokens returned by the lexer:")
 
-    # create an instance of a lexer
-    lexer.initialize(sourceText)
+    def writeln(*args):
+        for arg in args:
+            f.write(str(arg))
+        f.write("\n")
 
-    #------------------------------------------------------------------
-    # use the lexer.getlist() method repeatedly to get the tokens in
-    # the sourceText. Then print the tokens.
-    #------------------------------------------------------------------
+    writeln("Here are the tokens returned by the Lexer:")
+
+    # create an instance of a Lexer
+    Lexer.initialize(input_source_text)
+
+    # ------------------------------------------------------------------
+    # use the Lexer.getlist() method repeatedly to get the tokens in
+    # the source_text. Then print the tokens.
+    # ------------------------------------------------------------------
     while True:
-        token = lexer.get()
+        token = Lexer.get()
         writeln(token.show(True))
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
     f.close()
+
 
 # -----------------------------------------------------------------------------
 #           __main__
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    sourceText=""
+    source_text = ""
     outputFilename = "LexerDriver_output.txt"
     for line in fileinput.input():
-        sourceText += line
-    main(sourceText)
+        source_text += line
+    main(source_text)
     print(open(outputFilename).read())
-

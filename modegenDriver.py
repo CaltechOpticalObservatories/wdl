@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -----------------------------------------------------------------------------
 # @file     modegenDriver.py
-# @brief    driver script for PHM's modegen
+# @brief    driver script for PHM's Modegen
 # @author   David Hale
 # @date     2017-02-08
 # @modified 2017-02-08 DH
 # 
-# This script invokes the PHM modegen.
+# This script invokes the PHM Modegen.
 # -----------------------------------------------------------------------------
 
 # Copyright (C) <2018> California Institute of Technology
@@ -31,11 +31,13 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
+# import fileinput
+import matplotlib as plt
+import wavgen
 import sys
 sys.dont_write_bytecode = True
-#sys.tracebacklimit=0
-import fileinput
-import wavgen
+# sys.tracebacklimit = 0
+
 
 # -----------------------------------------------------------------------------
 # @fn     main
@@ -46,20 +48,23 @@ import wavgen
 def main(source, toplot):
     """
     """
-    input  = source+".wdl"
+    input_file = source+".wdl"
     output = source
-    if toplot.upper() == "FALSE" or toplot.upper() == "NO" or \
-       toplot.upper() == "F"     or toplot.upper() == "N"  or toplot.upper() == "0":
+    if (toplot.upper() == "FALSE" or toplot.upper() == "NO" or
+            toplot.upper() == "F" or toplot.upper() == "N" or
+            toplot.upper() == "0"):
         wavgen.GenerateFigs = False
-    elif toplot.upper() == "TRUE" or toplot.upper() == "YES" or \
-         toplot.upper() == "T"    or toplot.upper() == "Y"   or toplot.upper() == "1":
+    elif (toplot.upper() == "TRUE" or toplot.upper() == "YES" or
+          toplot.upper() == "T" or toplot.upper() == "Y" or
+          toplot.upper() == "1"):
         wavgen.GenerateFigs = True
     else:
         print("warning: invalid plotting option specified, defaulting to True")
         wavgen.GenerateFigs = True
 
-    wavgen.loadWDL(input, output)
+    wavgen.loadWDL(input_file, output)
     plt.show(block=True)
+
 
 # -----------------------------------------------------------------------------
 #           __main__
@@ -68,9 +73,10 @@ if __name__ == '__main__':
     # check for correct number of args passed
     # don't count the zeroeth arg, as it is my name
     if len(sys.argv[1:]) == 2:
-#       main(sys.argv[1], sys.argv[2])
-        wavgen.modegen(sys.argv[1], sys.argv[2]).write("a")
+        # main(sys.argv[1], sys.argv[2])
+        wavgen.Modegen(sys.argv[1], sys.argv[2]).write("a")
         sys.exit(0)
     else:
-        print("error: wavgenDriver.py got %d argument(s) but expecting 2" % (len(sys.argv[1:])))
+        print("error: wavgenDriver.py got %d argument(s) but expecting 2" %
+              (len(sys.argv[1:])))
         sys.exit(1)

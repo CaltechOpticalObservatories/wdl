@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # @file     wdlParser.py
-# @brief    parser for the Waveform Development Language
+# @brief    Parser for the Waveform Development Language
 # @author   David Hale
 # @date     2016-xx-xx
 # @modified 2016-03-28 DH
@@ -25,7 +25,7 @@
 # @modified 2022-06-08 DH added DriverX support (copy of Driver)
 # @modified 2022-09-28 DH fixed DriverX support (added type=16 to module function)
 # 
-# This is the parser for the Waveform Development Language (WDL).
+# This is the Parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
 
 # Copyright (C) <2018> California Institute of Technology
@@ -50,62 +50,66 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from __future__ import print_function
+import Lexer as Lexer
+from Symbols import *
 import sys
 sys.dont_write_bytecode = True
-import Lexer as lexer
-from Symbols import *
 
-class ParserError(Exception): pass
 
-token         = None
-module_name   = None
-setSlot       = []   # SET slot
-setChan       = []   # SET chan
-setSlew       = -1   # SET slew
-setLevel      = 0
-constList     = []
-constNames    = []
-paramList     = []
-paramNames    = []
-subroutines   = []
-evalTime      = 0    # evaluated time for waveform line
-maxTime       = 0    # max time for each waveform
-wavReturnTime = 0    # time at which a waveform has manually specified a return
-wavReturnTo   = ""   # optional, alternate waveform name to return to (not supported by wavgen)
-wavReturn     = False # manual RETURN specified
-timeStamps    = {}   # dictionary of time stamps, timelabel:time
-drvOutput     = ""
-drvxOutput    = ""
-adcOutput     = ""
-hvlOutput     = ""
-hvhOutput     = ""
-lvlOutput     = ""
-lvhOutput     = ""
-dioOutput     = ""
-sysOutput     = ""
-sensorOutput  = ""
-heaterOutput  = ""
-pidOutput     = ""
-rampOutput    = ""
-pbiasOutput   = ""
-nbiasOutput   = ""
+class ParserError(Exception):
+    pass
 
-__SLEW_FAST   =  1
-__SLEW_SLOW   =  0
-__SLEW_NONE   = -1
+token = None
+module_name = None
+setSlot = []   # SET slot
+setChan = []   # SET chan
+setSlew = -1   # SET slew
+setLevel = 0
+constList = []
+constNames = []
+paramList = []
+paramNames = []
+subroutines = []
+evalTime = 0        # evaluated time for waveform line
+maxTime = 0         # max time for each waveform
+wavReturnTime = 0   # time at which a waveform has manually specified a return
+wavReturnTo = ""    # optional, alternate waveform name to return to
+# (not supported by wavgen)
+wavReturn = False   # manual RETURN specified
+timeStamps = {}     # dictionary of time stamps, timelabel:time
+drvOutput = ""
+drvxOutput = ""
+adcOutput = ""
+hvlOutput = ""
+hvhOutput = ""
+lvlOutput = ""
+lvhOutput = ""
+dioOutput = ""
+sysOutput = ""
+sensorOutput = ""
+heaterOutput = ""
+pidOutput = ""
+rampOutput = ""
+pbiasOutput = ""
+nbiasOutput = ""
+
+__SLEW_FAST = 1
+__SLEW_SLOW = 0
+__SLEW_NONE = -1
+
 
 # -----------------------------------------------------------------------------
 # @fn     abort
-# @brief  throw a parser error
+# @brief  throw a Parser error
 # @param  self, msg
 # @return none
 # -----------------------------------------------------------------------------
 def abort(self, msg):
     """
-    throw a parser error
+    throw a Parser error
     """
     raise ParserError(msg)
+
 
 # -----------------------------------------------------------------------------
 # @fn     dq
@@ -117,7 +121,8 @@ def dq(s):
     """
     wrap double quotes around a string 's' and return quoted string
     """
-    return '"%s"' %s
+    return '"%s"' % s
+
 
 # -----------------------------------------------------------------------------
 # @fn     getToken
@@ -131,7 +136,8 @@ def getToken():
     global variable 'token'.
     """
     global token
-    token = lexer.get()
+    token = Lexer.get()
+
 
 # -----------------------------------------------------------------------------
 # @fn     found
@@ -140,12 +146,13 @@ def getToken():
 # @return True or False
 # -----------------------------------------------------------------------------
 def found(argTokenType):
-        """
-        returns True if the current token type matches the parameter
-        """
-        if token.type.upper() == argTokenType.upper():
-                return True
-        return False
+    """
+    returns True if the current token type matches the parameter
+    """
+    if token.type.upper() == argTokenType.upper():
+        return True
+    return False
+
 
 # -----------------------------------------------------------------------------
 # @fn     error
@@ -158,6 +165,7 @@ def error(msg):
     abort the parsing process
     """
     token.abort(msg)
+
 
 # -----------------------------------------------------------------------------
 # @fn     consume
@@ -176,6 +184,7 @@ def consume(argTokenType):
     else:
         error("(wdlParser.py::consume) expected " + argTokenType + 
               " but got " + token.show(align=False) )
+
 
 # -----------------------------------------------------------------------------
 # @fn     module
@@ -207,8 +216,11 @@ def module():
     elif module_name.upper() == "ADLN"    : type = 15
     elif module_name.upper() == "DRIVERX" : type = 16
     else:
-        error("(wdlParser.py::module) unrecognized module type: " + dq(module_name))
-    return(type)
+        error("(wdlParser.py::module) unrecognized module type: " +
+              dq(module_name))
+        type = -1
+    return type
+
 
 # -----------------------------------------------------------------------------
 # @fn     dio
@@ -231,22 +243,26 @@ def dio(slotNumber, type):
 
     if found(NUMBER):
         dioChan = token.cargo
-        if module_name.upper()=="LVBIAS" or module_name.upper()=="LVXBIAS" \
-        or module_name.upper()=="HEATER" or module_name.upper()=="HEATERX":
+        if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
+        or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
             if int(dioChan) < 1 or int(dioChan) > 8:
-                error("DIO channel " + dq(dioChan) + " outside range {1:8} for module: " + module_name.upper())
+                error("DIO channel " + dq(dioChan) +
+                      " outside range {1:8} for module: " + module_name.upper())
         elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
             if int(dioChan) < 1 or int(dioChan) > 4:
-                error("DIO channel " + dq(dioChan) + " outside range for HS, LVDS {1:4}")
+                error("DIO channel " + dq(dioChan) +
+                      " outside range for HS, LVDS {1:4}")
         else:
-                error("DIO is invalid keyword for module: " + module_name.upper())
+            error("DIO is invalid keyword for module: " + module_name.upper())
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             source = token.cargo
-            if source != "0" and source != "1" and source != "2" and source != "3":
+            if (source != "0" and source != "1" and source != "2" and
+                    source != "3"):
                 error("DIO source " + dq(source) + " must be 0, 1, 2 or 3")
         consume(NUMBER)
         consume(",")
@@ -258,13 +274,14 @@ def dio(slotNumber, type):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + source    + "\n"
+    dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + \
+                 source + "\n"
 
     # for LVBIAS and HEATER cards there are 8 DIO outputs but only 4 directions
     if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
@@ -272,11 +289,15 @@ def dio(slotNumber, type):
         chan = int(dioChan)
         # for odd number channels 1,3,5,7 then DIO_DIR is DIO_DIR12, 34, 56, 78
         if chan % 2 == 1:
-            dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + str(chan) + str(chan+1) + "=" + direction + "\n"
+            dioOutput += "MOD" + slotNumber + "\DIO_DIR" + str(chan) + \
+                         str(chan+1) + "=" + direction + "\n"
     elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
-        dioOutput += "MOD" + slotNumber + "\DIO_DIR"    + dioChan + "=" + direction + "\n"
-    if (label != ""):
-        dioOutput += "MOD" + slotNumber + "\DIO_LABEL" + dioChan + "=" + label     + "\n"
+        dioOutput += "MOD" + slotNumber + "\DIO_DIR" + dioChan + "=" + \
+                     direction + "\n"
+    if label != "":
+        dioOutput += "MOD" + slotNumber + "\DIO_LABEL" + dioChan + "=" + \
+                     label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     diopower
@@ -297,7 +318,8 @@ def diopower(slotNumber):
 
     consume("=")
     while not found(";"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
@@ -305,7 +327,8 @@ def diopower(slotNumber):
             elif token.cargo == "1":
                 diopower = "1"
             else:
-                error("DIOPOWER unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("DIOPOWER unrecognized value: " + dq(token.cargo) +
+                      "\nexpected 0 or 1")
             consume(NUMBER)
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
@@ -314,12 +337,13 @@ def diopower(slotNumber):
             elif "DISABLE" in token.cargo.upper():
                 diopower = "1"
             else:
-                error("DIOPOWER unrecognized value: " + dq(token.cargo) +\
+                error("DIOPOWER unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
     dioOutput += "MOD" + slotNumber + "\DIO_POWER=" + diopower + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     updatetime
@@ -345,11 +369,14 @@ def updatetime(slotNumber):
         if found(NUMBER):
             updateTime = int(token.cargo)
             if updateTime < 1 or updateTime > 30000:
-                error("UPDATETIME: " + dq(str(updateTime)) + " outside range {1:30000}")
+                error("UPDATETIME: " + dq(str(updateTime)) +
+                      " outside range {1:30000}")
             consume(NUMBER)
     consume(";")
 
-    heaterOutput += "MOD" + slotNumber + "\HEATERUPDATETIME=" + str(updateTime) + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATERUPDATETIME=" + \
+                    str(updateTime) + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     preampgain
@@ -378,7 +405,8 @@ def preampgain(slotNumber):
             elif token.cargo == "1":
                 preampgain = "1"
             else:
-                error("PREAMPGAIN unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("PREAMPGAIN unrecognized value: " + dq(token.cargo) +
+                      "\nexpected 0 or 1")
             consume(NUMBER)
         # or "low" or "high", converted to upper for case-insensitivity
         elif found(IDENTIFIER):
@@ -393,6 +421,7 @@ def preampgain(slotNumber):
     consume(";")
 
     adcOutput += "MOD" + slotNumber + "\PREAMPGAIN=" + preampgain + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     clamp
@@ -432,7 +461,9 @@ def clamp(slotNumber):
         consume(NUMBER)
     consume(";")
 
-    adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + str(clamp) + "\n"
+    adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + \
+                 str(clamp) + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     hvhc
@@ -459,7 +490,8 @@ def hvhc(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
@@ -469,7 +501,8 @@ def hvhc(slotNumber):
         if found(NUMBER):
             current = token.cargo
             if float(current) < 0 or float(current) > 250:
-                error("HVHC current " + dq(current) + " outside range [0..250] mA")
+                error("HVHC current " + dq(current) +
+                      " outside range [0..250] mA")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -492,12 +525,17 @@ def hvhc(slotNumber):
         label=""
     consume(";")
 
-    hvhOutput += "MOD" + slotNumber + "\HVHC_ENABLE"  + hvhChan + "=" + enable  + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_V"       + hvhChan + "=" + volts   + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_IL"      + hvhChan + "=" + current + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER"   + hvhChan + "=" + order   + "\n"
-    if (label != ""):
-        hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL" + hvhChan + "=" + label + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_ENABLE" + hvhChan + "=" + \
+                 enable + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_V" + hvhChan + "=" + volts + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_IL" + hvhChan + "=" + \
+                 current + "\n"
+    hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER" + hvhChan + "=" + \
+                 order + "\n"
+    if label != "":
+        hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL" + hvhChan + "=" + \
+                     label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     hvlc
@@ -539,16 +577,18 @@ def hvlc(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    hvlOutput += "MOD" + slotNumber + "\HVLC_V"     + hvlChan + "=" + volts + "\n"
-    hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER" + hvlChan + "=" + order + "\n"
-    if (label != ""):
-        hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + label + "\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
+    hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER" + hvlChan + "=" + \
+                 order + "\n"
+    if label != "":
+        hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + \
+                     label + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -576,7 +616,8 @@ def lvhc(slotNumber):
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         # could have a negative number here...
         sign = +1
         if found("-"):
@@ -585,13 +626,15 @@ def lvhc(slotNumber):
         if found(NUMBER):
             volts = sign * float(token.cargo)
             if float(volts) < -14 or float(volts) > 14:
-                error("LVHC volts " + dq(str(volts)) + " outside range [-14..14] V")
+                error("LVHC volts " + dq(str(volts)) +
+                      " outside range [-14..14] V")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             current = token.cargo
             if float(current) < 0 or float(current) > 250:
-                error("LVHC current " + dq(current) + " outside range [0..250] mA")
+                error("LVHC current " + dq(current) +
+                      " outside range [0..250] mA")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -614,12 +657,18 @@ def lvhc(slotNumber):
         label=""
     consume(";")
 
-    lvhOutput += "MOD" + slotNumber + "\LVHC_ENABLE"  + lvhChan + "=" + enable  + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_V"       + lvhChan + "=" + str(volts) + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_IL"      + lvhChan + "=" + current + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_ORDER"   + lvhChan + "=" + order   + "\n"
-    if (label != ""):
-        lvhOutput += "MOD" + slotNumber + "\LVHC_LABEL" + lvhChan + "=" + label + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_ENABLE" + lvhChan + "=" + \
+                 enable + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_V" + lvhChan + "=" + \
+                 str(volts) + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_IL" + lvhChan + "=" + \
+                 current + "\n"
+    lvhOutput += "MOD" + slotNumber + "\LVHC_ORDER" + lvhChan + "=" + \
+                 order + "\n"
+    if label != "":
+        lvhOutput += "MOD" + slotNumber + "\LVHC_LABEL" + lvhChan + "=" + \
+                     label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     lvlc
@@ -657,7 +706,8 @@ def lvlc(slotNumber):
         if found(NUMBER):
             volts = sign*float(token.cargo)
             if volts < -14 or volts > 14:
-                error("LVLC volts " + dq(str(volts)) + " outside range [-14..14] V")
+                error("LVLC volts " + dq(str(volts)) +
+                      " outside range [-14..14] V")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -674,10 +724,14 @@ def lvlc(slotNumber):
         label=""
     consume(";")
 
-    lvlOutput += "MOD" + slotNumber + "\LVLC_V"     + lvlChan + "=" + str(volts) + "\n"
-    lvlOutput += "MOD" + slotNumber + "\LVLC_ORDER" + lvlChan + "=" + order + "\n"
-    if (label != ""):
-        lvlOutput += "MOD" + slotNumber + "\LVLC_LABEL" + lvlChan + "=" + label + "\n"
+    lvlOutput += "MOD" + slotNumber + "\LVLC_V" + lvlChan + "=" + \
+                 str(volts) + "\n"
+    lvlOutput += "MOD" + slotNumber + "\LVLC_ORDER" + lvlChan + "=" + \
+                 order + "\n"
+    if label != "":
+        lvlOutput += "MOD" + slotNumber + "\LVLC_LABEL" + lvlChan + "=" + \
+                     label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     sensor
@@ -724,7 +778,8 @@ def sensor(slotNumber):
         if found(NUMBER):
             sensorLoLim = sign * float(token.cargo)
             if sensorLoLim < -150.0 or sensorLoLim > 50.0:
-                error("SENSOR lower limit " + str(sensorLoLim) + ": must be in range {-150:50} deg C")
+                error("SENSOR lower limit " + str(sensorLoLim) +
+                      ": must be in range {-150:50} deg C")
         consume(NUMBER)
         consume(",")
         # sensorHiLim could have a negative number...
@@ -735,13 +790,15 @@ def sensor(slotNumber):
         if found(NUMBER):
             sensorHiLim = sign * float(token.cargo)
             if sensorHiLim < -150.0 or sensorHiLim > 50.0:
-                error("SENSOR upper limit " + str(sensorHiLim) + ": must be in range {-150:50} deg C")
+                error("SENSOR upper limit " + str(sensorHiLim) +
+                      ": must be in range {-150:50} deg C")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             sensorFilter = token.cargo
             if int(sensorFilter) < 0 or int(sensorFilter) > 8:
-                error("SENSOR filter " + sensorFilter + ": must be in range {0:8}")
+                error("SENSOR filter " + sensorFilter +
+                      ": must be in range {0:8}")
         consume(NUMBER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
@@ -752,12 +809,19 @@ def sensor(slotNumber):
         label=""
     consume(";")
 
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "TYPE"       + "=" + sensorType       + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "CURRENT"    + "=" + sensorCurrent    + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "LOWERLIMIT" + "=" + str(sensorLoLim) + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "UPPERLIMIT" + "=" + str(sensorHiLim) + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "FILTER"     + "=" + sensorFilter     + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + "LABEL"      + "=" + label            + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+                    "TYPE" + "=" + sensorType + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+                    "CURRENT" + "=" + sensorCurrent + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+                    "LOWERLIMIT" + "=" + str(sensorLoLim) + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+                    "UPPERLIMIT" + "=" + str(sensorHiLim) + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+                    "FILTER" + "=" + sensorFilter + "\n"
+    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+                    "LABEL" + "=" + label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     pid
@@ -803,10 +867,15 @@ def pid(slotNumber):
     consume("]")
     consume(";")
 
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "P"  + "=" + heaterP    + "\n"
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "I"  + "=" + heaterI    + "\n"
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "D"  + "=" + heaterD    + "\n"
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "IL" + "=" + heaterIlim + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "P" + "=" + \
+                 heaterP + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "I" + "=" + \
+                 heaterI + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "D" + "=" + \
+                 heaterD + "\n"
+    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "IL" + "=" + \
+                 heaterIlim + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     ramp
@@ -838,7 +907,8 @@ def ramp(slotNumber):
         if found(NUMBER):
             ramprate = int(token.cargo)
             if ramprate < 1 or ramprate > 32767:
-                error("RAMP rate " + dq(str(ramprate)) + " must be in range {1:32767}")
+                error("RAMP rate " + dq(str(ramprate)) +
+                      " must be in range {1:32767}")
         consume(NUMBER)
         consume(",")
         # if it's a number then allow a 0 or 1
@@ -848,7 +918,8 @@ def ramp(slotNumber):
             elif token.cargo == "1":
                 rampEnable = "1"
             else:
-                error("RAMP enable unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("RAMP enable unrecognized value: " + dq(token.cargo) +
+                      "\nexpected 0 or 1")
             consume(NUMBER)
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
@@ -857,14 +928,17 @@ def ramp(slotNumber):
             elif "DISABLE" in token.cargo.upper():
                 rampEnable = "0"
             else:
-                error("RAMP enable unrecognized value: " + dq(token.cargo) +\
+                error("RAMP enable unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("enable")+" or "+dq("disable"))
             consume(IDENTIFIER)
     consume("]")
     consume(";")
 
-    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMPRATE=" + str(ramprate) + "\n"
-    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMP="     + rampEnable    + "\n"
+    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMPRATE=" + \
+                  str(ramprate) + "\n"
+    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMP=" + \
+                  rampEnable + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     heater
@@ -900,7 +974,8 @@ def heater(slotNumber):
         if found(NUMBER):
             heaterTarget = sign * float(token.cargo)
             if heaterTarget < -150.0 or heaterTarget > 50.0:
-                error("HEATER target " + str(heaterTarget) + ": must be in range {-150:50}")
+                error("HEATER target " + str(heaterTarget) +
+                      ": must be in range {-150:50}")
         consume(NUMBER)
         consume(",")
         # heaterSensor
@@ -920,14 +995,16 @@ def heater(slotNumber):
         if found(NUMBER):
             heaterLimit = float(token.cargo)
             if heaterLimit < 0.0 or heaterLimit > 25.0:
-                error("HEATER volt limit " + str(heaterLimit) + ": must be in range {0:25}")
+                error("HEATER volt limit " + str(heaterLimit) +
+                      ": must be in range {0:25}")
         consume(NUMBER)
         consume(",")
         # heaterForcelevel
         if found(NUMBER):
             heaterForcelevel = float(token.cargo)
             if heaterForcelevel < 0.0 or heaterForcelevel > 25.0:
-                error("HEATER volt force level " + str(heaterForcelevel) + ": must be in range {0:25}")
+                error("HEATER volt force level " + str(heaterForcelevel) +
+                      ": must be in range {0:25}")
         consume(NUMBER)
         consume(",")
         # heaterForce
@@ -938,7 +1015,8 @@ def heater(slotNumber):
             elif token.cargo == "1":
                 heaterForce = "1"
             else:
-                error("HEATER force unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("HEATER force unrecognized value: " + dq(token.cargo) +
+                      "\nexpected 0 or 1")
             consume(NUMBER)
         # or "force" or "normal", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
@@ -947,7 +1025,7 @@ def heater(slotNumber):
             elif "NORMAL" in token.cargo.upper():
                 heaterForce = "0"
             else:
-                error("HEATER force unrecognized value: " + dq(token.cargo) +\
+                error("HEATER force unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("force")+" or "+dq("normal"))
             consume(IDENTIFIER)
         consume(",")
@@ -959,7 +1037,8 @@ def heater(slotNumber):
             elif token.cargo == "1":
                 heaterEnable = "1"
             else:
-                error("HEATER enable unrecognized value: " + dq(token.cargo) + "\nexpected 0 or 1")
+                error("HEATER enable unrecognized value: " + dq(token.cargo) +
+                      "\nexpected 0 or 1")
             consume(NUMBER)
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
@@ -968,7 +1047,7 @@ def heater(slotNumber):
             elif "DISABLE" in token.cargo.upper():
                 heaterEnable = "0"
             else:
-                error("HEATER enable unrecognized value: " + dq(token.cargo) +\
+                error("HEATER enable unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("enable")+" or "+dq("disable"))
             consume(IDENTIFIER)
     consume("]")
@@ -980,12 +1059,19 @@ def heater(slotNumber):
         label=""
     consume(";")
 
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "TARGET"     + "=" + str(heaterTarget) + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "SENSOR"     + "=" + heaterSensor      + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "LIMIT"      + "=" + str(heaterLimit)      + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "FORCELEVEL" + "=" + str(heaterForcelevel) + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "FORCE"      + "=" + heaterForce       + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "ENABLE"     + "=" + heaterEnable      + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
+                    "TARGET" + "=" + str(heaterTarget) + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
+                    "SENSOR" + "=" + heaterSensor + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
+                    "LIMIT" + "=" + str(heaterLimit) + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
+                    "FORCELEVEL" + "=" + str(heaterForcelevel) + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
+                    "FORCE" + "=" + heaterForce + "\n"
+    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
+                    "ENABLE" + "=" + heaterEnable + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     pbias
@@ -1014,7 +1100,8 @@ def pbias(slotNumber):
     consume("[")
 
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             order = token.cargo
             if int(order) < 0:
@@ -1030,10 +1117,10 @@ def pbias(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
     pbiasOutput += "MOD" + slotNumber + "\XVP_V"      + biasChan + "=" + cmd   + "\n"
@@ -1810,7 +1897,7 @@ def sequence():
 # -----------------------------------------------------------------------------
 # @fn     parse_waveform
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
 def parse_waveform(sourceText):
@@ -1818,7 +1905,7 @@ def parse_waveform(sourceText):
     """
     global token
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     while True:
         getToken()
@@ -1898,7 +1985,7 @@ def PRINT():
 # -----------------------------------------------------------------------------
 # @fn     parse_sequence
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
 def parse_sequence(sourceText):
@@ -1907,7 +1994,7 @@ def parse_sequence(sourceText):
     global token
     global paramList
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     getToken()
     PRINT()
@@ -1925,7 +2012,7 @@ def parse_sequence(sourceText):
 # -----------------------------------------------------------------------------
 # @fn     get_subroutines
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
 def get_subroutines(sourceText):
@@ -1934,7 +2021,7 @@ def get_subroutines(sourceText):
     global token
     global subroutines
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     subroutines = []
 
@@ -1973,7 +2060,7 @@ def get_subroutines(sourceText):
 # -----------------------------------------------------------------------------
 # @fn     get_params
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
 def get_params(sourceText):
@@ -1982,7 +2069,7 @@ def get_params(sourceText):
     global token
     global paramNames
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     while True:
         getToken()
@@ -1999,7 +2086,7 @@ def get_params(sourceText):
 # -----------------------------------------------------------------------------
 # @fn     parse_modules
 # @brief  creates the .modules file
-# @param  sourceText
+# @param  source_text
 # @return .modules file output string
 #
 # This is called by modParserDriver.py when we want the .modules file.
@@ -2030,7 +2117,7 @@ def parse_modules(sourceText):
     global pbiasOutput
     global nbiasOutput
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     # initialize the system output string
     sysOutput = ""
@@ -2074,7 +2161,7 @@ def parse_modules(sourceText):
 # -----------------------------------------------------------------------------
 # @fn     parse_system
 # @brief  returns the text for the .system file
-# @param  sourceText
+# @param  source_text
 # @return none
 #
 # This is called by modParserDriver.py when we want the .system file.
@@ -2090,7 +2177,7 @@ def parse_system():
 # -----------------------------------------------------------------------------
 # @fn     parse
 # @brief  parses everything
-# @param  sourceText
+# @param  source_text
 # @return none
 #
 # This is called by wdlParserDriver.py
@@ -2102,7 +2189,7 @@ def parse(sourceText):
     global paramList
     global constList
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     waveformText = ""
     sequenceText = ""
@@ -2154,7 +2241,7 @@ def parse(sourceText):
 # -----------------------------------------------------------------------------
 # @fn     make_include
 # @brief  produces the #include directives from the .conf file
-# @param  sourceText is the text of the .conf file
+# @param  source_text is the text of the .conf file
 # @return none
 # 
 # Parse all the input of the .conf file, making sure it meets criteria,
@@ -2166,7 +2253,7 @@ def make_include(sourceText):
     """
     global token
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     getToken()
     while True:
@@ -2216,7 +2303,7 @@ def make_include(sourceText):
 # -----------------------------------------------------------------------------
 # @fn     make_include_sequence
 # @brief  produces output for assembling the sequence files from .conf
-# @param  sourceText is the text of the .conf file
+# @param  source_text is the text of the .conf file
 # @return none
 # 
 # Parse all the input of the .conf file, making sure it meets criteria.
@@ -2233,7 +2320,7 @@ def make_include_sequence(sourceText):
     sequenceFile = ""
     includeFiles = []
 
-    lexer.initialize(sourceText)
+    Lexer.initialize(sourceText)
 
     getToken()
     while True:

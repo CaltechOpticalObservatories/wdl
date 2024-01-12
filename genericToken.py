@@ -27,15 +27,18 @@ in the source text.
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from genericScanner import *
+# from genericScanner import *
 
-class LexerError(Exception): pass
 
-#-----------------------------------------------------------------------
+class LexerError(Exception):
+	pass
+
+
+# -----------------------------------------------------------------------
 #
 #               Token
 #
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 class Token:
 	"""
 	A Token object is the kind of thing that the Lexer returns.
@@ -45,73 +48,77 @@ class Token:
 	- the line number and column index where the token starts... self.show(True)
 	"""
 
-	#-------------------------------------------------------------------
+	# -------------------------------------------------------------------
 	#
-	#-------------------------------------------------------------------
-	def __init__(self, startChar):
+	# -------------------------------------------------------------------
+	def __init__(self, start_char):
 		"""
 		The constructor of the Token class
 		"""
-		self.cargo     = startChar.cargo
+		self.cargo = start_char.cargo
 
-		#----------------------------------------------------------
+		# ----------------------------------------------------------
 		# The token picks up information
-		# about its location in the sourceText
-		#----------------------------------------------------------
-		self.sourceText = startChar.sourceText
-		self.lineIndex  = startChar.lineIndex
-		self.colIndex   = startChar.colIndex
+		# about its location in the source_text
+		# ----------------------------------------------------------
+		self.source_text = start_char.source_text
+		self.line_index = start_char.line_index
+		self.col_index = start_char.col_index
 
-		#----------------------------------------------------------
+		# ----------------------------------------------------------
 		# We won't know what kind of token we have until we have
-		# finished processing all of the characters in the token.
+		# finished processing all the characters in the token.
 		# So when we start, the token.type is None (aka null).
-		#----------------------------------------------------------
-		self.type      = None
+		# ----------------------------------------------------------
+		self.type = None
 
-	#-------------------------------------------------------------------
+	# -------------------------------------------------------------------
 	#  return a displayable string representation of the token
-	#-------------------------------------------------------------------
-	def show(self,showLineNumbers=False,**kwargs):
+	# -------------------------------------------------------------------
+	def show(self, show_line_numbers=False, **kwargs):
 		"""
 		align=True shows token type left justified with dot leaders.
 		Specify align=False to turn this feature OFF.		
 		"""
-		align = kwargs.get("align",True)
+		align = kwargs.get("align", True)
 		if align: 
-			tokenTypeLen = 12
+			token_type_len = 12
 			space = " "
 		else: 
-			tokenTypeLen = 0
+			token_type_len = 0
 			space = ""
 			
-		if showLineNumbers:
-			s = str(self.lineIndex).rjust(6) + str(self.colIndex).rjust(4) + "  "
+		if show_line_numbers:
+			s = str(self.line_index).rjust(6) + str(self.col_index).rjust(4) + "  "
 		else:
 			s = ""
 			
 		if self.type == self.cargo: 
-			s = s + "Symbol".ljust(tokenTypeLen,".") + ":" + space + self.type
+			s = s + "Symbol".ljust(token_type_len, ".") + ":" + \
+				space + self.type
 		elif self.type == "Whitespace": 
-			s = s + "Whitespace".ljust(tokenTypeLen,".") + ":" + space + repr(self.cargo)
+			s = s + "Whitespace".ljust(token_type_len, ".") + ":" + \
+				space + repr(self.cargo)
 		else:
-			s = s + self.type.ljust(tokenTypeLen,".") + ":" + space + self.cargo
+			s = s + self.type.ljust(token_type_len, ".") + ":" + \
+				space + self.cargo
 		return s
 			
 	guts = property(show)
 
-
-	#-------------------------------------------------------------------
+	# -------------------------------------------------------------------
 	#
-	#-------------------------------------------------------------------
-	def abort(self,msg):
+	# -------------------------------------------------------------------
+	def abort(self, msg):
 		"""
 		"""
-		lines = self.sourceText.split("\n")
-		sourceLine = lines[self.lineIndex]
-		raise LexerError("\nIn line "      + str(self.lineIndex + 1)
-			   + " near column " + str(self.colIndex + 1) + ":\n\n"
-			   + sourceLine.replace("\t"," ") + "\n"
-			   + " "* self.colIndex
-			   + "^\n\n"
-			   + msg)
+		lines = self.source_text.split("\n")
+		source_line = lines[self.line_index]
+		raise LexerError(
+			"\nIn line " + str(self.line_index + 1)
+			+ " near column " + str(self.col_index + 1) + ":\n\n"
+			+ source_line.replace("\t", " ") + "\n"
+			+ " " * self.col_index
+			+ "^\n\n"
+			+ msg
+		)

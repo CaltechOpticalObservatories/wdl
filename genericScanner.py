@@ -30,75 +30,82 @@ character from the file and returns it.
 from genericCharacter import *
 
 """
-A Scanner object reads through the sourceText
+A Scanner object reads through the source_text
 and returns one character at a time.
 """
-#-------------------------------------------------------------------
+source_text = ""
+last_index = -1
+source_index = -1
+line_index = -1
+col_index = -1
+
+
+# -------------------------------------------------------------------
 #
-#-------------------------------------------------------------------
-def initialize(sourceTextArg):
+# -------------------------------------------------------------------
+def initialize(source_text_arg):
 	"""
 	
 	"""
-	global sourceText, lastIndex, sourceIndex, lineIndex, colIndex
-	sourceText = sourceTextArg
-	lastIndex    = len(sourceText) - 1
-	sourceIndex  = -1
-	lineIndex    =  0
-	colIndex     = -1
+	global source_text, last_index, source_index, line_index, col_index
+	source_text = source_text_arg
+	last_index = len(source_text) - 1
+	source_index = -1
+	line_index = 0
+	col_index = -1
 
 
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 #
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 def get():
 	"""
-	Return the next character in sourceText.
+	Return the next character in source_text.
 	"""
-	global lastIndex, sourceIndex, lineIndex, colIndex
+	global last_index, source_index, line_index, col_index
 
-	sourceIndex += 1    # increment the index in sourceText
+	source_index += 1    # increment the index in source_text
 
 	# maintain the line count
-	if sourceIndex > 0:
-		if sourceText[sourceIndex - 1] == "\n":
-			#-------------------------------------------------------
-			# The previous character in sourceText was a newline
+	if source_index > 0:
+		if source_text[source_index - 1] == "\n":
+			# -------------------------------------------------------
+			# The previous character in source_text was a newline
 			# character.  So... we're starting a new line.
-			# Increment lineIndex and reset colIndex.
-			#-------------------------------------------------------
-			lineIndex +=1
-			colIndex  = -1
+			# Increment line_index and reset col_index.
+			# -------------------------------------------------------
+			line_index += 1
+			col_index = -1
 
-	colIndex += 1
+	col_index += 1
 
-	if sourceIndex > lastIndex:
-		# We've read past the end of sourceText.
+	if source_index > last_index:
+		# We've read past the end of source_text.
 		# Return the ENDMARK character.
-		char = Character(ENDMARK, lineIndex, colIndex, sourceIndex,sourceText)
+		char = Character(ENDMARK, line_index, col_index, source_index, source_text)
 	else:
-		c    = sourceText[sourceIndex]
-		char = Character(c, lineIndex, colIndex, sourceIndex, sourceText)
+		c = source_text[source_index]
+		char = Character(c, line_index, col_index, source_index, source_text)
 
 	return char
 
 
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 #
-#-------------------------------------------------------------------
+# -------------------------------------------------------------------
 def lookahead(offset=1):
 	"""
 	Return a string (not a Character object) containing the character
 	at position:
-			sourceIndex + offset
-	Note that we do NOT move our current position in the sourceText.
-	That is,  we do NOT change the value of sourceIndex.
+			source_index + offset
+	Note that we do NOT move our current position in the source_text.
+	That is,  we do NOT change the value of source_index.
 	"""
-	index = sourceIndex + offset
+	index = source_index + offset
 
-	if index > lastIndex:
-		# We've read past the end of sourceText.
+	if index > last_index:
+		# We've read past the end of source_text.
 		# Return the ENDMARK character.
 		return ENDMARK
 	else:
-		return sourceText[index]
+		return source_text[index]

@@ -23,29 +23,31 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 from __future__ import print_function
+import fileinput
+import wdlParser as Parser
 import sys
 sys.dont_write_bytecode = True
-import fileinput
-import wdlParser as parser
-sys.tracebacklimit=0
+sys.tracebacklimit = 0
+
 
 # -----------------------------------------------------------------------------
 # @fn     main
 # @brief  
-# @param  sourceText
+# @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def main(sourceText):
+def main(input_source_text):
     """
     """
-    global token
-    parser.make_include_sequence(sourceText)
+    # global token
+    Parser.make_include_sequence(input_source_text)
+
 
 # -----------------------------------------------------------------------------
 #           __main__
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    sourceText=""
+    source_text = ""
     for line in fileinput.input():
-        sourceText += line
-    main(sourceText)
+        source_text += line
+    main(source_text)
