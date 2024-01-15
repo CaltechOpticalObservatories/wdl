@@ -33,12 +33,12 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-import sys
-sys.dont_write_bytecode = True
-#=sys.tracebacklimit=0
-import fileinput
 import wavgen
 import matplotlib.pyplot as plt
+import sys
+sys.dont_write_bytecode = True
+# sys.tracebacklimit=0
+
 
 # -----------------------------------------------------------------------------
 # @fn     main
@@ -49,20 +49,21 @@ import matplotlib.pyplot as plt
 def main(source, toplot):
     """
     """
-    input  = source+".wdl"
+    input_ = source + ".wdl"
     output = source
     if toplot.upper() == "FALSE" or toplot.upper() == "NO" or \
-       toplot.upper() == "F"     or toplot.upper() == "N"  or toplot.upper() == "0":
+            toplot.upper() == "F" or toplot.upper() == "N" or toplot.upper() == "0":
         wavgen.GenerateFigs = False
     elif toplot.upper() == "TRUE" or toplot.upper() == "YES" or \
-         toplot.upper() == "T"    or toplot.upper() == "Y"   or toplot.upper() == "1":
+            toplot.upper() == "T" or toplot.upper() == "Y" or toplot.upper() == "1":
         wavgen.GenerateFigs = True
     else:
         print("warning: invalid plotting option specified, defaulting to True")
         wavgen.GenerateFigs = True
 
-    wavgen.loadWDL(input, output)
+    wavgen.loadWDL(input_, output)
     plt.show(block=True)
+
 
 # -----------------------------------------------------------------------------
 #           __main__

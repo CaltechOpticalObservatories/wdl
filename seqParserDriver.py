@@ -22,7 +22,6 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from __future__ import print_function
 import fileinput
 import wdlParser as Parser
 import sys
@@ -39,7 +38,6 @@ sys.tracebacklimit = 0
 def main(input_source_text):
     """
     """
-    # global token
     Parser.make_include_sequence(input_source_text)
 
 

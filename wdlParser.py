@@ -59,7 +59,7 @@ sys.dont_write_bytecode = True
 class ParserError(Exception):
     pass
 
-token = None
+
 module_name = None
 setSlot = []   # SET slot
 setChan = []   # SET chan
@@ -104,7 +104,7 @@ __SLEW_NONE = -1
 # @param  self, msg
 # @return none
 # -----------------------------------------------------------------------------
-def abort(self, msg):
+def abort(msg):
     """
     throw a Parser error
     """
@@ -125,12 +125,12 @@ def dq(s):
 
 
 # -----------------------------------------------------------------------------
-# @fn     getToken
+# @fn     get_token
 # @brief  assign next token from source text to global var
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
-def getToken():
+def get_token():
     """
     Gets the next token from the source text and assigns it to the
     global variable 'token'.
@@ -145,11 +145,11 @@ def getToken():
 # @param  token type
 # @return True or False
 # -----------------------------------------------------------------------------
-def found(argTokenType):
+def found(arg_token_type):
     """
     returns True if the current token type matches the parameter
     """
-    if token.type.upper() == argTokenType.upper():
+    if token.type.upper() == arg_token_type.upper():
         return True
     return False
 
@@ -173,17 +173,17 @@ def error(msg):
 # @param  argTokenType
 # @return none
 # -----------------------------------------------------------------------------
-def consume(argTokenType):
+def consume(arg_token_type):
     """
     Consume a token of a given type and get the next token.
     If the current token is NOT of the expected type, then
     throw an error.
     """
-    if token.type.upper() == argTokenType.upper():
-        getToken()
+    if token.type.upper() == arg_token_type.upper():
+        get_token()
     else:
-        error("(wdlParser.py::consume) expected " + argTokenType + 
-              " but got " + token.show(align=False) )
+        error("(wdlParser.py::consume) expected " + arg_token_type +
+              " but got " + token.show(align=False))
 
 
 # -----------------------------------------------------------------------------
@@ -200,26 +200,41 @@ def module():
     global module_name
     module_name = token.cargo
     # convert all comparisons to upper for case-insensitivity
-    if   module_name.upper() == "DRIVER"  : type = 1
-    elif module_name.upper() == "AD"      : type = 2
-    elif module_name.upper() == "LVBIAS"  : type = 3
-    elif module_name.upper() == "HVBIAS"  : type = 4
-    elif module_name.upper() == "HEATER"  : type = 5
-    elif module_name.upper() == "HS"      : type = 7
-    elif module_name.upper() == "HVXBIAS" : type = 8
-    elif module_name.upper() == "LVXBIAS" : type = 9
-    elif module_name.upper() == "LVDS"    : type = 10
-    elif module_name.upper() == "HEATERX" : type = 11
-    elif module_name.upper() == "XVBIAS"  : type = 12
-    elif module_name.upper() == "ADF"     : type = 13
-    elif module_name.upper() == "ADX"     : type = 14
-    elif module_name.upper() == "ADLN"    : type = 15
-    elif module_name.upper() == "DRIVERX" : type = 16
+    if module_name.upper() == "DRIVER":
+        mod_type = 1
+    elif module_name.upper() == "AD":
+        mod_type = 2
+    elif module_name.upper() == "LVBIAS":
+        mod_type = 3
+    elif module_name.upper() == "HVBIAS":
+        mod_type = 4
+    elif module_name.upper() == "HEATER":
+        mod_type = 5
+    elif module_name.upper() == "HS":
+        mod_type = 7
+    elif module_name.upper() == "HVXBIAS":
+        mod_type = 8
+    elif module_name.upper() == "LVXBIAS":
+        mod_type = 9
+    elif module_name.upper() == "LVDS":
+        mod_type = 10
+    elif module_name.upper() == "HEATERX":
+        mod_type = 11
+    elif module_name.upper() == "XVBIAS":
+        mod_type = 12
+    elif module_name.upper() == "ADF":
+        mod_type = 13
+    elif module_name.upper() == "ADX":
+        mod_type = 14
+    elif module_name.upper() == "ADLN":
+        mod_type = 15
+    elif module_name.upper() == "DRIVERX":
+        mod_type = 16
     else:
         error("(wdlParser.py::module) unrecognized module type: " +
               dq(module_name))
-        type = -1
-    return type
+        mod_type = -1
+    return mod_type
 
 
 # -----------------------------------------------------------------------------
@@ -229,7 +244,7 @@ def module():
 # @param  int type
 # @return none, appends to global variable "dioOutput"
 # -----------------------------------------------------------------------------
-def dio(slotNumber, type):
+def dio(slot_number):
     """
     These are the rules for the DIO keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -242,15 +257,15 @@ def dio(slotNumber, type):
     global dioOutput
 
     if found(NUMBER):
-        dioChan = token.cargo
+        dio_chan = token.cargo
         if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
-        or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
-            if int(dioChan) < 1 or int(dioChan) > 8:
-                error("DIO channel " + dq(dioChan) +
+                or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
+            if int(dio_chan) < 1 or int(dio_chan) > 8:
+                error("DIO channel " + dq(dio_chan) +
                       " outside range {1:8} for module: " + module_name.upper())
         elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
-            if int(dioChan) < 1 or int(dioChan) > 4:
-                error("DIO channel " + dq(dioChan) +
+            if int(dio_chan) < 1 or int(dio_chan) > 4:
+                error("DIO channel " + dq(dio_chan) +
                       " outside range for HS, LVDS {1:4}")
         else:
             error("DIO is invalid keyword for module: " + module_name.upper())
@@ -280,22 +295,22 @@ def dio(slotNumber, type):
         label = ""
     consume(";")
 
-    dioOutput += "MOD" + slotNumber + "\DIO_SOURCE" + dioChan + "=" + \
+    dioOutput += "MOD" + slot_number + "\DIO_SOURCE" + dio_chan + "=" + \
                  source + "\n"
 
     # for LVBIAS and HEATER cards there are 8 DIO outputs but only 4 directions
     if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
-    or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
-        chan = int(dioChan)
+            or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
+        chan = int(dio_chan)
         # for odd number channels 1,3,5,7 then DIO_DIR is DIO_DIR12, 34, 56, 78
         if chan % 2 == 1:
-            dioOutput += "MOD" + slotNumber + "\DIO_DIR" + str(chan) + \
+            dioOutput += "MOD" + slot_number + "\DIO_DIR" + str(chan) + \
                          str(chan+1) + "=" + direction + "\n"
     elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
-        dioOutput += "MOD" + slotNumber + "\DIO_DIR" + dioChan + "=" + \
+        dioOutput += "MOD" + slot_number + "\DIO_DIR" + dio_chan + "=" + \
                      direction + "\n"
     if label != "":
-        dioOutput += "MOD" + slotNumber + "\DIO_LABEL" + dioChan + "=" + \
+        dioOutput += "MOD" + slot_number + "\DIO_LABEL" + dio_chan + "=" + \
                      label + "\n"
 
 
@@ -305,7 +320,7 @@ def dio(slotNumber, type):
 # @param  string slotNumber
 # @return none, appends to global variable "dioOutput"
 # -----------------------------------------------------------------------------
-def diopower(slotNumber):
+def diopower(slot_number):
     """
     These are the rules for the DIOPOWER keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -342,7 +357,7 @@ def diopower(slotNumber):
             consume(IDENTIFIER)
     consume(";")
 
-    dioOutput += "MOD" + slotNumber + "\DIO_POWER=" + diopower + "\n"
+    dioOutput += "MOD" + slot_number + "\DIO_POWER=" + diopower + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -351,7 +366,7 @@ def diopower(slotNumber):
 # @param  string slotNumber
 # @return none, appends to global variable "heaterOutput"
 # -----------------------------------------------------------------------------
-def updatetime(slotNumber):
+def updatetime(slot_number):
     """
     These are the rules for the UPDATETIME keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -364,18 +379,19 @@ def updatetime(slotNumber):
 
     consume("=")
     while not found(";"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
-            updateTime = int(token.cargo)
-            if updateTime < 1 or updateTime > 30000:
-                error("UPDATETIME: " + dq(str(updateTime)) +
+            update_time = int(token.cargo)
+            if update_time < 1 or update_time > 30000:
+                error("UPDATETIME: " + dq(str(update_time)) +
                       " outside range {1:30000}")
             consume(NUMBER)
     consume(";")
 
-    heaterOutput += "MOD" + slotNumber + "\HEATERUPDATETIME=" + \
-                    str(updateTime) + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATERUPDATETIME=" + \
+                    str(update_time) + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -384,7 +400,7 @@ def updatetime(slotNumber):
 # @param  string slotNumber
 # @return none, appends to global variable "adcOutput"
 # -----------------------------------------------------------------------------
-def preampgain(slotNumber):
+def preampgain(slot_number):
     """
     These are the rules for the PREAMPGAIN keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -397,7 +413,8 @@ def preampgain(slotNumber):
 
     consume("=")
     while not found(";"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
@@ -415,12 +432,12 @@ def preampgain(slotNumber):
             elif token.cargo.upper() == "HIGH":
                 preampgain = "1"
             else:
-                error("PREAMPGAIN unrecognized value: " + dq(token.cargo) +\
+                error("PREAMPGAIN unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
-    adcOutput += "MOD" + slotNumber + "\PREAMPGAIN=" + preampgain + "\n"
+    adcOutput += "MOD" + slot_number + "\PREAMPGAIN=" + preampgain + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -429,7 +446,7 @@ def preampgain(slotNumber):
 # @param  string slotNumber
 # @return none, appends to global variable "adcOutput"
 # -----------------------------------------------------------------------------
-def clamp(slotNumber):
+def clamp(slot_number):
     """
     These are the rules for the CLAMP keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -442,13 +459,14 @@ def clamp(slotNumber):
     global adcOutput
 
     if found(NUMBER):
-        adChan = token.cargo
-        if int(adChan) < 1 or int(adChan) > 4:
-            error("CLAMP channel " + dq(adChan) + " outside range [1..4]")
+        ad_chan = token.cargo
+        if int(ad_chan) < 1 or int(ad_chan) > 4:
+            error("CLAMP channel " + dq(ad_chan) + " outside range [1..4]")
     consume(NUMBER)
     consume("=")
     while not found(";"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
 
         # could have a negative number...
         sign = +1
@@ -461,7 +479,7 @@ def clamp(slotNumber):
         consume(NUMBER)
     consume(";")
 
-    adcOutput += "MOD" + slotNumber + "\CLAMP" + adChan + "=" + \
+    adcOutput += "MOD" + slot_number + "\CLAMP" + ad_chan + "=" + \
                  str(clamp) + "\n"
 
 
@@ -471,7 +489,7 @@ def clamp(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "hvhOutput"
 # -----------------------------------------------------------------------------
-def hvhc(slotNumber):
+def hvhc(slot_number):
     """
     These are the rules for the HVHC keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -484,9 +502,9 @@ def hvhc(slotNumber):
     global hvhOutput
 
     if found(NUMBER):
-        hvhChan = token.cargo
-        if int(hvhChan) < 1 or int(hvhChan) > 6:
-            error("HVHC channel " + dq(hvhChan) + " outside range [1..6]")
+        hvh_chan = token.cargo
+        if int(hvh_chan) < 1 or int(hvh_chan) > 6:
+            error("HVHC channel " + dq(hvh_chan) + " outside range [1..6]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
@@ -519,21 +537,21 @@ def hvhc(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    hvhOutput += "MOD" + slotNumber + "\HVHC_ENABLE" + hvhChan + "=" + \
+    hvhOutput += "MOD" + slot_number + "\HVHC_ENABLE" + hvh_chan + "=" + \
                  enable + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_V" + hvhChan + "=" + volts + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_IL" + hvhChan + "=" + \
+    hvhOutput += "MOD" + slot_number + "\HVHC_V" + hvh_chan + "=" + volts + "\n"
+    hvhOutput += "MOD" + slot_number + "\HVHC_IL" + hvh_chan + "=" + \
                  current + "\n"
-    hvhOutput += "MOD" + slotNumber + "\HVHC_ORDER" + hvhChan + "=" + \
+    hvhOutput += "MOD" + slot_number + "\HVHC_ORDER" + hvh_chan + "=" + \
                  order + "\n"
     if label != "":
-        hvhOutput += "MOD" + slotNumber + "\HVHC_LABEL" + hvhChan + "=" + \
+        hvhOutput += "MOD" + slot_number + "\HVHC_LABEL" + hvh_chan + "=" + \
                      label + "\n"
 
 
@@ -543,7 +561,7 @@ def hvhc(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "hvlOutput"
 # -----------------------------------------------------------------------------
-def hvlc(slotNumber):
+def hvlc(slot_number):
     """
     These are the rules for the HVLC keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -556,13 +574,14 @@ def hvlc(slotNumber):
     global hvlOutput
 
     if found(NUMBER):
-        hvlChan = token.cargo
-        if int(hvlChan) < 1 or int(hvlChan) > 24:
-            error("HVLC channel " + dq(hvlChan) + " outside range [1..24]")
+        hvl_chan = token.cargo
+        if int(hvl_chan) < 1 or int(hvl_chan) > 24:
+            error("HVLC channel " + dq(hvl_chan) + " outside range [1..24]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
@@ -583,11 +602,11 @@ def hvlc(slotNumber):
         label = ""
     consume(";")
 
-    hvlOutput += "MOD" + slotNumber + "\HVLC_V" + hvlChan + "=" + volts + "\n"
-    hvlOutput += "MOD" + slotNumber + "\HVLC_ORDER" + hvlChan + "=" + \
+    hvlOutput += "MOD" + slot_number + "\HVLC_V" + hvl_chan + "=" + volts + "\n"
+    hvlOutput += "MOD" + slot_number + "\HVLC_ORDER" + hvl_chan + "=" + \
                  order + "\n"
     if label != "":
-        hvlOutput += "MOD" + slotNumber + "\HVLC_LABEL" + hvlChan + "=" + \
+        hvlOutput += "MOD" + slot_number + "\HVLC_LABEL" + hvl_chan + "=" + \
                      label + "\n"
 
 
@@ -597,7 +616,7 @@ def hvlc(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "lvhOutput"
 # -----------------------------------------------------------------------------
-def lvhc(slotNumber):
+def lvhc(slot_number):
     """
     These are the rules for the LVHC keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -610,9 +629,9 @@ def lvhc(slotNumber):
     global lvhOutput
 
     if found(NUMBER):
-        lvhChan = token.cargo
-        if int(lvhChan) < 1 or int(lvhChan) > 6:
-            error("LVHC channel " + dq(lvhChan) + " outside range [1..6]")
+        lvh_chan = token.cargo
+        if int(lvh_chan) < 1 or int(lvh_chan) > 6:
+            error("LVHC channel " + dq(lvh_chan) + " outside range [1..6]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
@@ -651,22 +670,22 @@ def lvhc(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    lvhOutput += "MOD" + slotNumber + "\LVHC_ENABLE" + lvhChan + "=" + \
+    lvhOutput += "MOD" + slot_number + "\LVHC_ENABLE" + lvh_chan + "=" + \
                  enable + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_V" + lvhChan + "=" + \
+    lvhOutput += "MOD" + slot_number + "\LVHC_V" + lvh_chan + "=" + \
                  str(volts) + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_IL" + lvhChan + "=" + \
+    lvhOutput += "MOD" + slot_number + "\LVHC_IL" + lvh_chan + "=" + \
                  current + "\n"
-    lvhOutput += "MOD" + slotNumber + "\LVHC_ORDER" + lvhChan + "=" + \
+    lvhOutput += "MOD" + slot_number + "\LVHC_ORDER" + lvh_chan + "=" + \
                  order + "\n"
     if label != "":
-        lvhOutput += "MOD" + slotNumber + "\LVHC_LABEL" + lvhChan + "=" + \
+        lvhOutput += "MOD" + slot_number + "\LVHC_LABEL" + lvh_chan + "=" + \
                      label + "\n"
 
 
@@ -676,7 +695,7 @@ def lvhc(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "lvlOutput"
 # -----------------------------------------------------------------------------
-def lvlc(slotNumber):
+def lvlc(slot_number):
     """
     These are the rules for the LVLC keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -689,13 +708,14 @@ def lvlc(slotNumber):
     global lvlOutput
 
     if found(NUMBER):
-        lvlChan = token.cargo
-        if int(lvlChan) < 1 or int(lvlChan) > 24:
-            error("LVLC channel " + dq(lvlChan) + " outside range [1..24]")
+        lvl_chan = token.cargo
+        if int(lvl_chan) < 1 or int(lvl_chan) > 24:
+            error("LVLC channel " + dq(lvl_chan) + " outside range [1..24]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
 
         # could have a negative number...
         sign = +1
@@ -718,18 +738,18 @@ def lvlc(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    lvlOutput += "MOD" + slotNumber + "\LVLC_V" + lvlChan + "=" + \
+    lvlOutput += "MOD" + slot_number + "\LVLC_V" + lvl_chan + "=" + \
                  str(volts) + "\n"
-    lvlOutput += "MOD" + slotNumber + "\LVLC_ORDER" + lvlChan + "=" + \
+    lvlOutput += "MOD" + slot_number + "\LVLC_ORDER" + lvl_chan + "=" + \
                  order + "\n"
     if label != "":
-        lvlOutput += "MOD" + slotNumber + "\LVLC_LABEL" + lvlChan + "=" + \
+        lvlOutput += "MOD" + slot_number + "\LVLC_LABEL" + lvl_chan + "=" + \
                      label + "\n"
 
 
@@ -739,7 +759,7 @@ def lvlc(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "sensorOutput"
 # -----------------------------------------------------------------------------
-def sensor(slotNumber):
+def sensor(slot_number):
     """
     These are the rules for the SENSOR keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -753,13 +773,14 @@ def sensor(slotNumber):
     global sensorOutput
 
     if found(IDENTIFIER):
-        sensorChan = token.cargo
-        if sensorChan != 'A' and sensorChan != 'B' and sensorChan != 'C':
-            error("SENSOR channel " + sensorChan + ": must be {A,B,C}")
+        sensor_chan = token.cargo
+        if sensor_chan != 'A' and sensor_chan != 'B' and sensor_chan != 'C':
+            error("SENSOR channel " + sensor_chan + ": must be {A,B,C}")
     consume(IDENTIFIER)
     consume("[")
-    while not found ("]"):
-        if token.type == EOF: break
+    while not found("]"):
+        if token.type == EOF:
+            break
         if found(NUMBER):
             sensorType = token.cargo
             if int(sensorType) < 0 or int(sensorType) > 5:
@@ -767,59 +788,59 @@ def sensor(slotNumber):
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
-            sensorCurrent = token.cargo
+            sensor_current = token.cargo
         consume(NUMBER)
         consume(",")
-        # sensorLoLim could have a negative number...
+        # sensor_lo_lim could have a negative number...
         sign = +1
         if found("-"):
             consume("-")
             sign = -1
         if found(NUMBER):
-            sensorLoLim = sign * float(token.cargo)
-            if sensorLoLim < -150.0 or sensorLoLim > 50.0:
-                error("SENSOR lower limit " + str(sensorLoLim) +
+            sensor_lo_lim = sign * float(token.cargo)
+            if sensor_lo_lim < -150.0 or sensor_lo_lim > 50.0:
+                error("SENSOR lower limit " + str(sensor_lo_lim) +
                       ": must be in range {-150:50} deg C")
         consume(NUMBER)
         consume(",")
-        # sensorHiLim could have a negative number...
+        # sensor_hi_lim could have a negative number...
         sign = +1
         if found("-"):
             consume("-")
             sign = -1
         if found(NUMBER):
-            sensorHiLim = sign * float(token.cargo)
-            if sensorHiLim < -150.0 or sensorHiLim > 50.0:
-                error("SENSOR upper limit " + str(sensorHiLim) +
+            sensor_hi_lim = sign * float(token.cargo)
+            if sensor_hi_lim < -150.0 or sensor_hi_lim > 50.0:
+                error("SENSOR upper limit " + str(sensor_hi_lim) +
                       ": must be in range {-150:50} deg C")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
-            sensorFilter = token.cargo
-            if int(sensorFilter) < 0 or int(sensorFilter) > 8:
-                error("SENSOR filter " + sensorFilter +
+            sensor_filter = token.cargo
+            if int(sensor_filter) < 0 or int(sensor_filter) > 8:
+                error("SENSOR filter " + sensor_filter +
                       ": must be in range {0:8}")
         consume(NUMBER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+    sensorOutput += "MOD" + slot_number + "\SENSOR" + sensor_chan + \
                     "TYPE" + "=" + sensorType + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
-                    "CURRENT" + "=" + sensorCurrent + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
-                    "LOWERLIMIT" + "=" + str(sensorLoLim) + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
-                    "UPPERLIMIT" + "=" + str(sensorHiLim) + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
-                    "FILTER" + "=" + sensorFilter + "\n"
-    sensorOutput += "MOD" + slotNumber + "\SENSOR" + sensorChan + \
+    sensorOutput += "MOD" + slot_number + "\SENSOR" + sensor_chan + \
+                    "CURRENT" + "=" + sensor_current + "\n"
+    sensorOutput += "MOD" + slot_number + "\SENSOR" + sensor_chan + \
+                    "LOWERLIMIT" + "=" + str(sensor_lo_lim) + "\n"
+    sensorOutput += "MOD" + slot_number + "\SENSOR" + sensor_chan + \
+                    "UPPERLIMIT" + "=" + str(sensor_hi_lim) + "\n"
+    sensorOutput += "MOD" + slot_number + "\SENSOR" + sensor_chan + \
+                    "FILTER" + "=" + sensor_filter + "\n"
+    sensorOutput += "MOD" + slot_number + "\SENSOR" + sensor_chan + \
                     "LABEL" + "=" + label + "\n"
 
 
@@ -829,7 +850,7 @@ def sensor(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "pidOutput"
 # -----------------------------------------------------------------------------
-def pid(slotNumber):
+def pid(slot_number):
     """
     These are the rules for the PID keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -842,39 +863,40 @@ def pid(slotNumber):
     global pidOutput
 
     if found(IDENTIFIER):
-        heaterChan = token.cargo
-        if heaterChan != 'A' and heaterChan != 'B':
-            error("PID invalid heater: " + heaterChan + ": must be {A,B}")
+        heater_chan = token.cargo
+        if heater_chan != 'A' and heater_chan != 'B':
+            error("PID invalid heater: " + heater_chan + ": must be {A,B}")
     consume(IDENTIFIER)
     consume("[")
-    while not found ("]"):
-        if token.type == EOF: break
+    while not found("]"):
+        if token.type == EOF:
+            break
         if found(NUMBER):
-            heaterP = token.cargo
+            heater_p = token.cargo
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
-            heaterI = token.cargo
+            heater_i = token.cargo
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
-            heaterD = token.cargo
+            heater_d = token.cargo
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
-            heaterIlim = token.cargo
+            heater_ilim = token.cargo
         consume(NUMBER)
     consume("]")
     consume(";")
 
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "P" + "=" + \
-                 heaterP + "\n"
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "I" + "=" + \
-                 heaterI + "\n"
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "D" + "=" + \
-                 heaterD + "\n"
-    pidOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + "IL" + "=" + \
-                 heaterIlim + "\n"
+    pidOutput += "MOD" + slot_number + "\HEATER" + heater_chan + "P" + "=" + \
+                 heater_p + "\n"
+    pidOutput += "MOD" + slot_number + "\HEATER" + heater_chan + "I" + "=" + \
+                 heater_i + "\n"
+    pidOutput += "MOD" + slot_number + "\HEATER" + heater_chan + "D" + "=" + \
+                 heater_d + "\n"
+    pidOutput += "MOD" + slot_number + "\HEATER" + heater_chan + "IL" + "=" + \
+                 heater_ilim + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -883,7 +905,7 @@ def pid(slotNumber):
 # @param  string slotNumber
 # @return none, appends to global variable "rampOutput"
 # -----------------------------------------------------------------------------
-def ramp(slotNumber):
+def ramp(slot_number):
     """
     These are the rules for the RAMP keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -897,13 +919,14 @@ def ramp(slotNumber):
     global rampOutput
 
     if found(IDENTIFIER):
-        rampChan = token.cargo
-        if rampChan != 'A' and rampChan != 'B':
-            error("RAMP heater channel " + rampChan + ": must be {A,B}")
+        ramp_chan = token.cargo
+        if ramp_chan != 'A' and ramp_chan != 'B':
+            error("RAMP heater channel " + ramp_chan + ": must be {A,B}")
     consume(IDENTIFIER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             ramprate = int(token.cargo)
             if ramprate < 1 or ramprate > 32767:
@@ -914,9 +937,9 @@ def ramp(slotNumber):
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
-                rampEnable = "0"
+                ramp_enable = "0"
             elif token.cargo == "1":
-                rampEnable = "1"
+                ramp_enable = "1"
             else:
                 error("RAMP enable unrecognized value: " + dq(token.cargo) +
                       "\nexpected 0 or 1")
@@ -924,9 +947,9 @@ def ramp(slotNumber):
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
             if "ENABLE" in token.cargo.upper():
-                rampEnable = "1"
+                ramp_enable = "1"
             elif "DISABLE" in token.cargo.upper():
-                rampEnable = "0"
+                ramp_enable = "0"
             else:
                 error("RAMP enable unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("enable")+" or "+dq("disable"))
@@ -934,10 +957,10 @@ def ramp(slotNumber):
     consume("]")
     consume(";")
 
-    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMPRATE=" + \
+    rampOutput += "MOD" + slot_number + "\HEATER" + ramp_chan + "RAMPRATE=" + \
                   str(ramprate) + "\n"
-    rampOutput += "MOD" + slotNumber + "\HEATER" + rampChan + "RAMP=" + \
-                  rampEnable + "\n"
+    rampOutput += "MOD" + slot_number + "\HEATER" + ramp_chan + "RAMP=" + \
+                  ramp_enable + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -946,7 +969,7 @@ def ramp(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "heaterOutput"
 # -----------------------------------------------------------------------------
-def heater(slotNumber):
+def heater(slot_number):
     """
     These are the rules for the HEATER keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -959,61 +982,62 @@ def heater(slotNumber):
     global heaterOutput
 
     if found(IDENTIFIER):
-        heaterChan = token.cargo
-        if heaterChan != 'A' and heaterChan != 'B':
-            error("HEATER channel " + heaterChan + ": must be {A,B}")
+        heater_chan = token.cargo
+        if heater_chan != 'A' and heater_chan != 'B':
+            error("HEATER channel " + heater_chan + ": must be {A,B}")
     consume(IDENTIFIER)
     consume("[")
-    while not found ("]"):
-        if token.type == EOF: break
-        # heaterTarget could have a negative number...
+    while not found("]"):
+        if token.type == EOF:
+            break
+        # heater_target could have a negative number...
         sign = +1
         if found("-"):
             consume("-")
             sign = -1
         if found(NUMBER):
-            heaterTarget = sign * float(token.cargo)
-            if heaterTarget < -150.0 or heaterTarget > 50.0:
-                error("HEATER target " + str(heaterTarget) +
+            heater_target = sign * float(token.cargo)
+            if heater_target < -150.0 or heater_target > 50.0:
+                error("HEATER target " + str(heater_target) +
                       ": must be in range {-150:50}")
         consume(NUMBER)
         consume(",")
-        # heaterSensor
+        # heater_sensor
         if found(IDENTIFIER):
-            heaterSensor = token.cargo
-            if heaterSensor == 'A':
-                heaterSensor = '0'
-            elif heaterSensor == 'B':
-                heaterSensor = '1'
-            elif heaterSensor == 'C':
-                heaterSensor = '2'
+            heater_sensor = token.cargo
+            if heater_sensor == 'A':
+                heater_sensor = '0'
+            elif heater_sensor == 'B':
+                heater_sensor = '1'
+            elif heater_sensor == 'C':
+                heater_sensor = '2'
             else:
-                error("HEATER sensor " + heaterSensor + ": must be {A,B,C}")
+                error("HEATER sensor " + heater_sensor + ": must be {A,B,C}")
         consume(IDENTIFIER)
         consume(",")
-        # heaterLimit
+        # heater_limit
         if found(NUMBER):
-            heaterLimit = float(token.cargo)
-            if heaterLimit < 0.0 or heaterLimit > 25.0:
-                error("HEATER volt limit " + str(heaterLimit) +
+            heater_limit = float(token.cargo)
+            if heater_limit < 0.0 or heater_limit > 25.0:
+                error("HEATER volt limit " + str(heater_limit) +
                       ": must be in range {0:25}")
         consume(NUMBER)
         consume(",")
-        # heaterForcelevel
+        # heater_forcelevel
         if found(NUMBER):
-            heaterForcelevel = float(token.cargo)
-            if heaterForcelevel < 0.0 or heaterForcelevel > 25.0:
-                error("HEATER volt force level " + str(heaterForcelevel) +
+            heater_forcelevel = float(token.cargo)
+            if heater_forcelevel < 0.0 or heater_forcelevel > 25.0:
+                error("HEATER volt force level " + str(heater_forcelevel) +
                       ": must be in range {0:25}")
         consume(NUMBER)
         consume(",")
-        # heaterForce
+        # heater_force
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
-                heaterForce = "0"
+                heater_force = "0"
             elif token.cargo == "1":
-                heaterForce = "1"
+                heater_force = "1"
             else:
                 error("HEATER force unrecognized value: " + dq(token.cargo) +
                       "\nexpected 0 or 1")
@@ -1021,21 +1045,21 @@ def heater(slotNumber):
         # or "force" or "normal", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
             if "FORCE" in token.cargo.upper():
-                heaterForce = "1"
+                heater_force = "1"
             elif "NORMAL" in token.cargo.upper():
-                heaterForce = "0"
+                heater_force = "0"
             else:
                 error("HEATER force unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("force")+" or "+dq("normal"))
             consume(IDENTIFIER)
         consume(",")
-        # heaterEnable
+        # heater_enable
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
-                heaterEnable = "0"
+                heater_enable = "0"
             elif token.cargo == "1":
-                heaterEnable = "1"
+                heater_enable = "1"
             else:
                 error("HEATER enable unrecognized value: " + dq(token.cargo) +
                       "\nexpected 0 or 1")
@@ -1043,9 +1067,9 @@ def heater(slotNumber):
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
             if "ENABLE" in token.cargo.upper():
-                heaterEnable = "1"
+                heater_enable = "1"
             elif "DISABLE" in token.cargo.upper():
-                heaterEnable = "0"
+                heater_enable = "0"
             else:
                 error("HEATER enable unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("enable")+" or "+dq("disable"))
@@ -1053,24 +1077,24 @@ def heater(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
-                    "TARGET" + "=" + str(heaterTarget) + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
-                    "SENSOR" + "=" + heaterSensor + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
-                    "LIMIT" + "=" + str(heaterLimit) + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
-                    "FORCELEVEL" + "=" + str(heaterForcelevel) + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
-                    "FORCE" + "=" + heaterForce + "\n"
-    heaterOutput += "MOD" + slotNumber + "\HEATER" + heaterChan + \
-                    "ENABLE" + "=" + heaterEnable + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATER" + heater_chan + \
+                    "TARGET" + "=" + str(heater_target) + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATER" + heater_chan + \
+                    "SENSOR" + "=" + heater_sensor + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATER" + heater_chan + \
+                    "LIMIT" + "=" + str(heater_limit) + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATER" + heater_chan + \
+                    "FORCELEVEL" + "=" + str(heater_forcelevel) + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATER" + heater_chan + \
+                    "FORCE" + "=" + heater_force + "\n"
+    heaterOutput += "MOD" + slot_number + "\HEATER" + heater_chan + \
+                    "ENABLE" + "=" + heater_enable + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -1079,7 +1103,7 @@ def heater(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "pbiasOutput"
 # -----------------------------------------------------------------------------
-def pbias(slotNumber):
+def pbias(slot_number):
     """
     These are the rules for the PBIAS keyword, encountered while parsing
     the xvbias command for the modules (.mod) file. Required format is
@@ -1092,9 +1116,9 @@ def pbias(slotNumber):
     global pbiasOutput
 
     if found(NUMBER):
-        biasChan = token.cargo
-        if int(biasChan) < 1 or int(biasChan) > 4:
-            error("PBIAS channel " + dq(biasChan) + " outside range {1:4}")
+        bias_chan = token.cargo
+        if int(bias_chan) < 1 or int(bias_chan) > 4:
+            error("PBIAS channel " + dq(bias_chan) + " outside range {1:4}")
     consume(NUMBER)
 
     consume("[")
@@ -1123,11 +1147,12 @@ def pbias(slotNumber):
         label = ""
     consume(";")
 
-    pbiasOutput += "MOD" + slotNumber + "\XVP_V"      + biasChan + "=" + cmd   + "\n"
-    pbiasOutput += "MOD" + slotNumber + "\XVP_ORDER"  + biasChan + "=" + order + "\n"
-    pbiasOutput += "MOD" + slotNumber + "\XVP_ENABLE" + biasChan + "=1\n"
-    if (label != ""):
-        pbiasOutput += "MOD" + slotNumber + "\XVP_LABEL" + biasChan + "=" + label + "\n"
+    pbiasOutput += "MOD" + slot_number + "\XVP_V" + bias_chan + "=" + cmd + "\n"
+    pbiasOutput += "MOD" + slot_number + "\XVP_ORDER" + bias_chan + "=" + order + "\n"
+    pbiasOutput += "MOD" + slot_number + "\XVP_ENABLE" + bias_chan + "=1\n"
+    if label != "":
+        pbiasOutput += "MOD" + slot_number + "\XVP_LABEL" + bias_chan + "=" + label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     nbias
@@ -1135,7 +1160,7 @@ def pbias(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "nbiasOutput"
 # -----------------------------------------------------------------------------
-def nbias(slotNumber):
+def nbias(slot_number):
     """
     These are the rules for the NBIAS keyword, encountered while parsing
     the xvbias command for the modules (.mod) file. Required format is
@@ -1148,15 +1173,16 @@ def nbias(slotNumber):
     global nbiasOutput
 
     if found(NUMBER):
-        biasChan = token.cargo
-        if int(biasChan) < 1 or int(biasChan) > 4:
-            error("NBIAS channel " + dq(biasChan) + " outside range {1:4}")
+        bias_chan = token.cargo
+        if int(bias_chan) < 1 or int(bias_chan) > 4:
+            error("NBIAS channel " + dq(bias_chan) + " outside range {1:4}")
     consume(NUMBER)
 
     consume("[")
 
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             order = token.cargo
             if int(order) < 0:
@@ -1174,17 +1200,18 @@ def nbias(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    nbiasOutput += "MOD" + slotNumber + "\XVN_V"      + biasChan + "=-"+ cmd   + "\n"
-    nbiasOutput += "MOD" + slotNumber + "\XVN_ORDER"  + biasChan + "=" + order + "\n"
-    nbiasOutput += "MOD" + slotNumber + "\XVN_ENABLE" + biasChan + "=1\n"
-    if (label != ""):
-        nbiasOutput += "MOD" + slotNumber + "\XVN_LABEL" + biasChan + "=" + label + "\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_V" + bias_chan + "=-" + cmd + "\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_ORDER" + bias_chan + "=" + order + "\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_ENABLE" + bias_chan + "=1\n"
+    if label != "":
+        nbiasOutput += "MOD" + slot_number + "\XVN_LABEL" + bias_chan + "=" + label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     drv
@@ -1192,7 +1219,7 @@ def nbias(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "drvOutput"
 # -----------------------------------------------------------------------------
-def drv(slotNumber):
+def drv(slot_number):
     """
     These are the rules for the DRV keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -1205,13 +1232,14 @@ def drv(slotNumber):
     global drvOutput
 
     if found(NUMBER):
-        drvChan = token.cargo
-        if int(drvChan) < 0 or int(drvChan) > 8:
-            error("DRV channel " + dq(drvChan) + " outside range [1..8]")
+        drv_chan = token.cargo
+        if int(drv_chan) < 0 or int(drv_chan) > 8:
+            error("DRV channel " + dq(drv_chan) + " outside range [1..8]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
@@ -1232,17 +1260,18 @@ def drv(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    drvOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
-    drvOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
-    drvOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
-    if (label != ""):
-        drvOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=" + label + "\n"
+    drvOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + enable + "\n"
+    drvOutput += "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + slewfast + "\n"
+    drvOutput += "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + slewslow + "\n"
+    if label != "":
+        drvOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     drvx
@@ -1250,7 +1279,7 @@ def drv(slotNumber):
 # @param  string slotNumber
 # @return none, appends to the global variable "drvxOutput"
 # -----------------------------------------------------------------------------
-def drvx(slotNumber):
+def drvx(slot_number):
     """
     These are the rules for the DRVX keyword, encountered while parsing
     the SLOT command for the modules (.mod) file. Required format is
@@ -1263,13 +1292,14 @@ def drvx(slotNumber):
     global drvxOutput
 
     if found(NUMBER):
-        drvChan = token.cargo
-        if int(drvChan) < 0 or int(drvChan) > 12:
-            error("DRVX channel " + dq(drvChan) + " outside range [1..12]")
+        drv_chan = token.cargo
+        if int(drv_chan) < 0 or int(drv_chan) > 12:
+            error("DRVX channel " + dq(drv_chan) + " outside range [1..12]")
     consume(NUMBER)
     consume("[")
     while not found("]"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
@@ -1290,17 +1320,18 @@ def drvx(slotNumber):
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
-        label=token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
         consume(STRING)
     else:
-        label=""
+        label = ""
     consume(";")
 
-    drvxOutput += "MOD" + slotNumber + "\ENABLE"       + drvChan + "=" + enable   + "\n"
-    drvxOutput += "MOD" + slotNumber + "\FASTSLEWRATE" + drvChan + "=" + slewfast + "\n"
-    drvxOutput += "MOD" + slotNumber + "\SLOWSLEWRATE" + drvChan + "=" + slewslow + "\n"
-    if (label != ""):
-        drvxOutput += "MOD" + slotNumber + "\LABEL" + drvChan + "=" + label + "\n"
+    drvxOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + enable + "\n"
+    drvxOutput += "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + slewfast + "\n"
+    drvxOutput += "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + slewslow + "\n"
+    if label != "":
+        drvxOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     slot
@@ -1326,76 +1357,77 @@ def slot():
     consume("SLOT")
 
     if found(NUMBER):
-        slotNumber = token.cargo
-        if int(slotNumber) < 1 or int(slotNumber) > 12:
-            error("SLOT " + dq(slotNumber) + " outside range [1..12]")
+        slot_number = token.cargo
+        if int(slot_number) < 1 or int(slot_number) > 12:
+            error("SLOT " + dq(slot_number) + " outside range [1..12]")
     consume(NUMBER)
 
     if found(IDENTIFIER):
-        type = module()
+        mod_type = module()
     consume(IDENTIFIER)
 
     # Then, until the end of the waveform (delimited by curly brace),
     # check for the waveform rules.
     consume("{")
     while not found("}"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found("PRINT"):
-            PRINT()
+            wprint()
         if found("DRV"):
             consume("DRV")
-            drv(slotNumber)
+            drv(slot_number)
         if found("DRVX"):
             consume("DRVX")
-            drvx(slotNumber)
+            drvx(slot_number)
         elif found("CLAMP"):
             consume("CLAMP")
-            clamp(slotNumber)
+            clamp(slot_number)
         if found("PREAMPGAIN"):
             consume("PREAMPGAIN")
-            preampgain(slotNumber)
+            preampgain(slot_number)
         if found("HVLC"):
             consume("HVLC")
-            hvlc(slotNumber)
+            hvlc(slot_number)
         if found("HVHC"):
             consume("HVHC")
-            hvhc(slotNumber)
+            hvhc(slot_number)
         if found("LVLC"):
             consume("LVLC")
-            lvlc(slotNumber)
+            lvlc(slot_number)
         if found("LVHC"):
             consume("LVHC")
-            lvhc(slotNumber)
+            lvhc(slot_number)
         if found("DIO"):
             consume("DIO")
-            dio(slotNumber,type)
+            dio(slot_number)
         if found("DIOPOWER"):
             consume("DIOPOWER")
-            diopower(slotNumber)
+            diopower(slot_number)
         if found("UPDATETIME"):
             consume("UPDATETIME")
-            updatetime(slotNumber)
+            updatetime(slot_number)
         if found("PID"):
             consume("PID")
-            pid(slotNumber)
+            pid(slot_number)
         if found("SENSOR"):
             consume("SENSOR")
-            sensor(slotNumber)
+            sensor(slot_number)
         if found("HTR"):
             consume("HTR")
-            heater(slotNumber)
+            heater(slot_number)
         if found("RAMP"):
             consume("RAMP")
-            ramp(slotNumber)
-        if found ("HEATER"):
+            ramp(slot_number)
+        if found("HEATER"):
             consume("HEATER")
-            heater(slotNumber)
-        if found ("PBIAS"):
+            heater(slot_number)
+        if found("PBIAS"):
             consume("PBIAS")
-            pbias(slotNumber)
-        if found ("NBIAS"):
+            pbias(slot_number)
+        if found("NBIAS"):
             consume("NBIAS")
-            nbias(slotNumber)
+            nbias(slot_number)
         else:
             pass
     consume("}")
@@ -1404,12 +1436,13 @@ def slot():
     # Values of ID, REV, VERSION don't matter, but they need to be defined if the
     # resultant .acf file is to be loaded by the GUI without an error. The important
     # value here is the TYPE, so that the correct tabs are created.
-    sysOutput += "MOD" + slotNumber + "_ID=0000000000000000\n"
-    sysOutput += "MOD" + slotNumber + "_REV=0\n"
-    sysOutput += "MOD" + slotNumber + "_VERSION=0.0.0\n"
-    sysOutput += "MOD" + slotNumber + "_TYPE=" + str(type) + "\n"
+    sysOutput += "MOD" + slot_number + "_ID=0000000000000000\n"
+    sysOutput += "MOD" + slot_number + "_REV=0\n"
+    sysOutput += "MOD" + slot_number + "_VERSION=0.0.0\n"
+    sysOutput += "MOD" + slot_number + "_TYPE=" + str(mod_type) + "\n"
 
     return
+
 
 # -----------------------------------------------------------------------------
 # @fn     timelabel
@@ -1433,6 +1466,7 @@ def timelabel():
         # for later retrieval (used in the time() function).
         timeStamps[token.cargo] = evalTime
         consume(IDENTIFIER)
+
 
 # -----------------------------------------------------------------------------
 # @fn     wav_return
@@ -1469,6 +1503,7 @@ def wav_return():
 
     return wavReturn
 
+
 # -----------------------------------------------------------------------------
 # @fn     time
 # @brief  evaluate the time stamp for each entry in the waveform
@@ -1496,19 +1531,21 @@ def time():
 
     # form an equation from which the time will be evaluated using everything up to the ":"
     while not found(":"):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         if found(IDENTIFIER):
             # if we found a time stamp label then get its actual time from the dictionary
             if token.cargo in timeStamps:
-                eqn += str( timeStamps[token.cargo] )
+                eqn += str(timeStamps[token.cargo])
             else:
-                print( "Unresolved symbol " + dq(token.cargo), file=sys.stderr )
+                print("Unresolved symbol " + dq(token.cargo), file=sys.stderr)
             consume(IDENTIFIER)
         else:
             eqn += token.cargo   # if not a label then we have a number or math symbol
-            getToken()
+            get_token()
     consume(":")
-    evalTime = int( eval(eqn) )  # new evaluated time
+    evalTime = int(eval(eqn))  # new evaluated time
+
 
 # -----------------------------------------------------------------------------
 # @fn     set
@@ -1516,7 +1553,7 @@ def time():
 # @param  none
 # @return none
 # -----------------------------------------------------------------------------
-def set():
+def wset():
     """
     These are the rules for the SET keyword, encountered while parsing
     waveforms. Format is
@@ -1537,14 +1574,15 @@ def set():
         consume("[")
 
     while not found(","):
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         # SLOT
-        if found (NUMBER):
+        if found(NUMBER):
             setSlot.append(token.cargo)
         consume(NUMBER)
         consume(":")
         # CHANNEL
-        if found (NUMBER):
+        if found(NUMBER):
             setChan.append(token.cargo)
         consume(NUMBER)
 
@@ -1558,6 +1596,7 @@ def set():
 
     if found("]"):
         consume("]")
+
 
 # -----------------------------------------------------------------------------
 # @fn     to
@@ -1575,13 +1614,14 @@ def to():
     if found("-"):
         # if so, consume the sign and remember it
         consume("-")
-        sign=-1.0
+        sign = -1.0
     else:
-        sign=1.0
+        sign = 1.0
     if found(NUMBER):
         # multiply the value by the sign from above (hehe)
-        setLevel = str( sign * float(token.cargo) )
+        setLevel = str(sign * float(token.cargo))
     consume(NUMBER)
+
 
 # -----------------------------------------------------------------------------
 # @fn     slew
@@ -1611,6 +1651,7 @@ def slew():
     else:
         error("SLEW expected SLOW | FAST but got: " + dq(token.cargo))
 
+
 # -----------------------------------------------------------------------------
 # @fn     eol
 # @brief  check for end-of-line character
@@ -1619,9 +1660,10 @@ def slew():
 # -----------------------------------------------------------------------------
 def eol():
     """
-    check for the end-of-line character (semi-colon)
+    check for the end-of-line character (semicolon)
     """
     consume(";")
+
 
 # -----------------------------------------------------------------------------
 # @fn     waverules
@@ -1644,7 +1686,7 @@ def waverules():
         =timelabel is an optional label for this time, which can be used elsewhere
  
         SET signallabel TO level; 
-        is required and must end with a semi-colon
+        is required and must end with a semicolon
 
         signallabel and level can be defined anywhere and is of the form
         slot:chan or a list of [slot:chan, slot:chan, ...]
@@ -1657,10 +1699,11 @@ def waverules():
     time()
     timelabel()
     if not wav_return():
-        set()
+        wset()
         to()
         slew()
     eol()
+
 
 # -----------------------------------------------------------------------------
 # @fn     waveform
@@ -1681,17 +1724,17 @@ def waveform():
     global wavReturnTime
     global wavReturnTo
 
-    outputText = ""
-    wavReturnTo= ""
-    maxTime    = 0
-    wavReturn  = False  # True if a manual waveform return is specified
+    output_text = ""
+    wavReturnTo = ""
+    maxTime = 0
+    wavReturn = False  # True if a manual waveform return is specified
 
     # a waveform must start with the "WAVEFORM" keyword, ...
     consume("WAVEFORM")
 
     # ...followed by a label for the waveform.
-    waveformName, pyextension = name_label()
-    outputText   += "waveform " + waveformName + pyextension + ":" + "\n"
+    waveform_name, pyextension = name_label()
+    output_text += "waveform " + waveform_name + pyextension + ":" + "\n"
 
     # Then, until the end of the waveform (delimited by curly brace),
     # check for the waveform rules.
@@ -1702,36 +1745,38 @@ def waveform():
         if wavReturn:
             # if an alternate return name not specified then the default is current waveform
             if wavReturnTo == "":
-                wavReturnTo = waveformName
-            outputText += str(wavReturnTime) + " RETURN " + wavReturnTo + "\n\n"
+                wavReturnTo = waveform_name
+            output_text += str(wavReturnTime) + " RETURN " + wavReturnTo + "\n\n"
         # otherwise loop through all the slots that were set and write a line for each
         else:
             for index in range(len(setSlot)):
-                # The output is written differently depending on whether or not
+                # The output is written differently depending on whether
                 # a slew rate (fast | slow) has been specified.
-                if (setSlew == __SLEW_NONE):
-                    outputText += str(evalTime)                + " " +\
-                                  str(setSlot[index])          + " " +\
-                                  str(int(setChan[index])-1)   + " " +\
-                                  str(setLevel)                + "\n"
+                if setSlew == __SLEW_NONE:
+                    output_text += str(evalTime) + " " +\
+                                  str(setSlot[index]) + " " +\
+                                  str(int(setChan[index])-1) + " " +\
+                                  str(setLevel) + "\n"
                 else:
-                    outputText += str(evalTime)                + " " +\
-                                  str(setSlot[index])          + " " +\
+                    output_text += str(evalTime) + " " +\
+                                  str(setSlot[index]) + " " +\
                                   str(2*int(setChan[index])-2) + " " +\
-                                  str(setLevel)                + "\n"
-                    outputText += str(evalTime)                + " " +\
-                                  str(setSlot[index])          + " " +\
+                                  str(setLevel) + "\n"
+                    output_text += str(evalTime) + " " +\
+                                  str(setSlot[index]) + " " +\
                                   str(2*int(setChan[index])-1) + " " +\
-                                  str(setSlew)                 + "\n"
-        if token.type == EOF: break
+                                  str(setSlew) + "\n"
+        if token.type == EOF:
+            break
     consume("}")
 
     # "RETURN" marks the end of the waveform output
     if not wavReturn:
-        outputText += str(maxTime+1) + " RETURN " + waveformName + "\n\n"
+        output_text += str(maxTime+1) + " RETURN " + waveform_name + "\n\n"
     if wavReturn and (wavReturnTime <= maxTime):
         error("waveform return time: " + str(wavReturnTime) + " must be > " + str(maxTime))
-    return outputText
+    return output_text
+
 
 # -----------------------------------------------------------------------------
 # @fn     python_commands
@@ -1747,17 +1792,19 @@ def python_commands():
     and close parentheses and copy everthing inbetween.
     """
     global token
-    pyCommand = token.cargo         # first token is the name label itself
+    py_command = token.cargo         # first token is the name label itself
     consume("IDENTIFIER")
-    pyCommand += token.cargo        # next must be an open paren
+    py_command += token.cargo        # next must be an open paren
     consume("(")
     while not found(")"):           # copy everything until a close paren
-        if token.type == EOF: break
-        pyCommand += token.cargo
-        getToken()
-    pyCommand += token.cargo
+        if token.type == EOF:
+            break
+        py_command += token.cargo
+        get_token()
+    py_command += token.cargo
     consume(")")
-    return pyCommand
+    return py_command
+
 
 # -----------------------------------------------------------------------------
 # @fn     name_label
@@ -1781,7 +1828,7 @@ def name_label():
     if found(IDENTIFIER):
         name = token.cargo
     else:
-        print( "waveform or sequence missing name label", file=sys.stderr )
+        print("waveform or sequence missing name label", file=sys.stderr)
         name = ""
     consume(IDENTIFIER)   # require an identifier for sequence|waveform name
 
@@ -1793,6 +1840,7 @@ def name_label():
     else:
         pyextension = ""
     return name, pyextension
+
 
 # -----------------------------------------------------------------------------
 # @fn     generic_sequence
@@ -1809,17 +1857,17 @@ def generic_sequence(*sequenceName):
     global token
     # sequence/waveform must start with an open (left) curly brace, {
     consume("{")
-    outputText = ""
+    output_text = ""
     # process until end-of-sequence
     while not found("}"):
-        sequenceLine = ""
+        sequence_line = ""
         # process until end-of-line
         while not found(";"):
-            if token.type == EOF: break
-            if  ( found(IDENTIFIER) ) and \
-                ( token.cargo not in subroutines ) and \
-                ( token.cargo not in paramNames ):
-                error("(wdlParser.py::generic_sequence) undefined symbol " + token.show(align=False) )
+            if token.type == EOF:
+                break
+            if (found(IDENTIFIER)) and (token.cargo not in subroutines) and \
+                    (token.cargo not in paramNames):
+                error("(wdlParser.py::generic_sequence) undefined symbol " + token.show(align=False))
             # If token is a GOTO then the next token must be in the list
             # of subroutines() with open and close parentheses and nothing else
             if found("GOTO"):
@@ -1828,7 +1876,7 @@ def generic_sequence(*sequenceName):
                 if token.cargo not in subroutines:
                     error("(wdlParser.py::generic_sequence) undefined waveform or sequence: " + dq(token.cargo))
                 else:
-                    sequenceLine += "GOTO " + token.cargo
+                    sequence_line += "GOTO " + token.cargo
                     # then consume the IDENTIFIER and the open/close parentheses
                     # and break, because that's it for the line.
                     consume(IDENTIFIER)
@@ -1838,43 +1886,44 @@ def generic_sequence(*sequenceName):
             # If token is in the list of subroutines then it must be CALLed
             # and must be followed by parentheses and an optional number
             if token.cargo in subroutines:
-                sequenceLine += "CALL " + token.cargo
+                sequence_line += "CALL " + token.cargo
                 consume(IDENTIFIER)
                 consume("(")
                 # if next token isn't a closing paren then assume it's a number or param
                 if not found(")"):
-                    sequenceLine += "(" + token.cargo #+ ")"
+                    sequence_line += "(" + token.cargo  # + ")"
                     # and if it's not a number then it must be a defined param
                     if not found(NUMBER) and token.cargo not in paramNames:
-                        error("(wdlParser.py::generic_sequence) undefined param " + token.show(align=False) )
+                        error("(wdlParser.py::generic_sequence) undefined param " + token.show(align=False))
             elif found("RETURN"):
                 consume("RETURN")
                 # check for an alternate sequence specified for the return
                 if found(IDENTIFIER):
-                    seqReturnTo = token.cargo
+                    seq_return_to = token.cargo
                     consume(IDENTIFIER)
                 # use the current sequenceName as the default, if none specified
                 else:
-                    seqReturnTo = sequenceName[0]
-                outputText += "RETURN " + seqReturnTo + "\n"
+                    seq_return_to = sequenceName[0]
+                output_text += "RETURN " + seq_return_to + "\n"
                 break
             else:
-                sequenceLine += token.cargo
-            prevToken = token.cargo
-            getToken()
+                sequence_line += token.cargo
+            prev_token = token.cargo
+            get_token()
             # if next token not a symbol then pad with a space
             if token.cargo not in TwoCharacterSymbols and \
                token.cargo not in OneCharacterSymbols and \
-               prevToken   not in PreSpaceSymbols:
-                sequenceLine += " "
-        # line must end with a semi-colon
+               prev_token not in PreSpaceSymbols:
+                sequence_line += " "
+        # line must end with a semicolon
         consume(";")
-        # won't normally have a 0-length sequenceLine, but could happen during testing
-        if len(sequenceLine) > 0:
-            outputText += sequenceLine + "\n"
-    # sequence/waveform must end with an close (right) curly brace, }
+        # won't normally have a 0-length sequence_line, but could happen during testing
+        if len(sequence_line) > 0:
+            output_text += sequence_line + "\n"
+    # sequence/waveform must end with a close (right) curly brace, }
     consume("}")
-    return outputText
+    return output_text
+
 
 # -----------------------------------------------------------------------------
 # @fn     sequence
@@ -1889,10 +1938,11 @@ def sequence():
     global subroutines
 
     consume("SEQUENCE")
-    sequenceName, pyextension = name_label()
-    outputText = "sequence " + sequenceName + pyextension + ":" + "\n"
-    outputText += generic_sequence(sequenceName) + "\n"
-    return outputText
+    sequence_name, pyextension = name_label()
+    output_text = "sequence " + sequence_name + pyextension + ":" + "\n"
+    output_text += generic_sequence(sequence_name) + "\n"
+    return output_text
+
 
 # -----------------------------------------------------------------------------
 # @fn     parse_waveform
@@ -1900,17 +1950,19 @@ def sequence():
 # @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def parse_waveform(sourceText):
+def parse_waveform(source_text):
     """
     """
     global token
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
     while True:
-        getToken()
-        if token.type == EOF: break
+        get_token()
+        if token.type == EOF:
+            break
         waveform()
+
 
 # -----------------------------------------------------------------------------
 # @fn     param
@@ -1936,6 +1988,7 @@ def param():
     consume(NUMBER)
     paramList.append(line)
 
+
 # -----------------------------------------------------------------------------
 # @fn     const
 # @brief  pulls out constants from anywhere in .seq file and stores in a list
@@ -1960,13 +2013,14 @@ def const():
     consume(NUMBER)
     constList.append(line)
 
+
 # -----------------------------------------------------------------------------
 # @fn     print
 # @brief  prints a string to stderr
 # @param  string to print
 # @return none
 # -----------------------------------------------------------------------------
-def PRINT():
+def wprint():
     """
     """
     global token
@@ -1978,9 +2032,11 @@ def PRINT():
     consume(STRING)
     sys.stderr.write(message + "\n")
     while not found(";"):
-        getToken()
-        if token.type == EOF: break
+        get_token()
+        if token.type == EOF:
+            break
     consume(";")
+
 
 # -----------------------------------------------------------------------------
 # @fn     parse_sequence
@@ -1988,26 +2044,28 @@ def PRINT():
 # @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def parse_sequence(sourceText):
+def parse_sequence(source_text):
     """
     """
     global token
     global paramList
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
-    getToken()
-    PRINT()
+    get_token()
+    wprint()
     param()
     const()
 
     while True:
-        getToken()
-        if token.type == EOF: break
+        get_token()
+        if token.type == EOF:
+            break
         param()
         const()
-        PRINT()
+        wprint()
         sequence()
+
 
 # -----------------------------------------------------------------------------
 # @fn     get_subroutines
@@ -2015,19 +2073,20 @@ def parse_sequence(sourceText):
 # @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def get_subroutines(sourceText):
+def get_subroutines(source_text):
     """
     """
     global token
     global subroutines
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
     subroutines = []
 
-    getToken()
+    get_token()
     while True:
-        if token.type == EOF: break
+        if token.type == EOF:
+            break
         # look only for sequences or waveforms
         if found("SEQUENCE") or found("WAVEFORM"):
             # consume whichever keyword was found
@@ -2047,15 +2106,17 @@ def get_subroutines(sourceText):
             # otherwise there ought to be open and close braces
             consume("{")
             while not found("}"):
-                getToken()
-                if token.type == EOF: break
+                get_token()
+                if token.type == EOF:
+                    break
             consume("}")
             # finally! add the name to the list of subroutines
             subroutines.append(name)
         else:
-            getToken()
+            get_token()
 
     return subroutines
+
 
 # -----------------------------------------------------------------------------
 # @fn     get_params
@@ -2063,17 +2124,18 @@ def get_subroutines(sourceText):
 # @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def get_params(sourceText):
+def get_params(source_text):
     """
     """
     global token
     global paramNames
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
     while True:
-        getToken()
-        if token.type == EOF: break
+        get_token()
+        if token.type == EOF:
+            break
         if found("param"):
             consume("param")
             paramNames.append(token.cargo)
@@ -2082,6 +2144,7 @@ def get_params(sourceText):
             consume(NUMBER)
 
     return paramNames
+
 
 # -----------------------------------------------------------------------------
 # @fn     parse_modules
@@ -2095,7 +2158,7 @@ def get_params(sourceText):
 # The text for the .system file is assembled here (in sysOutput) but
 # not returned from here.
 # -----------------------------------------------------------------------------
-def parse_modules(sourceText):
+def parse_modules(source_text):
     """
     This is called to create the .modules file. The only valid keyword is SLOT.
     The text for the .system file is assembled here in global variable sysOutput
@@ -2117,7 +2180,7 @@ def parse_modules(sourceText):
     global pbiasOutput
     global nbiasOutput
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
     # initialize the system output string
     sysOutput = ""
@@ -2126,7 +2189,7 @@ def parse_modules(sourceText):
     sysOutput += "BACKPLANE_TYPE=1\n"
     sysOutput += "BACKPLANE_VERSION=0.0.0\n"
 
-    getToken()
+    get_token()
     while True:
         if token.type == EOF:
             break
@@ -2134,10 +2197,10 @@ def parse_modules(sourceText):
             # parse the rules for the SLOT keyword
             slot()
         elif found("PRINT"):
-            PRINT()
+            wprint()
         else:
             # We should only be parsing modules now
-            error("(wdlParser.py::parse_modules) unrecognized token " + token.show(align=False) )
+            error("(wdlParser.py::parse_modules) unrecognized token " + token.show(align=False))
             break
 
     retval = ""
@@ -2158,6 +2221,7 @@ def parse_modules(sourceText):
 
     return retval
 
+
 # -----------------------------------------------------------------------------
 # @fn     parse_system
 # @brief  returns the text for the .system file
@@ -2174,6 +2238,7 @@ def parse_system():
     global sysOutput
     return sysOutput
 
+
 # -----------------------------------------------------------------------------
 # @fn     parse
 # @brief  parses everything
@@ -2182,21 +2247,21 @@ def parse_system():
 #
 # This is called by wdlParserDriver.py
 # -----------------------------------------------------------------------------
-def parse(sourceText):
+def parse(source_text):
     """
     """
     global token
     global paramList
     global constList
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
-    waveformText = ""
-    sequenceText = ""
-    moduleFile   = ""
-    signalFile   = ""
+    waveform_text = ""
+    sequence_text = ""
+    module_file = ""
+    signal_file = ""
 
-    getToken()
+    get_token()
     while True:
         if token.type == EOF:
             break
@@ -2205,38 +2270,39 @@ def parse(sourceText):
             consume("{")
             consume("}")
         elif found("WAVEFORM"):
-            waveformText += waveform()
+            waveform_text += waveform()
         elif found("PRINT"):
-            PRINT()
+            wprint()
         elif found("param"):
             param()
         elif found("const"):
             const()
         elif found("SEQUENCE"):
-            sequenceText += sequence()
+            sequence_text += sequence()
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
-            moduleFile = token.cargo.strip('"')
+            module_file = token.cargo.strip('"')
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
-            signalFile = token.cargo.strip('"')
+            signal_file = token.cargo.strip('"')
             consume(STRING)
         else:
-            error("(wdlParser.py::parse) unrecognized token " + token.show(align=False) )
+            error("(wdlParser.py::parse) unrecognized token " + token.show(align=False))
             break
 
-    retval =""
-    retval += "modulefile " + moduleFile + "\n"
-    retval += "signalfile " + signalFile + "\n\n"
-    retval += sequenceText
-    retval += waveformText
+    retval = ""
+    retval += "modulefile " + module_file + "\n"
+    retval += "signalfile " + signal_file + "\n\n"
+    retval += sequence_text
+    retval += waveform_text
     for p in paramList:
         retval += p + "\n"
     for c in constList:
         retval += c + "\n"
 
     return retval
+
 
 # -----------------------------------------------------------------------------
 # @fn     make_include
@@ -2247,46 +2313,46 @@ def parse(sourceText):
 # Parse all the input of the .conf file, making sure it meets criteria,
 # but act only on the INCLUDE_FILE tokens.
 # -----------------------------------------------------------------------------
-def make_include(sourceText):
+def make_include(source_text):
     """
     produces the #include directives from the .conf file
     """
     global token
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
-    getToken()
+    get_token()
     while True:
         if token.type == EOF:
             break
         elif found("INCLUDE_FILE"):
             consume("INCLUDE_FILE")
             consume("=")
-            print( "#include " + token.cargo.strip("\"")   )
+            print("#include " + token.cargo.strip("\""))
             consume(STRING)
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
             consume("=")
             if found(STRING):
-                moduleFile = token.cargo
+                module_file = token.cargo
             consume(STRING)
         elif found("WAVEFORM_FILE"):
             consume("WAVEFORM_FILE")
             consume("=")
             if found(STRING):
-                waveformFile = token.cargo
+                waveform_file = token.cargo
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
             consume("=")
             if found(STRING):
-                signalFile = token.cargo
+                signal_file = token.cargo
             consume(STRING)
         elif found("SEQUENCE_FILE"):
             consume("SEQUENCE_FILE")
             consume("=")
             if found(STRING):
-                sequenceFile = token.cargo
+                sequence_file = token.cargo
             consume(STRING)
         elif found("CDS_FILE"):
             consume("CDS_FILE")
@@ -2300,6 +2366,7 @@ def make_include(sourceText):
         else:
             error("(wdlParser.py::make_include) unrecognized keyword: " + dq(token.cargo))
 
+
 # -----------------------------------------------------------------------------
 # @fn     make_include_sequence
 # @brief  produces output for assembling the sequence files from .conf
@@ -2308,52 +2375,52 @@ def make_include(sourceText):
 # 
 # Parse all the input of the .conf file, making sure it meets criteria.
 # -----------------------------------------------------------------------------
-def make_include_sequence(sourceText):
+def make_include_sequence(source_text):
     """
     produces output for assembling the sequence files from .conf
     """
     global token
 
-    moduleFile   = ""
-    waveformFile = []
-    signalFile   = ""
-    sequenceFile = ""
-    includeFiles = []
+    module_file = ""
+    waveform_file = []
+    signal_file = ""
+    sequence_file = ""
+    include_files = []
 
-    Lexer.initialize(sourceText)
+    Lexer.initialize(source_text)
 
-    getToken()
+    get_token()
     while True:
         if token.type == EOF:
             break
         elif found("INCLUDE_FILE"):
             consume("INCLUDE_FILE")
             consume("=")
-            includeFiles.append( token.cargo )
+            include_files.append(token.cargo)
             consume(STRING)
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
             consume("=")
             if found(STRING):
-                moduleFile = token.cargo
+                module_file = token.cargo
             consume(STRING)
         elif found("WAVEFORM_FILE"):
             consume("WAVEFORM_FILE")
             consume("=")
             if found(STRING):
-                waveformFile.append( token.cargo )
+                waveform_file.append(token.cargo)
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
             consume("=")
             if found(STRING):
-                signalFile = token.cargo
+                signal_file = token.cargo
             consume(STRING)
         elif found("SEQUENCE_FILE"):
             consume("SEQUENCE_FILE")
             consume("=")
             if found(STRING):
-                sequenceFile = token.cargo
+                sequence_file = token.cargo
             consume(STRING)
         elif found("CDS_FILE"):
             consume("CDS_FILE")
@@ -2367,28 +2434,28 @@ def make_include_sequence(sourceText):
         else:
             error("(wdlParser.py::make_include_sequence) unrecognized keyword: " + dq(token.cargo))
 
-    if len(waveformFile) == 0:
+    if len(waveform_file) == 0:
         raise ParserError("missing WAVEFORM_FILE")
 
-    if len(signalFile) == 0:
+    if len(signal_file) == 0:
         raise ParserError("missing SIGNAL_FILE")
 
-    if len(sequenceFile) == 0:
+    if len(sequence_file) == 0:
         raise ParserError("missing SEQUENCE_FILE")
 
-    print( "MODULE_FILE " + moduleFile )  # PHM requires this to appear in the output
-    print( "SIGNAL_FILE " + signalFile )  # PHM requires this to appear in the output
+    print("MODULE_FILE " + module_file)  # PHM requires this to appear in the output
+    print("SIGNAL_FILE " + signal_file)  # PHM requires this to appear in the output
 
     # global include files come first, since they can have defines/conditionals
     # that might affect things downstream
-    for incf in includeFiles:
-        print( "#include " + incf )
+    for incf in include_files:
+        print("#include " + incf)
 
     # signal files must come before waveforms and sequences, since the waveforms
     # will use #defines from the signal file
-    print( "#include " + signalFile   )
+    print("#include " + signal_file)
 
-    for wf in waveformFile:
-        print( "#include " + wf )
+    for wf in waveform_file:
+        print("#include " + wf)
 
-    print( "#include " + sequenceFile )
+    print("#include " + sequence_file)

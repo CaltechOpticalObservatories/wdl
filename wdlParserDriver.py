@@ -22,14 +22,14 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from __future__ import print_function
+import fileinput
+import wdlParser as Parser
 import sys
 sys.dont_write_bytecode = True
-sys.tracebacklimit=0
-import fileinput
-import wdlParser as parser
+sys.tracebacklimit = 0
 
-subroutines=[]
+subroutines = None
+
 
 # -----------------------------------------------------------------------------
 # @fn     main
@@ -37,27 +37,27 @@ subroutines=[]
 # @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def main(sourceText):
+def main(input_source_text):
     """
     """
-    global token
     global subroutines
 
     # sequences and waveforms both wind up as callable subroutines
     # get a list of the names of sequences and waveforms
-    subroutines = parser.get_subroutines(sourceText)
+    subroutines = Parser.get_subroutines(input_source_text)
 
-    parser.get_params(sourceText)
+    Parser.get_params(input_source_text)
 
-    wdlOutput = parser.parse(sourceText)
+    wdl_output = Parser.parse(input_source_text)
 
-    print(wdlOutput)
+    print(wdl_output)
+
 
 # -----------------------------------------------------------------------------
 #           __main__
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    source_text= ""
+    source_text = ""
     for line in fileinput.input():
         source_text += line
     main(source_text)
