@@ -32,7 +32,7 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 # import fileinput
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import wavgen
 import sys
 sys.dont_write_bytecode = True
