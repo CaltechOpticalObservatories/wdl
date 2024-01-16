@@ -823,7 +823,7 @@ exit state and the parameters used in Catalog """
         keep = np.invert(state_arr[:, 1::2].astype('bool'))
         level = state_arr[:, 0::2]
 
-        if not initialLevel:
+        if initialLevel is None:
             initialLevel = self.ExitLevel
 
         # true level should be generated incrementally with  calls to subs.
@@ -909,7 +909,7 @@ condition (default=last non-zero state) """
         keep = np.invert(state_arr[:, 1::2].astype('bool'))
         level = state_arr[:, 0::2]
 
-        if not initialLevel:
+        if initialLevel is None:
             initialLevel = self.ExitLevel
         true_level = np.zeros((0, np.shape(level)[1]))  # 0xN empty array
         for jj in range(cycles):
