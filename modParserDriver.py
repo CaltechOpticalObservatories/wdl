@@ -23,11 +23,13 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 from __future__ import print_function
+
+import fileinput
+import wdlParser as Parser
 import sys
 sys.dont_write_bytecode = True
-sys.tracebacklimit=0
-import fileinput
-import wdlParser as parser
+sys.tracebacklimit = 0
+
 
 # -----------------------------------------------------------------------------
 # @fn     main
@@ -35,35 +37,38 @@ import wdlParser as parser
 # @param  source_text
 # @return none
 # -----------------------------------------------------------------------------
-def main(sourceName, sourceText):
+def main(input_source_name, sourceText):
     """
     """
 
     # create the .modules file
-    modOutput       = parser.parse_modules(sourceText)
-    modulesFilename = sourceName.strip() + ".modules"
+    modOutput = Parser.parse_modules(sourceText)
+    modulesFilename = input_source_name.strip() + ".modules"
     f = open(modulesFilename, "w")
     f.write("[CONFIG]\n")
     f.write(modOutput)
     f.close()
 
     # create the .system file
-    systemOutput   = parser.parse_system()
-    systemFilename = sourceName.strip() + ".system"
+    systemOutput = Parser.parse_system()
+    systemFilename = input_source_name.strip() + ".system"
     f = open(systemFilename, "w")
     f.write("[SYSTEM]\n")
     f.write(systemOutput)
     f.close()
 
+
 # -----------------------------------------------------------------------------
 #           __main__
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    source_text= ""
+    source_text = ""
+    source_name = ""
     for line in fileinput.input():
         if fileinput.isfirstline():
-            # the first line of the input must be the name of the project to build
-            sourceName = line
+            # the first line of the input must be
+            # the name of the project to build
+            source_name = line
         else:
             source_text += line
-    main(sourceName, source_text)
+    main(source_name, source_text)

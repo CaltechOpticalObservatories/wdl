@@ -52,10 +52,12 @@ def main(source, toplot):
     input_ = source + ".wdl"
     output = source
     if toplot.upper() == "FALSE" or toplot.upper() == "NO" or \
-            toplot.upper() == "F" or toplot.upper() == "N" or toplot.upper() == "0":
+            toplot.upper() == "F" or toplot.upper() == "N" or \
+            toplot.upper() == "0":
         wavgen.GenerateFigs = False
     elif toplot.upper() == "TRUE" or toplot.upper() == "YES" or \
-            toplot.upper() == "T" or toplot.upper() == "Y" or toplot.upper() == "1":
+            toplot.upper() == "T" or toplot.upper() == "Y" or \
+            toplot.upper() == "1":
         wavgen.GenerateFigs = True
     else:
         print("warning: invalid plotting option specified, defaulting to True")
@@ -75,5 +77,6 @@ if __name__ == '__main__':
         main(sys.argv[1], sys.argv[2])
         sys.exit(0)
     else:
-        print("error: wavgenDriver.py got %d argument(s) but expecting 2" % (len(sys.argv[1:])))
+        print("error: wavgenDriver.py got %d argument(s) but expecting 2" %
+              (len(sys.argv[1:])))
         sys.exit(1)
