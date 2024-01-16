@@ -50,6 +50,7 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
+from __future__ import print_function
 import Lexer as Lexer
 from Symbols import *
 import sys
@@ -1529,19 +1530,22 @@ def time():
     else:                  # or start anew
         eqn = ""
 
-    # form an equation from which the time will be evaluated using everything up to the ":"
+    # form an equation from which the time will be evaluated using everything
+    # up to the ":"
     while not found(":"):
         if token.type == EOF:
             break
         if found(IDENTIFIER):
-            # if we found a time stamp label then get its actual time from the dictionary
+            # if we found a time stamp label then get its actual time from
+            # the dictionary
             if token.cargo in timeStamps:
                 eqn += str(timeStamps[token.cargo])
             else:
                 print("Unresolved symbol " + dq(token.cargo), file=sys.stderr)
             consume(IDENTIFIER)
         else:
-            eqn += token.cargo   # if not a label then we have a number or math symbol
+            eqn += token.cargo   # if not a label then we have a number or
+            # math symbol
             get_token()
     consume(":")
     evalTime = int(eval(eqn))  # new evaluated time
