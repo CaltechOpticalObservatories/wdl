@@ -20,10 +20,10 @@
 # @modified 2016-06-07 DH allow for signed values of CLAMP
 # @modified 2016-08-23 DH implemented \???_LABEL
 # @modified 2016-09-21 DH allow RETURN to alternate sequences, waveforms
-# @modified 2018-03-15 DH throw error if an undefined param is used in a sequence
+# @modified 2018-03-15 DH throw error if an undefined param used in a sequence
 # @modified 2020-03-20 DH added support for HEATER card
 # @modified 2022-06-08 DH added DriverX support (copy of Driver)
-# @modified 2022-09-28 DH fixed DriverX support (added type=16 to module function)
+# @modified 2022-09-28 DH fixed DriverX support (add type=16 to module function)
 # 
 # This is the Parser for the Waveform Development Language (WDL).
 # -----------------------------------------------------------------------------
@@ -50,8 +50,10 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
+# for backwards compatibility with python 2
 from __future__ import print_function
-import Lexer as Lexer
+
+import Lexer
 from Symbols import *
 import sys
 sys.dont_write_bytecode = True
@@ -61,7 +63,6 @@ class ParserError(Exception):
     pass
 
 
-module_name = None
 setSlot = []   # SET slot
 setChan = []   # SET chan
 setSlew = -1   # SET slew
@@ -257,10 +258,12 @@ def dio(slot_number):
     global token
     global dioOutput
 
+    dio_chan = None
     if found(NUMBER):
         dio_chan = token.cargo
         if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
-                or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
+                or module_name.upper() == "HEATER" \
+                or module_name.upper() == "HEATERX":
             if int(dio_chan) < 1 or int(dio_chan) > 8:
                 error("DIO channel " + dq(dio_chan) +
                       " outside range {1:8} for module: " + module_name.upper())
@@ -271,6 +274,8 @@ def dio(slot_number):
         else:
             error("DIO is invalid keyword for module: " + module_name.upper())
     consume(NUMBER)
+    source = None
+    direction = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -301,7 +306,8 @@ def dio(slot_number):
 
     # for LVBIAS and HEATER cards there are 8 DIO outputs but only 4 directions
     if module_name.upper() == "LVBIAS" or module_name.upper() == "LVXBIAS" \
-            or module_name.upper() == "HEATER" or module_name.upper() == "HEATERX":
+            or module_name.upper() == "HEATER" \
+            or module_name.upper() == "HEATERX":
         chan = int(dio_chan)
         # for odd number channels 1,3,5,7 then DIO_DIR is DIO_DIR12, 34, 56, 78
         if chan % 2 == 1:
@@ -332,6 +338,7 @@ def diopower(slot_number):
     global token
     global dioOutput
 
+    dio_power = None
     consume("=")
     while not found(";"):
         if token.type == EOF:
@@ -339,9 +346,9 @@ def diopower(slot_number):
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
-                diopower = "0"
+                dio_power = "0"
             elif token.cargo == "1":
-                diopower = "1"
+                dio_power = "1"
             else:
                 error("DIOPOWER unrecognized value: " + dq(token.cargo) +
                       "\nexpected 0 or 1")
@@ -349,16 +356,16 @@ def diopower(slot_number):
         # or "enabled" or "disabled", convert to upper for case-insensitivity
         elif found(IDENTIFIER):
             if "ENABLE" in token.cargo.upper():
-                diopower = "0"
+                dio_power = "0"
             elif "DISABLE" in token.cargo.upper():
-                diopower = "1"
+                dio_power = "1"
             else:
                 error("DIOPOWER unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
-    dioOutput += "MOD" + slot_number + "\DIO_POWER=" + diopower + "\n"
+    dioOutput += "MOD" + slot_number + "\DIO_POWER=" + dio_power + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -378,6 +385,7 @@ def updatetime(slot_number):
     global token
     global heaterOutput
 
+    update_time = None
     consume("=")
     while not found(";"):
         if token.type == EOF:
@@ -412,6 +420,7 @@ def preampgain(slot_number):
     global token
     global adcOutput
 
+    preamp_gain = None
     consume("=")
     while not found(";"):
         if token.type == EOF:
@@ -419,9 +428,9 @@ def preampgain(slot_number):
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
             if token.cargo == "0":
-                preampgain = "0"
+                preamp_gain = "0"
             elif token.cargo == "1":
-                preampgain = "1"
+                preamp_gain = "1"
             else:
                 error("PREAMPGAIN unrecognized value: " + dq(token.cargo) +
                       "\nexpected 0 or 1")
@@ -429,16 +438,16 @@ def preampgain(slot_number):
         # or "low" or "high", converted to upper for case-insensitivity
         elif found(IDENTIFIER):
             if token.cargo.upper() == "LOW":
-                preampgain = "0"
+                preamp_gain = "0"
             elif token.cargo.upper() == "HIGH":
-                preampgain = "1"
+                preamp_gain = "1"
             else:
                 error("PREAMPGAIN unrecognized value: " + dq(token.cargo) +
                       "\nexpected "+dq("low")+" or "+dq("high"))
             consume(IDENTIFIER)
     consume(";")
 
-    adcOutput += "MOD" + slot_number + "\PREAMPGAIN=" + preampgain + "\n"
+    adcOutput += "MOD" + slot_number + "\PREAMPGAIN=" + preamp_gain + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -459,11 +468,13 @@ def clamp(slot_number):
     global token
     global adcOutput
 
+    ad_chan = None
     if found(NUMBER):
         ad_chan = token.cargo
         if int(ad_chan) < 1 or int(ad_chan) > 4:
             error("CLAMP channel " + dq(ad_chan) + " outside range [1..4]")
     consume(NUMBER)
+    _clamp = None
     consume("=")
     while not found(";"):
         if token.type == EOF:
@@ -476,12 +487,12 @@ def clamp(slot_number):
             sign = -1
 
         if found(NUMBER):
-            clamp = sign * float(token.cargo)
+            _clamp = sign * float(token.cargo)
         consume(NUMBER)
     consume(";")
 
     adcOutput += "MOD" + slot_number + "\CLAMP" + ad_chan + "=" + \
-                 str(clamp) + "\n"
+                 str(_clamp) + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -502,11 +513,16 @@ def hvhc(slot_number):
     global token
     global hvhOutput
 
+    hvh_chan = None
     if found(NUMBER):
         hvh_chan = token.cargo
         if int(hvh_chan) < 1 or int(hvh_chan) > 6:
             error("HVHC channel " + dq(hvh_chan) + " outside range [1..6]")
     consume(NUMBER)
+    volts = None
+    current = None
+    order = None
+    enable = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -574,11 +590,14 @@ def hvlc(slot_number):
     global token
     global hvlOutput
 
+    hvl_chan = None
     if found(NUMBER):
         hvl_chan = token.cargo
         if int(hvl_chan) < 1 or int(hvl_chan) > 24:
             error("HVLC channel " + dq(hvl_chan) + " outside range [1..24]")
     consume(NUMBER)
+    volts = None
+    order = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -629,11 +648,16 @@ def lvhc(slot_number):
     global token
     global lvhOutput
 
+    lvh_chan = None
     if found(NUMBER):
         lvh_chan = token.cargo
         if int(lvh_chan) < 1 or int(lvh_chan) > 6:
             error("LVHC channel " + dq(lvh_chan) + " outside range [1..6]")
     consume(NUMBER)
+    volts = None
+    current = None
+    order = None
+    enable = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -708,11 +732,14 @@ def lvlc(slot_number):
     global token
     global lvlOutput
 
+    lvl_chan = None
     if found(NUMBER):
         lvl_chan = token.cargo
         if int(lvl_chan) < 1 or int(lvl_chan) > 24:
             error("LVLC channel " + dq(lvl_chan) + " outside range [1..24]")
     consume(NUMBER)
+    volts = None
+    order = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -773,11 +800,17 @@ def sensor(slot_number):
     global token
     global sensorOutput
 
+    sensor_chan = None
     if found(IDENTIFIER):
         sensor_chan = token.cargo
         if sensor_chan != 'A' and sensor_chan != 'B' and sensor_chan != 'C':
             error("SENSOR channel " + sensor_chan + ": must be {A,B,C}")
     consume(IDENTIFIER)
+    sensorType = None
+    sensor_current = None
+    sensor_lo_lim = None
+    sensor_hi_lim = None
+    sensor_filter = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -863,11 +896,16 @@ def pid(slot_number):
     global token
     global pidOutput
 
+    heater_chan = None
     if found(IDENTIFIER):
         heater_chan = token.cargo
         if heater_chan != 'A' and heater_chan != 'B':
             error("PID invalid heater: " + heater_chan + ": must be {A,B}")
     consume(IDENTIFIER)
+    heater_p = None
+    heater_i = None
+    heater_d = None
+    heater_ilim = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -919,11 +957,14 @@ def ramp(slot_number):
     global token
     global rampOutput
 
+    ramp_chan = None
     if found(IDENTIFIER):
         ramp_chan = token.cargo
         if ramp_chan != 'A' and ramp_chan != 'B':
             error("RAMP heater channel " + ramp_chan + ": must be {A,B}")
     consume(IDENTIFIER)
+    ramprate = None
+    ramp_enable = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -982,11 +1023,18 @@ def heater(slot_number):
     global token
     global heaterOutput
 
+    heater_chan = None
     if found(IDENTIFIER):
         heater_chan = token.cargo
         if heater_chan != 'A' and heater_chan != 'B':
             error("HEATER channel " + heater_chan + ": must be {A,B}")
     consume(IDENTIFIER)
+    heater_target = None
+    heater_sensor = None
+    heater_limit = None
+    heater_forcelevel = None
+    heater_force = None
+    heater_enable = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -1116,14 +1164,15 @@ def pbias(slot_number):
     global token
     global pbiasOutput
 
+    bias_chan = None
     if found(NUMBER):
         bias_chan = token.cargo
         if int(bias_chan) < 1 or int(bias_chan) > 4:
             error("PBIAS channel " + dq(bias_chan) + " outside range {1:4}")
     consume(NUMBER)
-
+    cmd = None
+    order = None
     consume("[")
-
     while not found("]"):
         if token.type == EOF:
             break
@@ -1149,10 +1198,12 @@ def pbias(slot_number):
     consume(";")
 
     pbiasOutput += "MOD" + slot_number + "\XVP_V" + bias_chan + "=" + cmd + "\n"
-    pbiasOutput += "MOD" + slot_number + "\XVP_ORDER" + bias_chan + "=" + order + "\n"
+    pbiasOutput += "MOD" + slot_number + "\XVP_ORDER" + bias_chan + "=" + \
+                   order + "\n"
     pbiasOutput += "MOD" + slot_number + "\XVP_ENABLE" + bias_chan + "=1\n"
     if label != "":
-        pbiasOutput += "MOD" + slot_number + "\XVP_LABEL" + bias_chan + "=" + label + "\n"
+        pbiasOutput += "MOD" + slot_number + "\XVP_LABEL" + bias_chan + "=" + \
+                       label + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -1173,14 +1224,15 @@ def nbias(slot_number):
     global token
     global nbiasOutput
 
+    bias_chan = None
     if found(NUMBER):
         bias_chan = token.cargo
         if int(bias_chan) < 1 or int(bias_chan) > 4:
             error("NBIAS channel " + dq(bias_chan) + " outside range {1:4}")
     consume(NUMBER)
-
+    order = None
+    cmd = None
     consume("[")
-
     while not found("]"):
         if token.type == EOF:
             break
@@ -1207,11 +1259,14 @@ def nbias(slot_number):
         label = ""
     consume(";")
 
-    nbiasOutput += "MOD" + slot_number + "\XVN_V" + bias_chan + "=-" + cmd + "\n"
-    nbiasOutput += "MOD" + slot_number + "\XVN_ORDER" + bias_chan + "=" + order + "\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_V" + bias_chan + "=-" + \
+                   cmd + "\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_ORDER" + bias_chan + "=" + \
+                   order + "\n"
     nbiasOutput += "MOD" + slot_number + "\XVN_ENABLE" + bias_chan + "=1\n"
     if label != "":
-        nbiasOutput += "MOD" + slot_number + "\XVN_LABEL" + bias_chan + "=" + label + "\n"
+        nbiasOutput += "MOD" + slot_number + "\XVN_LABEL" + bias_chan + "=" + \
+                       label + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -1232,11 +1287,15 @@ def drv(slot_number):
     global token
     global drvOutput
 
+    drv_chan = None
     if found(NUMBER):
         drv_chan = token.cargo
         if int(drv_chan) < 0 or int(drv_chan) > 8:
             error("DRV channel " + dq(drv_chan) + " outside range [1..8]")
     consume(NUMBER)
+    slewfast = None
+    slewslow = None
+    enable = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -1244,13 +1303,15 @@ def drv(slot_number):
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
-                error("DRV Fast Slew Rate " + dq(slewfast) + " outside range [0.001..1000] V/us")
+                error("DRV Fast Slew Rate " + dq(slewfast) +
+                      " outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             slewslow = token.cargo
             if float(slewslow) < 0.001 or float(slewslow) > 1000:
-                error("DRV Slow Slew Rate " + dq(slewslow) + " outside range [0.001..1000] V/us")
+                error("DRV Slow Slew Rate " + dq(slewslow) +
+                      " outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -1267,11 +1328,15 @@ def drv(slot_number):
         label = ""
     consume(";")
 
-    drvOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + enable + "\n"
-    drvOutput += "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + slewfast + "\n"
-    drvOutput += "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + slewslow + "\n"
+    drvOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + \
+                 enable + "\n"
+    drvOutput += "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + \
+                 slewfast + "\n"
+    drvOutput += "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + \
+                 slewslow + "\n"
     if label != "":
-        drvOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + label + "\n"
+        drvOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + \
+                     label + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -1292,11 +1357,15 @@ def drvx(slot_number):
     global token
     global drvxOutput
 
+    drv_chan = None
     if found(NUMBER):
         drv_chan = token.cargo
         if int(drv_chan) < 0 or int(drv_chan) > 12:
             error("DRVX channel " + dq(drv_chan) + " outside range [1..12]")
     consume(NUMBER)
+    slewfast = None
+    slewslow = None
+    enable = None
     consume("[")
     while not found("]"):
         if token.type == EOF:
@@ -1304,13 +1373,15 @@ def drvx(slot_number):
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
-                error("DRVX Fast Slew Rate " + dq(slewfast) + " outside range [0.001..1000] V/us")
+                error("DRVX Fast Slew Rate " + dq(slewfast) +
+                      " outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
             slewslow = token.cargo
             if float(slewslow) < 0.001 or float(slewslow) > 1000:
-                error("DRVX Slow Slew Rate " + dq(slewslow) + " outside range [0.001..1000] V/us")
+                error("DRVX Slow Slew Rate " + dq(slewslow) +
+                      " outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -1327,11 +1398,15 @@ def drvx(slot_number):
         label = ""
     consume(";")
 
-    drvxOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + enable + "\n"
-    drvxOutput += "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + slewfast + "\n"
-    drvxOutput += "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + slewslow + "\n"
+    drvxOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + \
+                  enable + "\n"
+    drvxOutput += "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + \
+                  slewfast + "\n"
+    drvxOutput += "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + \
+                  slewslow + "\n"
     if label != "":
-        drvxOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + label + "\n"
+        drvxOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + \
+                      label + "\n"
 
 
 # -----------------------------------------------------------------------------
@@ -1347,7 +1422,8 @@ def slot():
 
     SLOT # type { param }
 
-    where param is DRV, DRVX, CLAMP, PREAMPGAIN, HVLC, HVHC, LVLC, LVHC, DIO, DIOPOWER
+    where param is DRV, DRVX, CLAMP, PREAMPGAIN, HVLC, HVHC, LVLC, LVHC, DIO,
+                DIOPOWER
                 followed by param specific rules,
           type  is a valid Archon module type,
           #     is any number.
@@ -1357,12 +1433,14 @@ def slot():
 
     consume("SLOT")
 
+    slot_number = None
     if found(NUMBER):
         slot_number = token.cargo
         if int(slot_number) < 1 or int(slot_number) > 12:
             error("SLOT " + dq(slot_number) + " outside range [1..12]")
     consume(NUMBER)
 
+    mod_type = None
     if found(IDENTIFIER):
         mod_type = module()
     consume(IDENTIFIER)
@@ -1434,9 +1512,10 @@ def slot():
     consume("}")
 
     # Build up the information for a .system file --
-    # Values of ID, REV, VERSION don't matter, but they need to be defined if the
-    # resultant .acf file is to be loaded by the GUI without an error. The important
-    # value here is the TYPE, so that the correct tabs are created.
+    # Values of ID, REV, VERSION don't matter, but they need to be defined
+    # if the resultant .acf file is to be loaded by the GUI without an error.
+    # The important value here is the TYPE, so that the correct tabs are
+    # created.
     sysOutput += "MOD" + slot_number + "_ID=0000000000000000\n"
     sysOutput += "MOD" + slot_number + "_REV=0\n"
     sysOutput += "MOD" + slot_number + "_VERSION=0.0.0\n"
@@ -1498,7 +1577,8 @@ def wav_return():
             consume(IDENTIFIER)
     else:
         wavReturn = False
-        # If manual return not specified then remember the max time, for the RETURN
+        # If manual return not specified then remember the max time,
+        # for the RETURN
         if evalTime > maxTime:
             maxTime = evalTime
 
@@ -1682,12 +1762,14 @@ def waverules():
         [time]: [=timelabel] SET signallabel TO level [,slew];
  
         time: at least one time label is required, followed by colon
-              (if omitted then SET... lines are all at the same time as previous time)
+              (if omitted then SET... lines are all at the same time as
+               previous time)
               arithmetic operations are allowed for time
               units are allowed to follow numbers, E.G. ns, us, ms
               ".+" means to add to the previous time
  
-        =timelabel is an optional label for this time, which can be used elsewhere
+        =timelabel is an optional label for this time, which can be used
+         elsewhere
  
         SET signallabel TO level; 
         is required and must end with a semicolon
@@ -1747,29 +1829,32 @@ def waveform():
         waverules()
         # If a manual waveform return was specified then write it here,
         if wavReturn:
-            # if an alternate return name not specified then the default is current waveform
+            # if an alternate return name not specified then
+            # the default is current waveform
             if wavReturnTo == "":
                 wavReturnTo = waveform_name
-            output_text += str(wavReturnTime) + " RETURN " + wavReturnTo + "\n\n"
-        # otherwise loop through all the slots that were set and write a line for each
+            output_text += str(wavReturnTime) + " RETURN " + \
+                wavReturnTo + "\n\n"
+        # otherwise loop through all the slots that were set and
+        # write a line for each
         else:
             for index in range(len(setSlot)):
                 # The output is written differently depending on whether
                 # a slew rate (fast | slow) has been specified.
                 if setSlew == __SLEW_NONE:
                     output_text += str(evalTime) + " " +\
-                                  str(setSlot[index]) + " " +\
-                                  str(int(setChan[index])-1) + " " +\
-                                  str(setLevel) + "\n"
+                        str(setSlot[index]) + " " +\
+                        str(int(setChan[index])-1) + " " +\
+                        str(setLevel) + "\n"
                 else:
                     output_text += str(evalTime) + " " +\
-                                  str(setSlot[index]) + " " +\
-                                  str(2*int(setChan[index])-2) + " " +\
-                                  str(setLevel) + "\n"
+                        str(setSlot[index]) + " " +\
+                        str(2*int(setChan[index])-2) + " " +\
+                        str(setLevel) + "\n"
                     output_text += str(evalTime) + " " +\
-                                  str(setSlot[index]) + " " +\
-                                  str(2*int(setChan[index])-1) + " " +\
-                                  str(setSlew) + "\n"
+                        str(setSlot[index]) + " " +\
+                        str(2*int(setChan[index])-1) + " " +\
+                        str(setSlew) + "\n"
         if token.type == EOF:
             break
     consume("}")
@@ -1778,7 +1863,8 @@ def waveform():
     if not wavReturn:
         output_text += str(maxTime+1) + " RETURN " + waveform_name + "\n\n"
     if wavReturn and (wavReturnTime <= maxTime):
-        error("waveform return time: " + str(wavReturnTime) + " must be > " + str(maxTime))
+        error("waveform return time: " + str(wavReturnTime) + " must be > " +
+              str(maxTime))
     return output_text
 
 
@@ -1871,14 +1957,16 @@ def generic_sequence(*sequenceName):
                 break
             if (found(IDENTIFIER)) and (token.cargo not in subroutines) and \
                     (token.cargo not in paramNames):
-                error("(wdlParser.py::generic_sequence) undefined symbol " + token.show(align=False))
+                error("(wdlParser.py::generic_sequence) undefined symbol " +
+                      token.show(align=False))
             # If token is a GOTO then the next token must be in the list
             # of subroutines() with open and close parentheses and nothing else
             if found("GOTO"):
                 consume("GOTO")
                 # Check next token against list of subroutines
                 if token.cargo not in subroutines:
-                    error("(wdlParser.py::generic_sequence) undefined waveform or sequence: " + dq(token.cargo))
+                    error("(wdlParser.py::generic_sequence) undefined waveform "
+                          "or sequence: " + dq(token.cargo))
                 else:
                     sequence_line += "GOTO " + token.cargo
                     # then consume the IDENTIFIER and the open/close parentheses
@@ -1893,12 +1981,14 @@ def generic_sequence(*sequenceName):
                 sequence_line += "CALL " + token.cargo
                 consume(IDENTIFIER)
                 consume("(")
-                # if next token isn't a closing paren then assume it's a number or param
+                # if next token isn't a closing paren then assume
+                # it's a number or param
                 if not found(")"):
                     sequence_line += "(" + token.cargo  # + ")"
                     # and if it's not a number then it must be a defined param
                     if not found(NUMBER) and token.cargo not in paramNames:
-                        error("(wdlParser.py::generic_sequence) undefined param " + token.show(align=False))
+                        error("(wdlParser.py::generic_sequence) undefined "
+                              "param " + token.show(align=False))
             elif found("RETURN"):
                 consume("RETURN")
                 # check for an alternate sequence specified for the return
@@ -1921,7 +2011,8 @@ def generic_sequence(*sequenceName):
                 sequence_line += " "
         # line must end with a semicolon
         consume(";")
-        # won't normally have a 0-length sequence_line, but could happen during testing
+        # won't normally have a 0-length sequence_line,
+        # but could happen during testing
         if len(sequence_line) > 0:
             output_text += sequence_line + "\n"
     # sequence/waveform must end with a close (right) curly brace, }
@@ -2033,6 +2124,8 @@ def wprint():
     consume("(")
     if found(STRING):
         message = token.cargo.strip('"')
+    else:
+        message = None
     consume(STRING)
     sys.stderr.write(message + "\n")
     while not found(";"):
@@ -2204,7 +2297,8 @@ def parse_modules(source_text):
             wprint()
         else:
             # We should only be parsing modules now
-            error("(wdlParser.py::parse_modules) unrecognized token " + token.show(align=False))
+            error("(wdlParser.py::parse_modules) unrecognized token " +
+                  token.show(align=False))
             break
 
     retval = ""
@@ -2292,7 +2386,8 @@ def parse(source_text):
             signal_file = token.cargo.strip('"')
             consume(STRING)
         else:
-            error("(wdlParser.py::parse) unrecognized token " + token.show(align=False))
+            error("(wdlParser.py::parse) unrecognized token " +
+                  token.show(align=False))
             break
 
     retval = ""
@@ -2368,7 +2463,8 @@ def make_include(source_text):
             consume("=")
             consume(STRING)
         else:
-            error("(wdlParser.py::make_include) unrecognized keyword: " + dq(token.cargo))
+            error("(wdlParser.py::make_include) unrecognized keyword: " +
+                  dq(token.cargo))
 
 
 # -----------------------------------------------------------------------------
@@ -2436,7 +2532,8 @@ def make_include_sequence(source_text):
             consume("=")
             consume(STRING)
         else:
-            error("(wdlParser.py::make_include_sequence) unrecognized keyword: " + dq(token.cargo))
+            error("(wdlParser.py::make_include_sequence) unrecognized keyword: "
+                  + dq(token.cargo))
 
     if len(waveform_file) == 0:
         raise ParserError("missing WAVEFORM_FILE")
@@ -2447,8 +2544,9 @@ def make_include_sequence(source_text):
     if len(sequence_file) == 0:
         raise ParserError("missing SEQUENCE_FILE")
 
-    print("MODULE_FILE " + module_file)  # PHM requires this to appear in the output
-    print("SIGNAL_FILE " + signal_file)  # PHM requires this to appear in the output
+    # PHM requires these two to appear in the output
+    print("MODULE_FILE " + module_file)
+    print("SIGNAL_FILE " + signal_file)
 
     # global include files come first, since they can have defines/conditionals
     # that might affect things downstream
