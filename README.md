@@ -5,7 +5,11 @@ waveform definition language for Archons
 ## Requirements:
  - any version of make
  - GPP (https://logological.org/gpp)
- - Python 2.7 (see **PYTHON NOTES** below)
+ - Python 3.x or 2.7 (see **PYTHON NOTES** below)
+ - numpy
+ - scipy
+ - matplotlib
+ - pyqt
  
 ## Instructions:
 
@@ -22,23 +26,6 @@ ACFPATH   = $(HOME)/Software/acf
 
 ## PYTHON NOTES:
 
-WDL requires Python 2.7 which is no longer supported but 2.7 compatibility can be achieved with Anaconda.
-Install Anaconda on your system using the appropriate method (e.g. sudo apt-get anaconda). Then create
-an environment for a 2.7 python package. For example:
+WDL has been tested with python 3.8 and 3.11 as well as python 2.7.  Using a more modern python is preferred.
 
-```
-$ sudo apt-get anaconda
-$ sudo sh /tmp/Anaconda3-2020.11-Linux-x86_64.sh
-$ conda install python=2.7
-$ sudo /opt/anaconda3/bin/conda create --name py2 python=2.7
-```
-
-That last command creates an environment named "py2".
-You can now activate a Python 2.7 environment using the following command:
-
-```
-(base) $ conda activate py2
-(py2) $
-```
-
-You are now in a Python 2.7 environment suitable for running WDL.
+Using your system's python should work as long as you also have the packages listed above.
