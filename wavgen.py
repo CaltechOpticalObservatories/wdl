@@ -918,7 +918,12 @@ condition (default=last non-zero state) """
             initialLevel = self.ExitLevel
 
         # find the static channels
-        nonstatic = np.amax(true_level, 0) != np.amin(true_level, 0)
+        nonstatic = np.asarray(
+            [x != y for x, y in
+             zip(np.amax(true_level, 0),
+                 np.amin(true_level, 0))]
+        )
+        # nonstatic = np.amax(true_level, 0) != np.amin(true_level, 0)
         # find the commanded channels
         commanded = np.amin(keep, 0) == 0
 
@@ -1160,7 +1165,7 @@ def state(outfile=None):
                 UniqueStateArr[ii, (offset+1):(offset+2*n_back):2].astype(
                     'bool')).astype('int')))
             ofile.write(prefix + 'CONTROL="%X,%X"\n' % (int(level),
-                                                          int(keep)))
+                                                        int(keep)))
             offset += 2*n_back
         for hvbdslot in slot['hvbd']:  # different from the other states,
             # in the acf, there is only one entry, and it is
