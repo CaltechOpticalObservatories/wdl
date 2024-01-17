@@ -651,7 +651,9 @@ as needed. Calculate time for time segment to complete, stores the
 exit state and the parameters used in Catalog """
 
         if type(outfile) is str:
-            outfile = open(outfile, 'a')
+            ofile = open(str(outfile), 'a')
+        else:
+            ofile = outfile
 
         if not hasattr(self, 'unique_state_ID'):
             self.__make_states()
@@ -661,7 +663,7 @@ exit state and the parameters used in Catalog """
         global __padmax__
 
         if self.name != '':
-            outfile.write('%s: # %s\n' % (self.name, self.tstype))
+            ofile.write('%s: # %s\n' % (self.name, self.tstype))
         
         do_anything_tt = self.do_anything_tt
         do_anything_dt = self.do_anything_dt
@@ -678,7 +680,7 @@ exit state and the parameters used in Catalog """
             time += 1
             pad -= 11
             this_state = self.unique_state_ID[0, do_anything_tt[jj]]
-            outfile.write("STATE%03d; " % this_state)
+            ofile.write("STATE%03d; " % this_state)
             # overwrite the exit state if the unique_state_ID is nonzero
             if this_state > 0:
                 self.ExitState = this_state
@@ -692,7 +694,7 @@ exit state and the parameters used in Catalog """
             if len(seq_indx):
                 this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 pad -= len(this_sub_call)
-                outfile.write("%s" % this_sub_call)
+                ofile.write("%s" % this_sub_call)
                 EOL = True
                 if this_sub_call[0:3].upper() == 'IF ':
                     # get the first word after IF...
@@ -781,11 +783,10 @@ exit state and the parameters used in Catalog """
             if do_anything_tt[jj] == self.nperiods - 1:
                 if self.endline == -1:
                     pad -= 7 + len(self.name)
-                    outfile.write("RETURN %s" % self.name)
+                    ofile.write("RETURN %s" % self.name)
                 elif 0 <= self.endline < len(Catalog):
                     pad -= 6 + len(Catalog[self.endline].name)
-                    outfile.write("GOTO %s" %
-                                  Catalog[self.endline].name)
+                    ofile.write("GOTO %s" % Catalog[self.endline].name)
                     # SubName[self.endline]))
                 EOL = True
             if (do_anything_dt[jj] > 1) and not EOL:
@@ -794,21 +795,20 @@ exit state and the parameters used in Catalog """
                 count += do_anything_dt[jj] - 1
                 time += do_anything_dt[jj] - 1
                 pad -= 8
-                outfile.write("STATE000")  # the do-nothing-state
+                ofile.write("STATE000")  # the do-nothing-state
                 if do_anything_dt[jj] > 2:
                     # add the repeat counter if more than 1 are required.
                     pad -= np.ceil(
                         np.log10(do_anything_dt[jj]-1)).astype(int) + 2
-                    outfile.write("(%d)" % (do_anything_dt[jj]-1))
+                    ofile.write("(%d)" % (do_anything_dt[jj]-1))
             if pad < __padmax__:
                 # comment line with the counter, END LINE
                 if pad < 1:
                     __padmax__ -= (pad - 1)
-                outfile.write("%s# %6d %8.0f\n" % (' '*pad, max(count, 0),
-                                                   time))
+                ofile.write("%s# %6d %8.0f\n" % (' '*pad, max(count, 0), time))
         self.time = time
-        if outfile.name != '<stdout>':  # don't close stdout!
-            outfile.close()
+        if ofile.name != '<stdout>':  # don't close stdout!
+            ofile.close()
 
         return True
 
@@ -991,27 +991,31 @@ condition (default=last non-zero state) """
         return
 
 
-def state(outfile=sys.stdout):
+def state(outfile=None):
     """ write states from the UniqueStateArr to the
     file or file handle specified """
     global UniqueStateArr
     global __chan_per_board__
 
-    if type(outfile) is str:
-        outfile = open(outfile, 'w')
+    if outfile is None:
+        ofile = sys.stdout
+    elif type(outfile) is str:
+        ofile = open(outfile, 'w')
+    else:
+        ofile = outfile
 
     # write the script to /dev/null before writing states.
     script('/dev/null', quiet=True)
 
-    outfile.write('[CONFIG]\n')
+    ofile.write('[CONFIG]\n')
     ii = 0
     for ii in range(np.size(UniqueStateArr, 0)):
         # take out 2 \\'s if we don't need the double \
         prefix = "STATE%d\\" % ii
-        outfile.write(prefix + "NAME=STATE%03d\n" % ii)
+        ofile.write(prefix + "NAME=STATE%03d\n" % ii)
         offset = 0  # to keep track of position in array
         for clkslot in slot['drvr']:
-            outfile.write(prefix + 'MOD%d="' % clkslot)
+            ofile.write(prefix + 'MOD%d="' % clkslot)
             statestring = ""
             # driver-speed-keep !!!!!
             for clkchan in range(int(__chan_per_board__['drvr']/2)):
@@ -1047,10 +1051,10 @@ def state(outfile=sys.stdout):
                     )
                     
             statestring = statestring[:-1] + '"'
-            outfile.write(statestring + '\n')
+            ofile.write(statestring + '\n')
             offset += 2 * __chan_per_board__['drvr']  # !driver-speed-keep
         for lvdsslot in slot['lvds']:
-            outfile.write(prefix + 'MOD%d="' % lvdsslot)
+            ofile.write(prefix + 'MOD%d="' % lvdsslot)
             statestring = ""
             for lvdschan in range(__chan_per_board__['lvds']):
                 jj_level = offset + 2*lvdschan + 0
@@ -1060,10 +1064,10 @@ def state(outfile=sys.stdout):
                 else:
                     statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
             statestring = statestring[:-1] + '"'
-            outfile.write(statestring + '\n')
+            ofile.write(statestring + '\n')
             offset += 2 * __chan_per_board__['lvds']
         for htrslot in slot['htr']:
-            outfile.write(prefix + 'MOD%d="' % htrslot)
+            ofile.write(prefix + 'MOD%d="' % htrslot)
             statestring = ""
             for htrchan in range(__chan_per_board__['htr']):
                 jj_level = offset + 2*htrchan + 0
@@ -1073,12 +1077,12 @@ def state(outfile=sys.stdout):
                 else:
                     statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
             statestring = statestring[:-1] + '"'
-            outfile.write(statestring + '\n')
+            ofile.write(statestring + '\n')
             offset += 2 * __chan_per_board__['htr']
         for xvslot in slot['xvbd']:  # this is similar to the hvbd states
             # In teh acf there are two entries, and they are
             # (!pKEEP,pchan,pvalue,!nKeep,nchan,nvalue)
-            outfile.write(prefix + 'MOD%d="' % xvslot)
+            ofile.write(prefix + 'MOD%d="' % xvslot)
             statestring = ""
             # Do like the hvbd processing, but on positive bits (first half)
             # and then the negative bits (second half)
@@ -1132,11 +1136,11 @@ def state(outfile=sys.stdout):
                 print("Error in negative XVBD state call -- multiple changes "
                       "in a state")
             #            statestring = statestring[:-1] + '"'
-            outfile.write(statestring + '"\n')
+            ofile.write(statestring + '"\n')
             # skip over the last half of the xvbd channels
             offset += 2 * __chan_per_board__['xvbd']/2
         for adcslot in slot['adc']:
-            outfile.write(prefix + 'MOD%d="' % adcslot)
+            ofile.write(prefix + 'MOD%d="' % adcslot)
             statestring = ""
             jj_level = offset
             jj_change = offset + 1
@@ -1145,7 +1149,7 @@ def state(outfile=sys.stdout):
             else:
                 statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
             statestring = statestring[:-1] + '"'
-            outfile.write(statestring + '\n')
+            ofile.write(statestring + '\n')
             offset += 2
         if True:  # Backplane
             n_back = __chan_per_board__['back']    
@@ -1155,13 +1159,13 @@ def state(outfile=sys.stdout):
             keep = sum(bn*(np.invert(
                 UniqueStateArr[ii, (offset+1):(offset+2*n_back):2].astype(
                     'bool')).astype('int')))
-            outfile.write(prefix + 'CONTROL="%X,%X"\n' % (int(level),
+            ofile.write(prefix + 'CONTROL="%X,%X"\n' % (int(level),
                                                           int(keep)))
             offset += 2*n_back
         for hvbdslot in slot['hvbd']:  # different from the other states,
             # in the acf, there is only one entry, and it is
             # (!KEEP, chan, value)
-            outfile.write(prefix + 'MOD%d="' % hvbdslot)
+            ofile.write(prefix + 'MOD%d="' % hvbdslot)
             statestring = ""
             n_hvbd_X_2 = 2*__chan_per_board__['hvbd']
             hvbdLevel = UniqueStateArr[ii, offset:offset + n_hvbd_X_2:2]
@@ -1179,11 +1183,11 @@ def state(outfile=sys.stdout):
             else:
                 print(
                     "Error in HVBD state call -- multiple changes in a state")
-            outfile.write(statestring + '"\n')
+            ofile.write(statestring + '"\n')
             offset += n_hvbd_X_2
         for lvbdslot in slot['lvbd']:
             # this is an ugly amalgamation of lvds and hvbd...
-            outfile.write(prefix + 'MOD%d="' % lvbdslot)
+            ofile.write(prefix + 'MOD%d="' % lvbdslot)
             statestring = ""
             n_LVBIAS = 30
             n_LVDIO = 8
@@ -1227,12 +1231,12 @@ def state(outfile=sys.stdout):
             else:
                 print(
                     "Error in LVBD state call -- multiple changes in a state")
-            outfile.write(statestring + '"\n')
+            ofile.write(statestring + '"\n')
             # offset += n_lvbd_X_2 # this is fine for voltages after DIO
             # use for DIO after voltages
             offset += 2*(__chan_per_board__['lvbd'])
 
-    outfile.write('STATES=%d\n' % (ii + 1))
+    ofile.write('STATES=%d\n' % (ii + 1))
 
     global Catalog
     global Parameters
@@ -1263,7 +1267,7 @@ def state(outfile=sys.stdout):
     #     samples_per_line = Parameters['Pixels'] * RP_time
     #     rawsamples_per_line = int(np.floor(samples_per_line / 1024.) * 1024)
     #     rawsamples_per_line = max(rawsamples_per_line, 1024)
-    #     outfile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
+    #     ofile.write('RAWSAMPLES=%d\n'%rawsamples_per_line)
     #     if samples_per_line != rawsamples_per_line:
     #         print('Warning: %d samples per line will be skipped' %
     #               (samples_per_line-rawsamples_per_line))
@@ -1272,12 +1276,12 @@ def state(outfile=sys.stdout):
     #         rawspace = 768*2**20 - cds_size
     #         maxrawlines = rawspace/(rawsamples_per_line*2)
     #         if maxrawlines < Parameters['Lines'] and maxrawlines > 0:
-    #             outfile.write('RAWENDLINE=%d\n'%(maxrawlines-1))
-    if outfile.name != '<stdout>':  # don't close stdout!
-        outfile.close()
+    #             ofile.write('RAWENDLINE=%d\n'%(maxrawlines-1))
+    if ofile.name != '<stdout>':  # don't close stdout!
+        ofile.close()
 
 
-def script(outfile=sys.stdout, quiet=False):
+def script(outfile=None, quiet=False):
     """generate ACF scripts and calculates times.  Reports state of
 Catalog if a consistent script cannot be generated  """
     global Catalog
@@ -1298,7 +1302,9 @@ Catalog if a consistent script cannot be generated  """
 
     if N_nocalc == 0:
         # remove the existing file before writing to it.
-        if type(outfile) is str:
+        if outfile is None:
+            outfilehandle = sys.stdout
+        elif type(outfile) is str:
             outfilehandle = open(outfile, 'w')
         else:
             outfilehandle = outfile
