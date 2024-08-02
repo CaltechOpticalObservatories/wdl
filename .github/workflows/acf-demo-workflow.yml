@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "py3_dev" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "py3_dev" ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -21,7 +21,6 @@ jobs:
       run: |
         ls -l
         .github/workflows/install-deps.sh
-        which gpp
         pip install -r requirements.txt
       shell: bash
 
