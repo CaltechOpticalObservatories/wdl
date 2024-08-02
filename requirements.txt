@@ -5,5 +5,5 @@ scipy
 # Plotting and visualization
 matplotlib
 
-# GUI development (PyQt5 is typically preferred over PyQt4 nowadays)
+# GUI development
 PyQt5
