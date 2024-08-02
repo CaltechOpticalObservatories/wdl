@@ -11,7 +11,7 @@ env:
   BUILD_NAME: Demo
 
 jobs:
-  Archon-build:
+  Demo-ACF:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,6 +21,8 @@ jobs:
       run: |
         ls -l
         .github/workflows/install-deps.sh
+        which gpp
+        pip install -r requirements.txt
       shell: bash
 
     - name: Build Demo ACF
