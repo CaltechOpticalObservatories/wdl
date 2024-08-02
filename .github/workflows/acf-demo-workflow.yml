@@ -2,7 +2,7 @@ name: CMake workflow
 
 on:
   push:
-    branches: [ "CIO-7-python3" ]
+    branches: [ "COI-7-python3" ]
   pull_request:
     branches: [ "master" ]
 
