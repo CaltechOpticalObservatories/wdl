@@ -1,0 +1,121 @@
+/* -*- C -*- */
+/** ---------------------------------------------------------------------------
+ * @file     Demo.seq
+ * @brief    sequence file for SITe imager
+ * @author   Jake Zimmer
+ * @date     2023-05-24 Initial creation
+ * @modified 
+ *
+ */
+
+/** ---------------------------------------------------------------------------
+ * parameter definitions
+ * syntax: param paramname=value
+*/
+
+param Expose=0
+param exptime=0
+param test_mode=0
+param longexposure=0
+
+/** ---------------------------------------------------------------------------
+ * @fn     SetupSITe
+ * @brief  This executes on start-up and sets levels to initialize ROIC array.
+ *
+ */
+SEQUENCE Main {
+if Expose GrabFrame();
+if test_mode TestPhase();
+// if test_mode GOTO TestMode();
+GOTO Main();
+}
+
+/**
+ * @fn     TestMode
+ * @brief  This tests each phase sequentially
+*/
+SEQUENCE TestMode {
+  wFrame();
+  wLine();
+  wPixel();
+  TestPhase(100);
+  return;
+}
+
+/**
+ * @fn     TestRG
+ * @brief  This tests the RG phase
+ */
+SEQUENCE TestRG {
+  OnlyRG_Hi();
+  Sec(5);
+  OnlyRG_Lo();
+  Sec(5);
+  return;
+}
+
+/**
+ * @fn     TestSW
+ * @brief  This tests the SW phase
+ */
+SEQUENCE TestSW {
+  OnlySW_Hi();
+  Sec(5);
+  TestRG();
+  OnlySW_Lo();
+  Sec(5);
+  TestRG();
+  return;
+}
+
+/** ---------------------------------------------------------------------------
+ * @fn     GrabFrame
+ * @brief  Grab a frame of data
+ */
+SEQUENCE GrabFrame {
+Expose--;
+ParallelShiftMPP(4096); //TODO SWAP BACK TO _LINECOUNT
+Sec(exptime);
+wFrame();
+GrabLine(_LINECOUNT);
+return;
+}
+
+/** ---------------------------------------------------------------------------
+ * @fn     GrabLine
+ * @brief  Grab a line of data
+ */
+SEQUENCE GrabLine {
+wLine();
+ClampAC();
+ParallelShiftMPP();
+GrabPixel(_PIXELCOUNT);
+return;
+}
+
+/** ---------------------------------------------------------------------------
+ * @fn     GrabPixel
+ * @brief  Grab a pixel of data
+ */
+SEQUENCE GrabPixel {
+wPixel();
+SerialShiftPixelB();
+wDelay1us();
+return;
+}
+
+/** ----------------------------------------------------------
+ * MISC SEQUENCES
+ *
+ */
+
+SEQUENCE MilliSec {
+  wDelay1ms();
+  return;
+}
+SEQUENCE Sec {
+MilliSec(1000);
+return;
+}
+
+
