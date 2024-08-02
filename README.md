@@ -37,3 +37,13 @@ pip install -r requirements.txt
      ACFPATH   = $(HOME)/Software/acf
      ```
      Ensure these paths point to your GPP executable, WDL directory, and ACF source files respectively.
+4. Run make
+   ```bash
+    $ make ${TARGET}
+   ```
+
+## Demo Build
+```bash
+$ cd demo
+$ make Demo
+```
