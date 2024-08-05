@@ -22,8 +22,8 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from . import Lexer
-from .Symbols import EOF
+import Lexer
+from Symbols import EOF
 import fileinput
 
 
@@ -70,4 +70,4 @@ if __name__ == '__main__':
     for line in fileinput.input():
         source_text += line
     main(source_text)
-    print((open(outputFilename).read()))
+    print(open(outputFilename).read())

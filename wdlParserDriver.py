@@ -23,7 +23,7 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 import fileinput
-from . import wdlParser as Parser
+import wdlParser as Parser
 import sys
 sys.dont_write_bytecode = True
 sys.tracebacklimit = 0

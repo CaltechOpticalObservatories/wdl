@@ -27,7 +27,7 @@ character from the file and returns it.
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from .genericCharacter import *
+from genericCharacter import *
 
 """
 A Scanner object reads through the source_text

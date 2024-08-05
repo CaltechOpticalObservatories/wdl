@@ -29,10 +29,10 @@ be a Lexer object that is ready to return the tokens in the source text.
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from . import genericScanner as Scanner
-from .genericToken import *
-from .Symbols import *
-from .genericCharacter import *
+import genericScanner as Scanner
+from genericToken import *
+from Symbols import *
+from genericCharacter import *
 
 character = ''
 c1 = ''
@@ -180,7 +180,7 @@ def get():
 	print(OneCharacterSymbols)
 	print(TwoCharacterSymbols)
 	print(PreSpaceSymbols)
-	print((hex(ord(c1))))
+	print(hex(ord(c1)))
 	token.abort("I found a character or symbol that I do not recognize: " + dq(c1))
 
 
