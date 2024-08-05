@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # @file     Makefile
-# @brief    Makefile for Software/wdl/test
+# @brief    Makefile for Software/wdl/demo
 # @author   David Hale
 # @date     2015-xx-xx
 # @modified 2024-08-02 made generic for demo
@@ -11,9 +11,12 @@
 # -----------------------------------------------------------------------------
 #
 
-GPP       = /usr/bin/gpp	# set to path to gpp
-WDLPATH   = ../../		# set to path to wdl code
-ACFPATH   = ./			# output for *.acf file
+# set to path to gpp
+GPP       = /usr/bin/gpp
+# set to path to wdl code
+WDLPATH   = ..
+# output for *.acf file
+ACFPATH   = ./
 
 PLOT      = False # True   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""

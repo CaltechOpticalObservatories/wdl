@@ -1,31 +1,49 @@
-# wdl
-waveform definition language for Archons
+# Waveform Definition Language (WDL) for Archons
 
+## Overview
+WDL (Waveform Definition Language) is designed for use with Archons. This project provides tools and instructions for setting up and using WDL efficiently.
 
-## Requirements:
- - any version of make
- - GPP (https://logological.org/gpp)
- - Python 3.x or 2.7 (see **PYTHON NOTES** below)
- - numpy
- - scipy
- - matplotlib
- - pyqt
- 
-## Instructions:
+## Requirements
 
- - It is advised that wdl be in a separate directory from you ACF source files.
- - Copy the Makefile from the wdl directory to the directory which contains your ACF source files.
- - Edit the following three lines in your Makefile to indicate the correct locations of
- GPP, the path to your WDL directory (this directory), and the path to your ACF source files.
- 
-```
-GPP       = /usr/local/bin/gpp
-WDLPATH   = $(HOME)/Software/wdl
-ACFPATH   = $(HOME)/Software/acf
+### System Requirements:
+- Python 3.x
+- GNU Make
+- GPP (GNU Preprocessor) [Download GPP](https://logological.org/gpp)
+
+### Python Packages:
+The following Python packages are required:
+- `numpy`
+- `scipy`
+- `matplotlib`
+- `pyqt`
+
+You can install the required Python packages using:
+```bash
+pip install -r requirements.txt
 ```
 
-## PYTHON NOTES:
+## Setup Instructions
 
-WDL has been tested with python 3.8 and 3.11 as well as python 2.7.  Using a more modern python is preferred.
+1. Directory Structure:
+   - It is recommended to keep WDL in a separate directory from your ACF source files.
+2. Copy the Makefile:
+   - Copy the Makefile from the WDL directory to the directory containing your ACF source files.
+3. Update Paths in Makefile:
+   - Edit the Makefile to update the following lines with the correct paths
 
-Using your system's python should work as long as you also have the packages listed above.
+     ```makefile
+     GPP       = /usr/local/bin/gpp
+     WDLPATH   = $(HOME)/Software/wdl
+     ACFPATH   = $(HOME)/Software/acf
+     ```
+     Ensure these paths point to your GPP executable, WDL directory, and ACF source files respectively.
+4. Run make
+   ```bash
+    $ make ${TARGET}
+   ```
+
+## Demo Build
+```bash
+$ cd demo
+$ make Demo
+```

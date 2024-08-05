@@ -76,8 +76,8 @@ Use 'stdout' or sys.stdout to dump to terminal. """
     usercommands = []
     
     # default mod file
-    # ModFile = '/home/ztf/devel/python/wdl/test.mod'
-    ModFile = '/home/user/wdl/test.mod'
+    # ModFile = '/home/ztf/devel/python/wdl/demo.mod'
+    ModFile = '/home/user/wdl/demo.mod'
     __SignalFile__ = ''
 
     # read through file to find the mod file
@@ -360,7 +360,7 @@ def __get_slot_chan_from_level_index__(levelColumnIndex):
     boardname = __boardTypes__[bn]
     rawindex = levelColumnIndex - signalPartitions[bn]
     thisChan = np.mod(rawindex, __chan_per_board__[boardname])
-    thisSlot = slot[boardname][rawindex / __chan_per_board__[boardname]]
+    thisSlot = slot[boardname][rawindex // __chan_per_board__[boardname]]
     return thisSlot, thisChan, boardname
 
 
@@ -701,7 +701,7 @@ exit state and the parameters used in Catalog """
                     regexmatch = re.search('\w+\s+!?([\w]+)',
                                            this_sub_call)
                     this_param = regexmatch.group(1)
-                    try:  # test if this_param is an integer
+                    try:  # demo if this_param is an integer
                         int(this_param)
                     # if it's not, then it's a parameter,
                     # so add it to self.Param dict
@@ -846,9 +846,9 @@ exit state and the parameters used in Catalog """
                     '((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?' +
                     '(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?', this_sub_call)
                 #  REGEX labels:
-                #  N0: negation of IF test (!)
-                #  P0: IF test parameter 
-                #  D0: decrement of test parameter (--)
+                #  N0: negation of IF demo (!)
+                #  P0: IF demo parameter
+                #  D0: decrement of demo parameter (--)
                 #  CMD: branching command (RETURN, GOTO or CALL)
                 #  TS: Time segment to call
                 #  P1: Parameter
@@ -942,7 +942,7 @@ condition (default=last non-zero state) """
             figYTop = 0.06
             gap = 0.02
             vspace = (1 - figYBtm - figYTop)/nsignals
-            vgap = vspace * gap / 2
+            vgap = vspace * gap // 2
             axes = []
             kk = 0
             for kk in range(nsignals):
@@ -957,7 +957,7 @@ condition (default=last non-zero state) """
                 axes.append(fig.add_axes([figXLeft, figYBtm + kk*vspace + vgap,
                                           0.97 - figXLeft, vspace*(1-gap)]))
                 global period_ns
-                period_us = period_ns / 1000.
+                period_us = period_ns // 1000.
                 time = np.arange(np.shape(true_level)[0]) * period_us
                 axes[kk].plot(time, true_level[:, thisSigID])
                 axes[kk].set_ylabel('%s\n%s\n(%d,%d)' %
