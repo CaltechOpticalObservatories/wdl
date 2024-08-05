@@ -6,8 +6,4 @@
 __pycache__
 
 demo/*.acf
-demo/*.modules
-demo/*.script
-demo/*.states
-demo/*.system
-demo/*.wdl
+demo/*_TMP.*
