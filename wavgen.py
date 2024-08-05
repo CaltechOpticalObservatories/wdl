@@ -360,7 +360,7 @@ def __get_slot_chan_from_level_index__(levelColumnIndex):
     boardname = __boardTypes__[bn]
     rawindex = levelColumnIndex - signalPartitions[bn]
     thisChan = np.mod(rawindex, __chan_per_board__[boardname])
-    thisSlot = slot[boardname][rawindex / __chan_per_board__[boardname]]
+    thisSlot = slot[boardname][rawindex // __chan_per_board__[boardname]]
     return thisSlot, thisChan, boardname
 
 
@@ -942,7 +942,7 @@ condition (default=last non-zero state) """
             figYTop = 0.06
             gap = 0.02
             vspace = (1 - figYBtm - figYTop)/nsignals
-            vgap = vspace * gap / 2
+            vgap = vspace * gap // 2
             axes = []
             kk = 0
             for kk in range(nsignals):
@@ -957,7 +957,7 @@ condition (default=last non-zero state) """
                 axes.append(fig.add_axes([figXLeft, figYBtm + kk*vspace + vgap,
                                           0.97 - figXLeft, vspace*(1-gap)]))
                 global period_ns
-                period_us = period_ns / 1000.
+                period_us = period_ns // 1000.
                 time = np.arange(np.shape(true_level)[0]) * period_us
                 axes[kk].plot(time, true_level[:, thisSigID])
                 axes[kk].set_ylabel('%s\n%s\n(%d,%d)' %
