@@ -9,3 +9,5 @@ demo/*.acf
 demo/*_TMP.*
 
 *.bak
+*.pyc
+*.pyo
