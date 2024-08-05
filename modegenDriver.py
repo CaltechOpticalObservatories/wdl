@@ -33,7 +33,7 @@
 
 # import fileinput
 import matplotlib.pyplot as plt
-import wavgen
+from . import wavgen
 import sys
 sys.dont_write_bytecode = True
 # sys.tracebacklimit = 0
@@ -77,6 +77,6 @@ if __name__ == '__main__':
         wavgen.Modegen(sys.argv[1], sys.argv[2]).write("a")
         sys.exit(0)
     else:
-        print("error: wavgenDriver.py got %d argument(s) but expecting 2" %
-              (len(sys.argv[1:])))
+        print(("error: wavgenDriver.py got %d argument(s) but expecting 2" %
+              (len(sys.argv[1:]))))
         sys.exit(1)

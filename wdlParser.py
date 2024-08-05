@@ -51,10 +51,10 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 # for backwards compatibility with python 2
-from __future__ import print_function
 
-import Lexer
-from Symbols import *
+
+from . import Lexer
+from .Symbols import *
 import sys
 sys.dont_write_bytecode = True
 

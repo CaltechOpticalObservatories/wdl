@@ -33,7 +33,7 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-import wavgen
+from . import wavgen
 import matplotlib.pyplot as plt
 import sys
 sys.dont_write_bytecode = True
@@ -77,6 +77,6 @@ if __name__ == '__main__':
         main(sys.argv[1], sys.argv[2])
         sys.exit(0)
     else:
-        print("error: wavgenDriver.py got %d argument(s) but expecting 2" %
-              (len(sys.argv[1:])))
+        print(("error: wavgenDriver.py got %d argument(s) but expecting 2" %
+              (len(sys.argv[1:]))))
         sys.exit(1)
