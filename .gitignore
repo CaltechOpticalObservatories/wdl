@@ -7,3 +7,6 @@ __pycache__
 
 demo/*.acf
 demo/*_TMP.*
+
+*.bak
+*.py[cod]
