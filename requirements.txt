@@ -1,0 +1,9 @@
+# Scientific computing and data analysis
+numpy
+scipy
+
+# Plotting and visualization
+matplotlib
+
+# GUI development
+PyQt5

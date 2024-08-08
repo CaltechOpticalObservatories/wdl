@@ -1,0 +1,60 @@
+/** -*- C -*- ---------------------------------------------------------------------------
+ * use "#define" to define user macros used within the Archon files,
+ * i.e. within the .script, .states, .cds, or .modules files
+ * Do not edit or remove the following line.
+ */
+
+/** ---------------------------------------------------------------------------
+ * Set the size of the CMOS array
+ */
+
+#define _MAX_XADDR 64   /* Maximum X Address - zero index            */
+
+#define _TOTAL_ROWS 512
+
+
+/** ---------------------------------------------------------------------------
+ * CDS-Deinterlace engine options
+ */
+#define _ARCHON_SAMPLE_MODE        0     /* 0=16bit, 1=32bit  */
+#define _ARCHON_FRAMEMODE          1     /* 0=top, 1=bottom, 2=split */
+/* Each tap will only contain ~2MB of data, so normal buffers are fine */
+#define _ARCHON_FRAMEBUFS          0     /* 0=3x512MB, 1=2x768MB, I.E. "BIGBUF" */
+
+/* We will not begin with raw stuff, so leave this be for now */
+#define _RAW_ENABLE                1 /* 0=no, 1=yes */
+#define _RAW_STARTLINE             1     /* first line of raw data, 0-65535 */
+#define _RAW_ENDLINE              10     /* last line of raw data, 0-65535 */
+#define _RAW_STARTPIXEL            0
+#define _RAW_SAMPLES           25600
+#define _RAW_SELECT               10 /* AD channel for raw data capture, 0-15 */
+
+#define _FIRST_RESET_SAMPLE       1000
+#defeval _LAST_RESET_SAMPLE       1400
+#defeval _FIRST_VIDEO_SAMPLE      2800
+#define _LAST_VIDEO_SAMPLE        3400
+#define _LINECOUNT                  1000
+#define _PIXELCOUNT                 2118
+
+
+/** ---------------------------------------------------------------------------
+ * Define clock voltage levels here (units are Volts)
+ */
+/* Clocks */
+#define SerialLo        -5
+#define SerialHi        3.8
+
+#define ParallelLo      -10
+#define ParallelHi      2
+
+#define Parallel3Lo     -7.8
+#define Parallel3Hi     5.8
+
+#define LVDSHi          1
+#define LVDSLo          0
+
+#define PINDHi          0
+#define PINDLo          1
+
+//#define ClampLo         0
+//#define ClampHi         1

@@ -1,0 +1,49 @@
+/* -*- C -*- */
+/** ---------------------------------------------------------------------------
+ * @file     Demo.signals
+ * @brief    Demo signal names and module/channel assignments
+ * @author   Timothee Greffe
+ * @date     2021-06-03 Initial creation from Template provided by Steve Kaye
+ * @modified 
+ * 
+ * syntax:
+ *
+ * #define signallabel slot : channel
+ *
+ * where signallabel   is any ASCII text string to identify the signal name
+ *       slot          is the slot number containing the module,
+ *       channel       is the channel number on the module
+ * 
+ * Combinations of signals can also be made by creating a comma-separated
+ * list enclosed in square brackets as follows:
+ *
+ * #define newlabel [ signallabel, signallabel [, signallabel] ]
+ *
+ * where newlabel    is any ASCII text string to define a new signal
+ *       signallabel is any signal already defined above
+ *
+ * any number can be combined in a comma-separated list between square brackets,
+ * or a single signal can be defined in square brackets to effectively asign
+ * a different name to the signal
+ *
+ */
+
+/* These are the control signals needed to control pixels*/
+/* fire the shutter and get a frame of data */
+#define SHUTTER	0 : 1   /* INT signal from the backplane - is there a shutter?	*/
+#define FRAME	0 : 2   /* FRAME signal from the backplane			*/
+#define LINE	0 : 3   /* LINE signal from the backplane			*/
+#define PIXEL	0 : 4   /* PIXEL signal from the backplane			*/
+
+/* These are the clock signals which come from the clock board    */
+#define P1    	2 : 2   /*  SITe Parallel Phase 1    */
+#define P2     	2 : 4   /*  SITe Parallel Phase 2    */
+#define P3    	2 : 6   /*  SITe Parallel Phase 3    */
+#define S1    	2 : 8   /*  SITe Serial Phase 1    */
+#define S2    	2 : 10  /*  SITe Serial Phase 2    */
+#define S3    	2 : 12  /*  SITe Serial Phase 3    */
+
+/* These are the clock signals which come from the LVDS board    */
+#define RG    	    12 : 1  /*  SITe Reset Gate         */
+#define SW    	    12 : 2  /*  SITe Summing Well         */
+#define AC_CLAMP    12 : 3  /*  SITe AC Coupler Clamp         */

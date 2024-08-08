@@ -1,0 +1,253 @@
+/* -*- C -*- */
+/** ---------------------------------------------------------------------------
+ * @file     Demo.waveform
+ * @brief    Aladdin timing file, rules for waveform generation and scripting
+ * @author   Timothee Greffe
+ * @date     2021-06-03 Initial creation
+ * @modified 
+ *
+ * syntax (is case sensitive):
+ *
+ * WAVEFORM waveformlabel { rules }
+ *
+ * where rules (enclosed in curly braces) are as follows:
+ *
+ * [time]: [=timelabel] SET signallabel TO level;
+ *
+ * time: at least one time label is required, followed by colon
+ *       (if omitted then SET... lines are all at the same time as previous time)
+ *       arithmetic operations are allowed for time
+ *       units are allowed to follow numbers, E.G. ns, us, ms
+ *       ".+" means to add to the previous time
+ *
+ * =timelabel is an optional label for this time, which can be used elsewhere
+ *
+ * SET signallabel TO level; 
+ * is required and must end with a semi-colon
+ * signallabel and level can be defined anywhere
+ *
+ */
+
+#define clockfreq  100000000                      /* 100 MHz master clock frequency in Hz */
+#define sec        *(clockfreq)                   /* clock cycles per second   */
+#define ms         *(clockfreq/1000)              /* clock cycles per millisec */
+#define us         *(clockfreq/1000000)           /* clock cycles per microsec */
+#define ns         *(clockfreq/1000000000)          /* clock cycles per nanosecond */
+#define clicks	   *(clockfreq/100000000)	  /* clock cycles per 10 nanosecond */
+
+/* Timing defines */
+/* Generic timing parameters */
+#define TICK	        #eval  1 clicks		  /* 10 nsec */
+#define 1ms	        #eval  1 ms
+#define 1us             #eval  1 us
+#define 2us             #eval  2 us
+#define 20us            #eval 20 us
+#define 25us            #eval 25 us
+#define 10ms            #eval 10 ms
+#define 10us            #eval 10 us
+#define 15us		#eval 15 us
+
+/* Timing specific to SITe waveform */
+// TODO define specific for SITe
+#define Ts 	#eval 3 us /* Serial clock spacing */
+#define Tp 	#eval 400 us /* Parallel clock spacing */
+#define TpF 	#eval 1 us /* Parallel clock spacing */
+#define Tsam 	#eval 10 us /* Time delay before sampling the serial signal */
+#define Tclamp 	#eval 10 us /* Time delay for clamping the serial signal */
+#define Trtn 	#eval 3 us /* Time delay for returning
+/* Logical state defines */
+#define High		   1
+#define Low		       0
+
+#define SA S1
+#define SB S2
+#define SC S3
+
+
+
+WAVEFORM RawPixel {
+  10us:          RETURN;
+}
+
+/* Various wait routines */
+WAVEFORM wDelay1us {
+ 1us:		   RETURN;
+}
+// WAVEFORM wDelay10us {
+//  10us:		   RETURN;
+// }
+
+
+// WAVEFORM wDelay10ns {
+//  10ns:		   RETURN;
+// }
+
+WAVEFORM wDelay1ms {
+ 1ms:               RETURN;
+}
+
+WAVEFORM wSampleDelay {
+ Tsam: RETURN;
+}
+
+/*****************************************/
+/* Waveforms specific to SITe ST-002A    */
+/*****************************************/
+/* Shift out to A side */
+WAVEFORM SerialShiftPixelA {
+0: 		SET RG TO PINDHi;
+		SET AC_CLAMP TO LVDSHi;
+		SET S2 TO SerialHi,FAST;
+.+Ts:	SET S1 TO SerialLo,FAST;
+.+Ts:	SET RG TO PINDLo;
+		SET S3 TO SerialHi,FAST;
+		SET SW TO PINDHi;
+.+Ts:	SET S2 TO SerialLo,FAST;
+.+Tclamp: SET AC_CLAMP TO LVDSLo;
+.+Ts:	SET S1 TO SerialHi,FAST;
+
+.+Ts:   SET S3 TO SerialLo,FAST;
+		SET SW TO PINDLo;
+.+Tsam:	return;
+}
+
+WAVEFORM SerialShiftPixelB {
+0: 		SET RG TO PINDHi;
+.+Ts:	SET RG TO PINDHi;
+.+Ts:	SET RG TO PINDLo;
+.+Ts:	SET SW TO PINDHi;
+		SET S3 TO SerialHi,FAST;
+.+Ts:	SET S1 TO SerialLo,FAST;
+.+Ts:	SET S2 TO SerialHi,FAST;
+.+Ts:	SET S3 TO SerialLo,FAST;
+.+Ts:	SET S1 TO SerialHi,FAST;
+.+Ts:	SET S2 TO SerialLo,FAST;
+.+Ts:	SET AC_CLAMP TO LVDSHi;
+.+Tclamp: SET AC_CLAMP TO LVDSLo;
+.+Ts:	SET SW TO PINDLo;
+.+Ts:	return;
+}
+
+
+
+/* Only RG */
+WAVEFORM OnlyRG_Hi {
+0:		SET RG TO PINDHi;
+.+Ts:		return;
+}
+
+WAVEFORM OnlyRG_Lo {
+0:		SET RG TO PINDLo;
+.+Ts:		return;
+}
+
+WAVEFORM OnlySW_Hi {
+0:		SET SW TO PINDHi;
+.+Ts:		return;
+}
+
+WAVEFORM OnlySW_Lo {
+0:		SET SW TO PINDLo;
+.+Ts:		return;
+}
+
+
+/* MPP Parallel Shift */
+WAVEFORM ParallelShiftMPP {
+0:		SET P2 TO ParallelHi,FAST;
+.+Tp:	SET P3 TO Parallel3Hi,FAST;
+.+Tp:	SET P2 TO ParallelLo,FAST;
+.+Tp:	SET P1 TO ParallelHi,FAST;
+.+Tp:	SET P3 TO Parallel3Lo,FAST;
+.+Tp:	SET P1 TO ParallelLo,FAST;
+.+Tp:	RETURN;
+}
+
+//1,3,2,1,3,2x (maybe, produces patterning 31)
+//1,2,3,1,2,3x (maybe, produces patterning 42)
+//2,1,3,2,1,3x (no pattern)
+//2,3,1,2,3,1x (maybe, produces patterning 37)
+//3,2,1,3,2,1x (very little pattern, also no parrallel bloom at bottom)
+//3,1,2,3,1,2x (maybe, produces patterning 36)
+
+//1,3,2,1,3,2x (SO works, parallel bloom, artifacts on other chans, laser on, lights on, #4)
+//1,2,3,1,2,3x (serial over works, lots of blooming and weird artifacts on other channels, laser was on lights off #3)
+//2,1,3,2,1,3x (SO hard to see, less P bloom, artifacts on other chans, laser on, lights on, #5)
+//2,3,1,2,3,1x (SO works, parallel bloom, artifacts on other chans, laser on, lights on, #6)
+//3,2,1,3,2,1x (SO works, parallel bloom, artifacts on other chans, laser on, lights on, #7)
+//3,1,2,3,1,2x (SO works, parallel bloom, artifacts on other chans, laser on, lights on, #8)
+
+/* Non-MPP Parallel Shift */
+// WAVEFORM ParallelShiftNonMPP {
+// 0:		SET P1 TO ParallelLo,SLOW;
+// .+Tp:	SET P3 TO Parallel3Hi,SLOW;
+// .+Tp:	SET P2 TO ParallelLo,SLOW;
+// .+Tp:	SET P1 TO ParallelHi,SLOW;
+// .+Tp:	SET P3 TO Parallel3Lo,SLOW;
+// .+Tp:	SET P2 TO ParallelHi,SLOW;
+// .+Tp:	RETURN;
+// }
+/* Non-MPP Parallel Flush */
+// WAVEFORM ParallelShiftNonMPPFlush {
+// 0:		SET P1 TO ParallelLo,SLOW;
+// .+TpF:	SET P3 TO Parallel3Hi,SLOW;
+// .+TpF:	SET P2 TO ParallelLo,SLOW;
+// .+TpF:	SET P1 TO ParallelHi,SLOW;
+// .+TpF:	SET P3 TO Parallel3Lo,SLOW;
+// .+TpF:	SET P2 TO ParallelHi,SLOW;
+// .+TpF:	RETURN;
+// }
+WAVEFORM ClampAC {
+0:			SET AC_CLAMP TO LVDSHi;
+.+Tclamp:	SET AC_CLAMP TO LVDSLo;
+.+Ts:	return;
+}
+
+/* Test each phase one by one */
+WAVEFORM TestPhase {
+0:			SET RG TO PINDHi;
+.+Ts:		SET RG TO PINDLo;
+.+Ts:		SET S1 TO SerialHi,FAST;
+.+Ts:		SET S1 TO SerialLo,FAST;
+.+Ts:		SET S2 TO SerialHi,FAST;
+.+Ts:		SET S2 TO SerialLo,FAST;
+.+Ts:		SET S3 TO SerialHi,FAST;
+.+Ts:		SET S3 TO SerialLo,FAST;
+.+Ts:		SET SW TO PINDHi;
+.+Ts:		SET SW TO PINDLo;
+.+Ts:		SET P1 TO ParallelHi,FAST;
+.+Ts:		SET P1 TO ParallelLo,FAST;
+.+Ts:		SET P2 TO ParallelHi,FAST;
+.+Ts:		SET P2 TO ParallelLo,FAST;
+.+Ts:		SET P3 TO Parallel3Hi,FAST;
+.+Ts:		SET P3 TO Parallel3Lo,FAST;
+.+Ts:		SET AC_CLAMP TO LVDSHi;
+.+Tclamp:	SET AC_CLAMP TO LVDSLo;
+.+Tp:		RETURN;
+}
+
+/* Set the RG Hi*/
+WAVEFORM RGHi {
+0:			SET RG TO PINDHi;
+.+Ts:		return;
+}
+
+/*****************************************/
+/* Here are the control signal waveforms */
+/*****************************************/
+WAVEFORM wFrame {
+ 0:			SET FRAME TO High;
+}
+
+WAVEFORM wLine {
+ 0:			SET LINE TO High;
+}
+
+WAVEFORM wPixel {
+ 0:			SET PIXEL   TO High;
+ .+TICK:		SET PIXEL   TO Low;
+			SET FRAME   TO Low;
+			SET LINE    TO Low;
+}
+
+

@@ -1,0 +1,12 @@
+# IDE
+.idea
+.vscode
+
+# Byte-compiled files
+__pycache__
+
+demo/*.acf
+demo/*_TMP.*
+
+*.bak
+*.py[cod]

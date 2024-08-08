@@ -1,0 +1,30 @@
+name: CMake workflow
+
+on:
+  push:
+    branches: [ "py3_dev" ]
+  pull_request:
+    branches: [ "py3_dev" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_NAME: Demo
+
+jobs:
+  Demo-ACF:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependecies
+      run: |
+        ls -l
+        .github/workflows/install-deps.sh
+        pip install -r requirements.txt
+      shell: bash
+
+    - name: Build Demo ACF
+      run: |
+        cd ${{github.workspace}}/demo
+        make ${{env.BUILD_NAME}}
