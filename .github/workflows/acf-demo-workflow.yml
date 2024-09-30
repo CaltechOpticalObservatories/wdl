@@ -2,9 +2,9 @@ name: CMake workflow
 
 on:
   push:
-    branches: [ "py3_dev" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "py3_dev" ]
+    branches: [ "main" ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
