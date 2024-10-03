@@ -12,7 +12,7 @@
 #
 
 # set to path to gpp
-GPP       = /usr/local/bin/gpp
+GPP       = /usr/bin/gpp
 # set to path to wdl code
 WDLPATH   = ..
 # output for *.acf file
