@@ -17,10 +17,29 @@ The following Python packages are required:
 - `matplotlib`
 - `pyqt`
 
-You can install the required Python packages using:
-```bash
-pip install -r requirements.txt
-```
+1. **Create a Virtual Environment**:
+   If you don't have `venv` installed, you can install it with:
+   ```bash
+   sudo apt install python3-venv  # For Ubuntu
+   ```
+2. **Activate the Virtual Environment**:
+   Once you have created your virtual environment, you need to activate it to start using it. Activation sets up your shell to use the Python interpreter and libraries from the virtual environment instead of the global Python environment.  
+   
+   **Activation Commands**
+-  **On macOS and Linux**:
+   ```bash
+   source venv/bin/activate
+   ```
+
+3. **Install Required Packages**
+
+   Once your virtual environment is activated, you can install the necessary Python packages listed in the `requirements.txt` file.
+
+   **Installation Command**
+   Run the following command to install the required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Setup Instructions
 

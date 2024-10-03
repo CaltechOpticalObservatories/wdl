@@ -12,7 +12,7 @@
 #
 
 # set to path to gpp
-GPP       = /usr/bin/gpp
+GPP       = /usr/local/bin/gpp
 # set to path to wdl code
 WDLPATH   = ..
 # output for *.acf file
@@ -29,38 +29,77 @@ MODEGEN   = $(WDLPATH)/modegenDriver.py
 I2A       = $(WDLPATH)/ini2acf.pl
 INCL      = -I$(CURDIR)
 
-SCAN_CDSFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
+# Global variable to store the filename
+FILE_NAME :=
+
+SCAN_CDSFILE = cat $(FILE_NAME).conf | $(GPP) $(GFLAGS) $(INCL) | \
 		awk -F= '{gsub(" |\t","",$$1)} $$1=="CDS_FILE"{print $$2}' | cut -d'"' -f2
-SCAN_MODFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
+SCAN_MODFILE = cat $(FILE_NAME).conf | $(GPP) $(GFLAGS) $(INCL) | \
 		awk -F= '{gsub(" |\t","",$$1)} $$1=="MODULE_FILE"{print $$2}' | cut -d'"' -f2
-SCAN_MODEFILE	= cat $(@F).conf | $(GPP) $(GFLAGS) $(INCL) | \
+SCAN_MODEFILE = cat $(FILE_NAME).conf | $(GPP) $(GFLAGS) $(INCL) | \
 		awk -F= '{gsub(" |\t","",$$1)} $$1=="MODE_FILE"{print $$2}' | cut -d'"' -f2
 
-F_TMP = $(@F)_TMP
+F_TMP = $(FILE_NAME)_TMP
 
-%:	;
+DEBUG ?= 0
+
+ifeq ($(DEBUG), 1)
+    debug_message = @echo "Debug: $(1)"
+else
+    debug_message = @true
+endif
+
+# Main rule for building the target
+%:
+	$(eval FILE_NAME := $(@F)) 
+	$(call debug_message, "Current filename: $(FILE_NAME)")
+	@$(MAKE) generate_wdl FILE_NAME=$(@F)
+	@$(MAKE) generate_script_states FILE_NAME=$(@F)
+	@$(MAKE) assemble_acf FILE_NAME=$(@F)
+
+# Rule for generating WDL
+generate_wdl: 
 	$(eval MODFILE := $(shell $(SCAN_MODFILE)))
-	@echo looking for MODULE_FILE = $(MODFILE) ...
-	@test -f $(@F).conf || echo $(@F).conf does not exist
-	@echo making $(F_TMP).wdl from $(@F).conf ...
-	@test -f $(@F).conf && cat $(@F).conf | $(SEQPARSER) - | $(GPP) $(GFLAGS) $(INCL) |  $(WDLPARSER) - > $(F_TMP).wdl
-	@echo making $(F_TMP).script, $(F_TMP).states from $(F_TMP).wdl ...
-	@test -f $(MODFILE) || echo $(MODFILE) does not exist
-	@test -f $(MODFILE) && echo $(F_TMP) | cat  - $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) |  $(MODPARSER) -
-	@$(WAVGEN) $(F_TMP) $(PLOT)
-	@if [ $$? -eq 1 ]; then exit 1; fi
-	@echo assembling $(@F).acf ...
+	@echo "Looking for MODULE_FILE = $(MODFILE) ..."
+	@test -f $(FILE_NAME).conf || { echo "$(FILE_NAME).conf does not exist"; exit 1; }
+	$(call debug_message, "Found configuration file: $(FILE_NAME).conf")
+
+	@echo "Making $(F_TMP).wdl from $(FILE_NAME).conf ..."
+	@cat $(FILE_NAME).conf | $(SEQPARSER) - | $(GPP) $(GFLAGS) $(INCL) | $(WDLPARSER) - > $(F_TMP).wdl
+	$(call debug_message, "Created WDL file: $(F_TMP).wdl")
+
+	@echo "Making $(F_TMP).script and $(F_TMP).states from $(F_TMP).wdl ..."
+	@test -f $(MODFILE) || { echo "$(MODFILE) does not exist"; exit 1; }
+	$(call debug_message, "Found MODULE_FILE: $(MODFILE)")
+
+	@cat $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) | $(MODPARSER) -
+	$(call debug_message, "Processed MODULE_FILE: $(MODFILE)")
+
+	@$(WAVGEN) $(F_TMP) $(PLOT) || { echo "Waveform generation failed"; exit 1; }
+	$(call debug_message, "Finished waveform generation for $(F_TMP) with plot: $(PLOT)")
+
+# Rule for generating script states
+generate_script_states:
+	@echo "Assembling $(FILE_NAME).acf ..."
 	$(eval CDSFILE := $(shell $(SCAN_CDSFILE)))
-	@echo looking for CDS_FILE = $(CDSFILE) ...
-	@test -f $(CDSFILE) || echo $(CDSFILE) does not exist
-	@echo assembling $(@F).acf file ...
-	@test -f $(CDSFILE) && cat $(@F).conf | $(INCPARSER) - | cat - $(CDSFILE) | $(GPP) $(GFLAGS) $(INCL) | \
+	$(call debug_message, "Looking for CDS_FILE = $(CDSFILE) ...")
+	@test -f $(CDSFILE) || { echo "$(CDSFILE) does not exist"; exit 1; }
+	$(call debug_message, "Preparing to assemble $(FILE_NAME).acf file using:")
+	$(call debug_message, "INCPARSER: $(INCPARSER)")
+	$(call debug_message, "CDSFILE: $(CDSFILE)")
+	$(call debug_message, "GPP Flags: $(GFLAGS)")
+	@echo "Assembling $(FILE_NAME).acf file ..."
+	@cat $(FILE_NAME).conf | $(INCPARSER) - | cat - $(CDSFILE) | $(GPP) $(GFLAGS) $(INCL) | \
 		cat - $(F_TMP).script $(F_TMP).modules $(F_TMP).states $(F_TMP).system | \
-		$(I2A) - > $(@F).acf
+		$(I2A) - > $(FILE_NAME).acf
+
+# Rule for assembling the ACF
+assemble_acf:
 	$(eval MODEFILE := $(shell $(SCAN_MODEFILE)))
-	@$(MODEGEN) $(MODEFILE) $(@F).acf
-	@if [ -d ".git" ]; \
-	then echo "inserting REV keyword ..."; $(WDLPATH)/insert_hash $(@F).acf; \
-	else echo "not a git archive, skipping REV keyword"; \
+	@$(MODEGEN) $(MODEFILE) $(FILE_NAME).acf
+	@if [ -d ".git" ]; then \
+		echo "Inserting REV keyword ..."; $(WDLPATH)/insert_hash $(FILE_NAME).acf; \
+	else \
+		echo "Not a git archive, skipping REV keyword"; \
 	fi
-	@echo "done"
+	@echo "Done"
