@@ -122,9 +122,9 @@ def abort(msg):
 # -----------------------------------------------------------------------------
 def dq(s):
     """
-    wrap double quotes around a string 's' and return quoted string
+    Wrap double quotes around a string 's' and return the quoted string.
     """
-    return '"%s"' % s
+    return '"{}"'.format(s)
 
 
 # -----------------------------------------------------------------------------
@@ -187,9 +187,7 @@ def consume(arg_token_type):
     else:
         error(
             "(wdlParser.py::consume) expected "
-            + arg_token_type
-            + " but got "
-            + token.show(align=False)
+            f"{arg_token_type} but got {token.show(align=False)}"
         )
 
 
@@ -201,47 +199,37 @@ def consume(arg_token_type):
 # -----------------------------------------------------------------------------
 def module():
     """
-    return an integer type for the module of the current token
+    Return an integer type for the module of the current token.
     """
     global token
     global module_name
     module_name = token.cargo
-    # convert all comparisons to upper for case-insensitivity
-    if module_name.upper() == "DRIVER":
-        mod_type = 1
-    elif module_name.upper() == "AD":
-        mod_type = 2
-    elif module_name.upper() == "LVBIAS":
-        mod_type = 3
-    elif module_name.upper() == "HVBIAS":
-        mod_type = 4
-    elif module_name.upper() == "HEATER":
-        mod_type = 5
-    elif module_name.upper() == "HS":
-        mod_type = 7
-    elif module_name.upper() == "HVXBIAS":
-        mod_type = 8
-    elif module_name.upper() == "LVXBIAS":
-        mod_type = 9
-    elif module_name.upper() == "LVDS":
-        mod_type = 10
-    elif module_name.upper() == "HEATERX":
-        mod_type = 11
-    elif module_name.upper() == "XVBIAS":
-        mod_type = 12
-    elif module_name.upper() == "ADF":
-        mod_type = 13
-    elif module_name.upper() == "ADX":
-        mod_type = 14
-    elif module_name.upper() == "ADLN":
-        mod_type = 15
-    elif module_name.upper() == "DRIVERX":
-        mod_type = 16
-    else:
-        error("(wdlParser.py::module) unrecognized module type: " + dq(module_name))
-        mod_type = -1
-    return mod_type
 
+    # Convert all comparisons to upper for case-insensitivity
+    module_map = {
+        "DRIVER": 1,
+        "AD": 2,
+        "LVBIAS": 3,
+        "HVBIAS": 4,
+        "HEATER": 5,
+        "HS": 7,
+        "HVXBIAS": 8,
+        "LVXBIAS": 9,
+        "LVDS": 10,
+        "HEATERX": 11,
+        "XVBIAS": 12,
+        "ADF": 13,
+        "ADX": 14,
+        "ADLN": 15,
+        "DRIVERX": 16,
+    }
+
+    mod_type = module_map.get(module_name.upper(), -1)
+
+    if mod_type == -1:
+        error(f"(wdlParser.py::module) unrecognized module type: {dq(module_name)}")
+
+    return mod_type
 
 # -----------------------------------------------------------------------------
 # @fn     dio
@@ -263,28 +251,23 @@ def dio(slot_number):
     global dioOutput
 
     dio_chan = None
+
     if found(NUMBER):
         dio_chan = token.cargo
-        if (
-            module_name.upper() == "LVBIAS"
-            or module_name.upper() == "LVXBIAS"
-            or module_name.upper() == "HEATER"
-            or module_name.upper() == "HEATERX"
-        ):
-            if int(dio_chan) < 1 or int(dio_chan) > 8:
+        if module_name.upper() in {"LVBIAS", "LVXBIAS", "HEATER", "HEATERX"}:
+            if not (1 <= int(dio_chan) <= 8):
                 error(
-                    "DIO channel "
-                    + dq(dio_chan)
-                    + " outside range {1:8} for module: "
-                    + module_name.upper()
+                    f"DIO channel {dq(dio_chan)} outside range {{1:8}} for module: "
+                    f"{module_name.upper()}"
                 )
-        elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
-            if int(dio_chan) < 1 or int(dio_chan) > 4:
+        elif module_name.upper() in {"HS", "LVDS"}:
+            if not (1 <= int(dio_chan) <= 4):
                 error(
-                    "DIO channel " + dq(dio_chan) + " outside range for HS, LVDS {1:4}"
+                    f"DIO channel {dq(dio_chan)} outside range for HS, LVDS {{1:4}}"
                 )
         else:
-            error("DIO is invalid keyword for module: " + module_name.upper())
+            error(f"DIO is an invalid keyword for module: {module_name.upper()}")
+
     consume(NUMBER)
     source = None
     direction = None
@@ -554,14 +537,16 @@ def hvhc(slot_number):
     hvh_chan = None
     if found(NUMBER):
         hvh_chan = token.cargo
-        if int(hvh_chan) < 1 or int(hvh_chan) > 6:
-            error("HVHC channel " + dq(hvh_chan) + " outside range [1..6]")
+        if not (1 <= int(hvh_chan) <= 6):
+            error(f"HVHC channel {dq(hvh_chan)} outside range [1..6]")
+
     consume(NUMBER)
     volts = None
     current = None
     order = None
     enable = None
     consume("[")
+
     while not found("]"):
         if token.type == EOF:
             break
@@ -589,20 +574,21 @@ def hvhc(slot_number):
                 error("HVHC enable " + dq(enable) + " must be 0 or 1")
         consume(NUMBER)
     consume("]")
+
     # there can be an optional label, specified as token type=STRING
+    label = ""
     if found(STRING):
-        label = token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # Strip leading and trailing quote chars
         consume(STRING)
-    else:
-        label = ""
     consume(";")
 
-    hvhOutput += "MOD" + slot_number + "\HVHC_ENABLE" + hvh_chan + "=" + enable + "\n"
-    hvhOutput += "MOD" + slot_number + "\HVHC_V" + hvh_chan + "=" + volts + "\n"
-    hvhOutput += "MOD" + slot_number + "\HVHC_IL" + hvh_chan + "=" + current + "\n"
-    hvhOutput += "MOD" + slot_number + "\HVHC_ORDER" + hvh_chan + "=" + order + "\n"
-    if label != "":
-        hvhOutput += "MOD" + slot_number + "\HVHC_LABEL" + hvh_chan + "=" + label + "\n"
+    hvhOutput += f"MOD{slot_number}\\HVHC_ENABLE{hvh_chan}={enable}\n"
+    hvhOutput += f"MOD{slot_number}\\HVHC_V{hvh_chan}={volts}\n"
+    hvhOutput += f"MOD{slot_number}\\HVHC_IL{hvh_chan}={current}\n"
+    hvhOutput += f"MOD{slot_number}\\HVHC_ORDER{hvh_chan}={order}\n"
+
+    if label:
+        hvhOutput += f"MOD{slot_number}\\HVHC_LABEL{hvh_chan}={label}\n"
 
 
 # -----------------------------------------------------------------------------
@@ -1514,7 +1500,8 @@ def drvx(slot_number):
     if found(NUMBER):
         drv_chan = token.cargo
         if int(drv_chan) < 0 or int(drv_chan) > 12:
-            error("DRVX channel " + dq(drv_chan) + " outside range [1..12]")
+            error(f"DRVX channel {dq(drv_chan)} outside range [1..12]")
+
     consume(NUMBER)
     slewfast = None
     slewslow = None
@@ -1526,11 +1513,7 @@ def drvx(slot_number):
         if found(NUMBER):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
-                error(
-                    "DRVX Fast Slew Rate "
-                    + dq(slewfast)
-                    + " outside range [0.001..1000] V/us"
-                )
+                error(f"DRVX Slow Slew Rate {dq(slewslow)} outside range [0.001..1000] V/us")
         consume(NUMBER)
         consume(",")
         if found(NUMBER):
@@ -1546,26 +1529,23 @@ def drvx(slot_number):
         if found(NUMBER):
             enable = token.cargo
             if enable != "0" and enable != "1":
-                error("DRVX enable " + dq(enable) + " must be 0 or 1")
+                error(f"DRVX enable {dq(enable)} must be 0 or 1")
         consume(NUMBER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
+    label = ""
     if found(STRING):
-        label = token.cargo[1:-1]  # strip leading and trailing quote chars
+        label = token.cargo[1:-1]  # Strip leading and trailing quote chars
         consume(STRING)
-    else:
-        label = ""
+
     consume(";")
 
-    drvxOutput += "MOD" + slot_number + "\ENABLE" + drv_chan + "=" + enable + "\n"
-    drvxOutput += (
-        "MOD" + slot_number + "\FASTSLEWRATE" + drv_chan + "=" + slewfast + "\n"
-    )
-    drvxOutput += (
-        "MOD" + slot_number + "\SLOWSLEWRATE" + drv_chan + "=" + slewslow + "\n"
-    )
-    if label != "":
-        drvxOutput += "MOD" + slot_number + "\LABEL" + drv_chan + "=" + label + "\n"
+    drvxOutput += f"MOD{slot_number}\\ENABLE{drv_chan}={enable}\n"
+    drvxOutput += f"MOD{slot_number}\\FASTSLEWRATE{drv_chan}={slewfast}\n"
+    drvxOutput += f"MOD{slot_number}\\SLOWSLEWRATE{drv_chan}={slewslow}\n"
+
+    if label:
+        drvxOutput += f"MOD{slot_number}\\LABEL{drv_chan}={label}\n"
 
 
 # -----------------------------------------------------------------------------
@@ -2586,13 +2566,13 @@ def parse(source_text):
 # Parse all the input of the .conf file, making sure it meets criteria,
 # but act only on the INCLUDE_FILE tokens.
 # -----------------------------------------------------------------------------
-def make_include(source_text):
+def make_include(sourceText):
     """
     produces the #include directives from the .conf file
     """
     global token
 
-    Lexer.initialize(source_text)
+    Lexer.initialize(sourceText)
 
     get_token()
     while True:
@@ -2601,31 +2581,31 @@ def make_include(source_text):
         elif found("INCLUDE_FILE"):
             consume("INCLUDE_FILE")
             consume("=")
-            print("#include " + token.cargo.strip('"'))
+            print( "#include " + token.cargo.strip("\"")   )
             consume(STRING)
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
             consume("=")
             if found(STRING):
-                module_file = token.cargo
+                moduleFile = token.cargo
             consume(STRING)
         elif found("WAVEFORM_FILE"):
             consume("WAVEFORM_FILE")
             consume("=")
             if found(STRING):
-                waveform_file = token.cargo
+                waveformFile = token.cargo
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
             consume("=")
             if found(STRING):
-                signal_file = token.cargo
+                signalFile = token.cargo
             consume(STRING)
         elif found("SEQUENCE_FILE"):
             consume("SEQUENCE_FILE")
             consume("=")
             if found(STRING):
-                sequence_file = token.cargo
+                sequenceFile = token.cargo
             consume(STRING)
         elif found("CDS_FILE"):
             consume("CDS_FILE")
@@ -2637,9 +2617,7 @@ def make_include(source_text):
             consume("=")
             consume(STRING)
         else:
-            error(
-                "(wdlParser.py::make_include) unrecognized keyword: " + dq(token.cargo)
-            )
+            error("(wdlParser.py::make_include) unrecognized keyword: " + dq(token.cargo))
 
 
 # -----------------------------------------------------------------------------
@@ -2650,19 +2628,19 @@ def make_include(source_text):
 #
 # Parse all the input of the .conf file, making sure it meets criteria.
 # -----------------------------------------------------------------------------
-def make_include_sequence(source_text):
+def make_include_sequence(sourceText):
     """
     produces output for assembling the sequence files from .conf
     """
     global token
 
-    module_file = ""
-    waveform_file = []
-    signal_file = ""
-    sequence_file = ""
-    include_files = []
+    moduleFile   = ""
+    waveformFile = []
+    signalFile   = ""
+    sequenceFile = ""
+    includeFiles = []
 
-    Lexer.initialize(source_text)
+    Lexer.initialize(sourceText)
 
     get_token()
     while True:
@@ -2671,31 +2649,31 @@ def make_include_sequence(source_text):
         elif found("INCLUDE_FILE"):
             consume("INCLUDE_FILE")
             consume("=")
-            include_files.append(token.cargo)
+            includeFiles.append( token.cargo )
             consume(STRING)
         elif found("MODULE_FILE"):
             consume("MODULE_FILE")
             consume("=")
             if found(STRING):
-                module_file = token.cargo
+                moduleFile = token.cargo
             consume(STRING)
         elif found("WAVEFORM_FILE"):
             consume("WAVEFORM_FILE")
             consume("=")
             if found(STRING):
-                waveform_file.append(token.cargo)
+                waveformFile.append( token.cargo )
             consume(STRING)
         elif found("SIGNAL_FILE"):
             consume("SIGNAL_FILE")
             consume("=")
             if found(STRING):
-                signal_file = token.cargo
+                signalFile = token.cargo
             consume(STRING)
         elif found("SEQUENCE_FILE"):
             consume("SEQUENCE_FILE")
             consume("=")
             if found(STRING):
-                sequence_file = token.cargo
+                sequenceFile = token.cargo
             consume(STRING)
         elif found("CDS_FILE"):
             consume("CDS_FILE")
@@ -2707,34 +2685,30 @@ def make_include_sequence(source_text):
             consume("=")
             consume(STRING)
         else:
-            error(
-                "(wdlParser.py::make_include_sequence) unrecognized keyword: "
-                + dq(token.cargo)
-            )
+            error("(wdlParser.py::make_include_sequence) unrecognized keyword: " + dq(token.cargo))
 
-    if len(waveform_file) == 0:
+    if len(waveformFile) == 0:
         raise ParserError("missing WAVEFORM_FILE")
 
-    if len(signal_file) == 0:
+    if len(signalFile) == 0:
         raise ParserError("missing SIGNAL_FILE")
 
-    if len(sequence_file) == 0:
+    if len(sequenceFile) == 0:
         raise ParserError("missing SEQUENCE_FILE")
 
-    # PHM requires these two to appear in the output
-    print("MODULE_FILE " + module_file)
-    print("SIGNAL_FILE " + signal_file)
+    print( "MODULE_FILE " + moduleFile )  # PHM requires this to appear in the output
+    print( "SIGNAL_FILE " + signalFile )  # PHM requires this to appear in the output
 
     # global include files come first, since they can have defines/conditionals
     # that might affect things downstream
-    for incf in include_files:
-        print("#include " + incf)
+    for incf in includeFiles:
+        print( "#include " + incf )
 
     # signal files must come before waveforms and sequences, since the waveforms
     # will use #defines from the signal file
-    print("#include " + signal_file)
+    print( "#include " + signalFile   )
 
-    for wf in waveform_file:
-        print("#include " + wf)
+    for wf in waveformFile:
+        print( "#include " + wf )
 
-    print("#include " + sequence_file)
+    print( "#include " + sequenceFile )

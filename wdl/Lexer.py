@@ -47,8 +47,7 @@ def dq(s):
     """
     enclose string s in double quotes
     """
-    return '"%s"' % s
-
+    return f'"{s}"'
 
 # -------------------------------------------------------------------
 #
