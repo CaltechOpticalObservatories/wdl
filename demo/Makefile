@@ -20,13 +20,13 @@ ACFPATH   = ./
 
 PLOT      = False # True   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
-SEQPARSER = $(WDLPATH)/seqParserDriver.py
-INCPARSER = $(WDLPATH)/incParserDriver.py
-WDLPARSER = $(WDLPATH)/wdlParserDriver.py
-MODPARSER = $(WDLPATH)/modParserDriver.py
-WAVGEN    = $(WDLPATH)/wavgenDriver.py
-MODEGEN   = $(WDLPATH)/modegenDriver.py
-I2A       = $(WDLPATH)/ini2acf.pl
+SEQPARSER = $(WDLPATH)/wdl/seqParserDriver.py
+INCPARSER = $(WDLPATH)/wdl/incParserDriver.py
+WDLPARSER = $(WDLPATH)/wdl/wdlParserDriver.py
+MODPARSER = $(WDLPATH)/wdl/modParserDriver.py
+WAVGEN    = $(WDLPATH)/wdl/wavgenDriver.py
+MODEGEN   = $(WDLPATH)/wdl/modegenDriver.py
+I2A       = $(WDLPATH)/wdl/ini2acf.pl
 INCL      = -I$(CURDIR)
 
 # Global variable to store the filename
