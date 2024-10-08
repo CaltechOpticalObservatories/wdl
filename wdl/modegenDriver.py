@@ -34,12 +34,10 @@
 # import fileinput
 import matplotlib.pyplot as plt
 import wavgen
+import modegen
 import sys
 
 sys.dont_write_bytecode = True
-
-
-# sys.tracebacklimit = 0
 
 
 # -----------------------------------------------------------------------------
@@ -84,7 +82,7 @@ if __name__ == "__main__":
     # don't count the zeroeth arg, as it is my name
     if len(sys.argv[1:]) == 2:
         # main(sys.argv[1], sys.argv[2])
-        wavgen.Modegen(sys.argv[1], sys.argv[2]).write("a")
+        modegen.Modegen(sys.argv[1], sys.argv[2]).write("a")
         sys.exit(0)
     else:
         print(

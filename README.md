@@ -26,7 +26,7 @@ The following Python packages are required:
    ```bash
    python -m venv venv 
    ```
-   
+
 2. **Activate the Virtual Environment**:
    Once you have created your virtual environment, you need to activate it to start using it. Activation sets up your shell to use the Python interpreter and libraries from the virtual environment instead of the global Python environment.  
    
