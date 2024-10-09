@@ -48,7 +48,7 @@ class Modegen:
         with open(self.modefile) as FILE:
             for line in FILE:
                 # look for headers
-                match = re.search("^\[(.*?)\]", line)
+                match = re.search(r"^\[(.*?)\]", line)
                 if match:
                     # initialize the KVpair entry
                     self.modeKVpair.update({match.group(1): {}})
@@ -57,7 +57,7 @@ class Modegen:
                     thismode = match.group(1)
                 else:
                     # look for key=value pairs, matching the LAST = on the line
-                    match = re.search("^(.+:.+)\s*=\s*(.+?)\n", line)
+                    match = re.search(r"^(.+:.+)\s*=\s*(.+?)\n", line)
                     if match:
                         # union will hold one of every key specified
                         self.union.update({match.group(1): None})
@@ -67,19 +67,19 @@ class Modegen:
                         )
                         # if the key is a non-empty TAPLINE setting,
                         # then increment self.taplines[thismode]
-                        if re.search('ACF:TAPLINE\d+="[\w,]+"', line):
+                        if re.search(r'ACF:TAPLINE\d+="[\w,]+"', line):
                             if thismode not in self.taplines:
                                 self.taplines.update({thismode: 1})
                             else:
                                 self.taplines[thismode] += 1
                         continue
                     # look for non key=value statements
-                    match = re.search("^(.+:[^=]+)\n", line)
+                    match = re.search(r"^(.+:[^=]+)\n", line)
                     if match:
                         self.modelist[thismode].append(match.group(1))
                         continue
                     # both matches failed - issue warning
-                    if re.search("[^\w]+", line[:-1]):
+                    if re.search(r"[^\w]+", line[:-1]):
                         print(
                             "WARNING: '%s' in %s not recognized as a "
                             "mode-setting statement" % (line[:-1], thismode)
@@ -98,15 +98,15 @@ class Modegen:
         with open(self.acffile) as ACF:
             for line in ACF:
                 # skip [MODE_X] statments
-                if re.search("^\w+:\w", line):
+                if re.search(r"^\w+:\w", line):
                     continue
                 # look for key=value pairs in ACF
-                match = re.search("^(.+)=(.+?)\n", line)
+                match = re.search(r"^(.+)=(.+?)\n", line)
                 if match:
                     ACFKEY = "ACF:" + match.group(1)
                     ACFVAL = match.group(2)
                     temp = ACFKEY.split('"')
-                    if re.search("PARAMETER", temp[0]):
+                    if re.search(r"PARAMETER", temp[0]):
                         ACFKEY = "ACF:" + temp[-1]
 
                     if ACFKEY in allkeys:
@@ -115,10 +115,10 @@ class Modegen:
                         # Parse the '%d' that typically shows up
                         # in 'ACF:PARAMETER'-keys
                         for unionkey in allkeys:  # do the reverse check
-                            if re.search("%d", unionkey):
+                            if re.search(r"%d", unionkey):
                                 # make regex from printf %d ONLY IF
                                 # it appears in the key
-                                unionregex = re.sub("%d", "(\d+)", unionkey)
+                                unionregex = re.sub(r"%d", r"(\d+)", unionkey)
                                 kmatch = re.search(unionregex, ACFKEY)
                                 if kmatch:
                                     try:
@@ -138,7 +138,7 @@ class Modegen:
         TheDefaultMode = self.modeKVpair["MODE_DEFAULT"]
         baddefault = False  # flag for bad default setting warning
         for key in TheDefaultMode:
-            match = re.search("^ACF:", key)
+            match = re.search(r"^ACF:", key)
             if not match:  # any key that isn't an ACF key
                 self.union[key] = TheDefaultMode[key]
             else:
@@ -155,13 +155,13 @@ class Modegen:
         for mode in self.modeKVpair:
             for key in self.modeKVpair[mode]:
                 # search the "ACF:" keys for "%d="
-                match = re.search("^ACF:.+?%d=(.+)", key)
+                match = re.search(r"^ACF:.+?%d=(.+)", key)
                 # NOTE: the above regex won't work for keys that do not
                 # have a "=" in them, ie, this will not work for LINE
                 # or MOD ACF statements, as they would not be unique
                 if match:
                     # now figure out which key in self.union this corresponds to
-                    keyregex = re.sub("%d", "(\d+)", key)
+                    keyregex = re.sub(r"%d", r"(\d+)", key)
                     for ukey in self.union:
                         kmatch = re.search(keyregex, ukey)
                         if kmatch:
