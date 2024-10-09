@@ -375,7 +375,7 @@ class TimingSegment(object):
                 EOL = True
                 if this_sub_call[0:3].upper() == "IF ":
                     # get the first word after IF...
-                    regexmatch = re.search("\w+\s+!?([\w]+)", this_sub_call)
+                    regexmatch = re.search(r"\w+\s+!?([\w]+)", this_sub_call)
                     this_param = regexmatch.group(1)
                     try:  # demo if this_param is an integer
                         int(this_param)
@@ -516,9 +516,9 @@ class TimingSegment(object):
             if len(seq_indx):
                 this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 match = re.search(
-                    "(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?"
-                    + "((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?"
-                    + "(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?",
+                    r"(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?"
+                    + r"((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?"
+                    + r"(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?",
                     this_sub_call,
                 )
                 #  REGEX labels:
