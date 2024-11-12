@@ -191,6 +191,7 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
                                     ]
                                     + chan
                                 )
+                                print("self.__chan_per_board__[board_type]:", __chan_per_board__[board_type])
                                 # uncomment below to debug waveform read-in
                                 # print '%s[%d]
                                 # <-- (%d,%g)'%(board_type,TSchan,time,value)

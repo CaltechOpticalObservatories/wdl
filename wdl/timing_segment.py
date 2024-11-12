@@ -49,6 +49,9 @@ class TimingSegment(object):
             "hvbd": 30,
             "lvbd": 38,
         }  # 8 DIO's + 30 bias (like hvbd)
+        self.__boardTypes__ = (
+            "drvr", "lvds", "htr", "xvbd", "adc", "back", "hvbd", "lvbd"
+        )
         CatalogNames = [obj.name for obj in self.catalog]
         NotifyTSTypeChange = False
         if TStype not in __TStypes__:
@@ -678,8 +681,6 @@ class TimingSegment(object):
     def __get_slot_chan_from_level_index__(self, levelColumnIndex):
         """given the column index in the level subset (even columns) of the
         UniqueStateArr, return the slot and channel number"""
-        global slot
-        global __boardTypes__
 
         signalPartitions = np.cumsum(
             [
@@ -695,7 +696,7 @@ class TimingSegment(object):
             ]
         )
         bn = np.where(levelColumnIndex >= signalPartitions)[-1]
-        boardname = __boardTypes__[bn]
+        boardname = self.__boardTypes__[bn]
         rawindex = levelColumnIndex - signalPartitions[bn]
         thisChan = np.mod(rawindex, self.__chan_per_board__[boardname])
         thisSlot = self.slot[boardname][rawindex // self.__chan_per_board__[boardname]]
