@@ -1,0 +1,143 @@
+[PARAMETER#]
+Expose=0
+exptime=0
+test_mode=0
+longexposure=0
+[LINE#]
+Main: # sequence
+STATE000; if Expose CALL GrabFrame    #      0 10656256011
+STATE000; if test_mode CALL TestPhase #      1 10656301812
+STATE000; GOTO Main                   #      2 10656301813
+TestMode: # sequence
+STATE000; CALL wFrame                 #      0        2
+STATE000; CALL wLine                  #      1        4
+STATE000; CALL wPixel                 #      2        7
+STATE000; CALL TestPhase(100)         #      3  4580008
+STATE000; RETURN TestMode             #      4  4580009
+TestRG: # sequence
+STATE000; CALL OnlyRG_Hi              #      0      301
+STATE000; CALL Sec(5)                 #      1 500010312
+STATE000; CALL OnlyRG_Lo              #      2 500010613
+STATE000; CALL Sec(5)                 #      3 1000020624
+STATE000; RETURN TestRG               #      4 1000020625
+TestSW: # sequence
+STATE000; CALL OnlySW_Hi              #      0      301
+STATE000; CALL Sec(5)                 #      1 500010312
+STATE000; CALL TestRG                 #      2 1500030938
+STATE000; CALL OnlySW_Lo              #      3 1500031239
+STATE000; CALL Sec(5)                 #      4 2000041250
+STATE000; CALL TestRG                 #      5 3000061876
+STATE000; RETURN TestSW               #      6 3000061877
+GrabFrame: # sequence
+STATE000; Expose--                    #      1        2
+STATE000; CALL ParallelShiftMPP(4096) #      2 983040003
+STATE000; CALL Sec(exptime)           #      3 1083042006
+STATE000; CALL wFrame                 #      4 1083042008
+STATE000; CALL GrabLine(1000)         #      5 10656256009
+STATE000; RETURN GrabFrame            #      6 10656256010
+GrabLine: # sequence
+STATE000; CALL wLine                  #      0        2
+STATE000; CALL ClampAC                #      1     1303
+STATE000; CALL ParallelShiftMPP       #      2   241304
+STATE000; CALL GrabPixel(2118)        #      3  9573213
+STATE000; RETURN GrabLine             #      4  9573214
+GrabPixel: # sequence
+STATE000; CALL wPixel                 #      0        3
+STATE000; CALL SerialShiftPixelB      #      1     4304
+STATE000; CALL wDelay1us              #      2     4405
+STATE000; RETURN GrabPixel            #      3     4406
+MilliSec: # sequence
+STATE000; CALL wDelay1ms              #      0   100001
+STATE000; RETURN MilliSec             #      1   100002
+Sec: # sequence
+STATE000; CALL MilliSec(1000)         #      0 100002001
+STATE000; RETURN Sec                  #      1 100002002
+RawPixel: # waveform
+STATE000; STATE000(998)               #    998      999
+STATE000; RETURN RawPixel             #    999     1000
+wDelay1us: # waveform
+STATE000; STATE000(98)                #     98       99
+STATE000; RETURN wDelay1us            #     99      100
+wDelay1ms: # waveform
+STATE000; STATE000(99998)             #  99998    99999
+STATE000; RETURN wDelay1ms            #  99999   100000
+wSampleDelay: # waveform
+STATE000; STATE000(998)               #    998      999
+STATE000; RETURN wSampleDelay         #    999     1000
+SerialShiftPixelA: # waveform
+STATE001; STATE000(299)               #    299      300
+STATE002; STATE000(299)               #    599      600
+STATE003; STATE000(299)               #    899      900
+STATE004; STATE000(999)               #   1899     1900
+STATE005; STATE000(299)               #   2199     2200
+STATE006; STATE000(299)               #   2499     2500
+STATE007; STATE000(998)               #   3498     3499
+STATE000; RETURN SerialShiftPixelA    #   3499     3500
+SerialShiftPixelB: # waveform
+STATE008; STATE000(299)               #    299      300
+STATE008; STATE000(299)               #    599      600
+STATE009; STATE000(299)               #    899      900
+STATE010; STATE000(299)               #   1199     1200
+STATE002; STATE000(299)               #   1499     1500
+STATE011; STATE000(299)               #   1799     1800
+STATE012; STATE000(299)               #   2099     2100
+STATE006; STATE000(299)               #   2399     2400
+STATE004; STATE000(299)               #   2699     2700
+STATE013; STATE000(999)               #   3699     3700
+STATE005; STATE000(299)               #   3999     4000
+STATE014; STATE000(298)               #   4298     4299
+STATE000; RETURN SerialShiftPixelB    #   4299     4300
+OnlyRG_Hi: # waveform
+STATE008; STATE000(298)               #    298      299
+STATE000; RETURN OnlyRG_Hi            #    299      300
+OnlyRG_Lo: # waveform
+STATE009; STATE000(298)               #    298      299
+STATE000; RETURN OnlyRG_Lo            #    299      300
+OnlySW_Hi: # waveform
+STATE015; STATE000(298)               #    298      299
+STATE000; RETURN OnlySW_Hi            #    299      300
+OnlySW_Lo: # waveform
+STATE014; STATE000(298)               #    298      299
+STATE000; RETURN OnlySW_Lo            #    299      300
+ParallelShiftMPP: # waveform
+STATE016; STATE000(39999)             #  39999    40000
+STATE017; STATE000(39999)             #  79999    80000
+STATE018; STATE000(39999)             # 119999   120000
+STATE019; STATE000(39999)             # 159999   160000
+STATE020; STATE000(39999)             # 199999   200000
+STATE021; STATE000(39998)             # 239998   239999
+STATE000; RETURN ParallelShiftMPP     # 239999   240000
+ClampAC: # waveform
+STATE013; STATE000(999)               #    999     1000
+STATE005; STATE000(298)               #   1298     1299
+STATE000; RETURN ClampAC              #   1299     1300
+TestPhase: # waveform
+STATE008; STATE000(299)               #    299      300
+STATE009; STATE000(299)               #    599      600
+STATE006; STATE000(299)               #    899      900
+STATE002; STATE000(299)               #   1199     1200
+STATE011; STATE000(299)               #   1499     1500
+STATE004; STATE000(299)               #   1799     1800
+STATE022; STATE000(299)               #   2099     2100
+STATE012; STATE000(299)               #   2399     2400
+STATE015; STATE000(299)               #   2699     2700
+STATE014; STATE000(299)               #   2999     3000
+STATE019; STATE000(299)               #   3299     3300
+STATE021; STATE000(299)               #   3599     3600
+STATE016; STATE000(299)               #   3899     3900
+STATE018; STATE000(299)               #   4199     4200
+STATE017; STATE000(299)               #   4499     4500
+STATE020; STATE000(299)               #   4799     4800
+STATE013; STATE000(999)               #   5799     5800
+STATE005; STATE000(39998)             #  45798    45799
+STATE000; RETURN TestPhase            #  45799    45800
+RGHi: # waveform
+STATE008; STATE000(298)               #    298      299
+STATE000; RETURN RGHi                 #    299      300
+wFrame: # waveform
+STATE023; RETURN wFrame               #      0        1
+wLine: # waveform
+STATE024; RETURN wLine                #      0        1
+wPixel: # waveform
+STATE025;                             #      0        1
+STATE026; RETURN wPixel               #      1        2

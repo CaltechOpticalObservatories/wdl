@@ -18,7 +18,7 @@ WDLPATH   = ..
 # output for *.acf file
 ACFPATH   = ./
 
-PLOT      = False # True   # show waveform plots by default, True | False
+PLOT      = True # True   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
 SEQPARSER = $(WDLPATH)/wdl/seqParserDriver.py
 INCPARSER = $(WDLPATH)/wdl/incParserDriver.py
