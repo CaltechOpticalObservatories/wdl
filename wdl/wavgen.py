@@ -286,40 +286,6 @@ def __loadMod__(ModFile):  # subroutine of loadWDL()
                     )
     return
 
-
-def __loadSignals__(__SignalFile__):  # subroutine of loadWDL()
-    """load the signals file"""
-    global __boardTypes__
-    # global __SignalbyName__
-    # global __SignalbyIndx__
-
-    if not os.path.isfile(__SignalFile__):
-        print("Signal file specified does not exist (%s)..." % __SignalFile__)
-        return False
-    with open(__SignalFile__, "r") as f:
-        for line in f:
-            # look for signal file
-            match = re.search("^#define (\w+)\s+(\d+)\s+:\s+(\d+)", line)
-            if match is not None:
-                signame = match.group(1)
-                sigslot = int(match.group(2))
-                sigchan = int(match.group(3)) - 1
-                if sigslot in slot["drvr"]:
-                    sigchan *= 2
-                LVLindx = __get_level_index_from_chan_slot__(sigslot, sigchan)
-                if LVLindx >= 0:
-                    __SignalByIndx__.update({LVLindx: signame})
-                    __SignalByName__.update({signame: LVLindx})
-                    if sigslot in slot["drvr"]:
-                        FASTindx = LVLindx + 1
-                        fastname = signame + "_fast"
-                        __SignalByIndx__.update({FASTindx: fastname})
-                        __SignalByName__.update({fastname: FASTindx})
-                else:
-                    print("*** Error in signal file %s ***" % __SignalFile__)
-    return
-
-
 # subroutine of __loadSignals__()
 def __get_level_index_from_chan_slot__(slotnum, channel):
     """given slot and channel,
@@ -363,14 +329,46 @@ def __get_level_index_from_chan_slot__(slotnum, channel):
             # 4. add the channel offset
             return indx_base + channel
 
+def __loadSignals__(__SignalFile__):  # subroutine of loadWDL()
+    """load the signals file"""
+    global __boardTypes__
+    # global __SignalbyName__
+    # global __SignalbyIndx__
+
+    if not os.path.isfile(__SignalFile__):
+        print("Signal file specified does not exist (%s)..." % __SignalFile__)
+        return False
+    with open(__SignalFile__, "r") as f:
+        for line in f:
+            # look for signal file
+            match = re.search("^#define (\w+)\s+(\d+)\s+:\s+(\d+)", line)
+            if match is not None:
+                signame = match.group(1)
+                sigslot = int(match.group(2))
+                sigchan = int(match.group(3)) - 1
+                if sigslot in slot["drvr"]:
+                    sigchan *= 2
+                LVLindx = __get_level_index_from_chan_slot__(sigslot, sigchan)
+                if LVLindx >= 0:
+                    __SignalByIndx__.update({LVLindx: signame})
+                    __SignalByName__.update({signame: LVLindx})
+                    if sigslot in slot["drvr"]:
+                        FASTindx = LVLindx + 1
+                        fastname = signame + "_fast"
+                        __SignalByIndx__.update({FASTindx: fastname})
+                        __SignalByName__.update({fastname: FASTindx})
+                else:
+                    print("*** Error in signal file %s ***" % __SignalFile__)
+    return
 
 # only used in TimingSegment.plot()
 def __get_slot_chan_from_level_index__(levelColumnIndex):
-    """given the column index in the level subset (even columns) of the
-    UniqueStateArr, return the slot and channel number"""
+    """Given the column index in the level subset (even columns) of the
+    UniqueStateArr, return the slot and channel number."""
     global slot
     global __boardTypes__
 
+    # Cumulative sum of signal partitions based on board types
     signalPartitions = np.cumsum(
         [
             0,
@@ -384,11 +382,21 @@ def __get_slot_chan_from_level_index__(levelColumnIndex):
             __chan_per_board__["lvbd"] * len(slot["lvbd"]),
         ]
     )
-    bn = np.where(levelColumnIndex >= signalPartitions)[-1]
+
+    # Find the board index (bn) corresponding to the given levelColumnIndex
+    # We need to ensure bn is a scalar, so use [-1] to get the last valid index
+    bn = np.where(levelColumnIndex >= signalPartitions)[-1][-1]
+
+    # Get the board name using the board index (bn)
     boardname = __boardTypes__[bn]
+
+    # Compute the raw index within the board partition
     rawindex = levelColumnIndex - signalPartitions[bn]
+
+    # Calculate the channel and slot within the board
     thisChan = np.mod(rawindex, __chan_per_board__[boardname])
     thisSlot = slot[boardname][rawindex // __chan_per_board__[boardname]]
+
     return thisSlot, thisChan, boardname
 
 
