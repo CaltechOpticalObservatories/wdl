@@ -1164,7 +1164,7 @@ def state(outfile=None):
             # Do like the hvbd processing, but on positive bits (first half)
             # and then the negative bits (second half)
             # really only want the first half of all xvbd states
-            n_xvbd_pos_X_2 = 2 * __chan_per_board__["xvbd"] / 2
+            n_xvbd_pos_X_2 = 2 * __chan_per_board__["xvbd"] // 2
             pxvbdLevel = UniqueStateArr[ii, offset : offset + n_xvbd_pos_X_2 : 2]
             pxvbdKeep = np.invert(
                 UniqueStateArr[ii, offset + 1 : offset + n_xvbd_pos_X_2 : 2].astype(
@@ -1193,9 +1193,9 @@ def state(outfile=None):
             # Do just like hvbd processing, but now on the negative bits
             # (second half)
             # skip over the positive xvbd voltages
-            offset += 2 * __chan_per_board__["xvbd"] / 2
+            offset += 2 * __chan_per_board__["xvbd"] // 2
             # really only want the second half of all xvbd states
-            n_xvbd_neg_X_2 = 2 * __chan_per_board__["xvbd"] / 2
+            n_xvbd_neg_X_2 = 2 * __chan_per_board__["xvbd"] // 2
             nxvbdLevel = UniqueStateArr[ii, offset : offset + n_xvbd_neg_X_2 : 2]
             nxvbdKeep = np.invert(
                 UniqueStateArr[ii, offset + 1 : offset + n_xvbd_neg_X_2 : 2].astype(
@@ -1221,7 +1221,7 @@ def state(outfile=None):
             #            statestring = statestring[:-1] + '"'
             ofile.write(statestring + '"\n')
             # skip over the last half of the xvbd channels
-            offset += 2 * __chan_per_board__["xvbd"] / 2
+            offset += 2 * __chan_per_board__["xvbd"] // 2
         for adcslot in slot["adc"]:
             ofile.write(prefix + 'MOD%d="' % adcslot)
             statestring = ""
