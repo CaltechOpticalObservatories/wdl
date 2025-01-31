@@ -72,7 +72,9 @@ generate_wdl:
 	@test -f $(MODFILE) || { echo "$(MODFILE) does not exist"; exit 1; }
 	$(call debug_message, "Found MODULE_FILE: $(MODFILE)")
 
-	@cat $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) | $(MODPARSER) -
+	@cat $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) | $(MODPARSER)
+	@test -f .modules && mv .modules $(F_TMP).modules || echo "No .modules file created"
+	@test -f .system && mv .system $(F_TMP).system || echo "No .system file created"
 	$(call debug_message, "Processed MODULE_FILE: $(MODFILE)")
 
 	@$(WAVGEN) $(F_TMP) $(PLOT) || { echo "Waveform generation failed"; exit 1; }
