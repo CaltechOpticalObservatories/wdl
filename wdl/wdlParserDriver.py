@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (C) <2018> California Institute of Technology
 # Software written by: <Dave Hale and Peter Mao>
@@ -19,7 +19,7 @@
 #
 #     Report any bugs or suggested improvements to:
 #
-#     David Hale <dhale@caltech.edu> or
+#     David Hale plo<dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
 import fileinput

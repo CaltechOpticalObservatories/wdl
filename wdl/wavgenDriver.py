@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # @file     wavgenDriver.py
 # @brief    driver script for PHM.wavgen

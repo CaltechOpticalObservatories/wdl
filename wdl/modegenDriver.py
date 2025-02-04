@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # @file     modegenDriver.py
 # @brief    driver script for PHM's Modegen

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (C) <2018> California Institute of Technology
 # Software written by: <Dave Hale and Peter Mao>
