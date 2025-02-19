@@ -1304,6 +1304,15 @@ def pbias(slot_number):
         if int(bias_chan) < 1 or int(bias_chan) > 4:
             error("PBIAS channel " + dq(bias_chan) + " outside range {1:4}")
     consume(NUMBER)
+
+    if found(NUMBER):
+        enable = token.cargo
+        if int(enable) < 0 or int(enable) > 1:
+            error("PBIAS enable " + dq(enable) + " must be 0 or 1")
+        consume(NUMBER)
+    else:
+        enable = "1"
+
     cmd = None
     order = None
     consume("[")
@@ -1333,7 +1342,7 @@ def pbias(slot_number):
 
     pbiasOutput += "MOD" + slot_number + "\XVP_V" + bias_chan + "=" + cmd + "\n"
     pbiasOutput += "MOD" + slot_number + "\XVP_ORDER" + bias_chan + "=" + order + "\n"
-    pbiasOutput += "MOD" + slot_number + "\XVP_ENABLE" + bias_chan + "=1\n"
+    pbiasOutput += "MOD" + slot_number + "\XVP_ENABLE" + bias_chan + "=" + enable + "\n"
     if label != "":
         pbiasOutput += (
             "MOD" + slot_number + "\XVP_LABEL" + bias_chan + "=" + label + "\n"
@@ -1364,6 +1373,15 @@ def nbias(slot_number):
         if int(bias_chan) < 1 or int(bias_chan) > 4:
             error("NBIAS channel " + dq(bias_chan) + " outside range {1:4}")
     consume(NUMBER)
+
+    if found(NUMBER):
+        enable = token.cargo
+        if int(enable) < 0 or int(enable) > 1:
+            error("NBIAS enable " + dq(enable) + " must be 0 or 1")
+        consume(NUMBER)
+    else:
+        enable = "1"
+
     order = None
     cmd = None
     consume("[")
@@ -1395,7 +1413,7 @@ def nbias(slot_number):
 
     nbiasOutput += "MOD" + slot_number + "\XVN_V" + bias_chan + "=-" + cmd + "\n"
     nbiasOutput += "MOD" + slot_number + "\XVN_ORDER" + bias_chan + "=" + order + "\n"
-    nbiasOutput += "MOD" + slot_number + "\XVN_ENABLE" + bias_chan + "=1\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_ENABLE" + bias_chan + "=" + enable + "\n"
     if label != "":
         nbiasOutput += (
             "MOD" + slot_number + "\XVN_LABEL" + bias_chan + "=" + label + "\n"
