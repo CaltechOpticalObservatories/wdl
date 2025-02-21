@@ -2124,6 +2124,7 @@ def name_label():
 def generic_sequence(*sequenceName):
     """ """
     global token
+    has_exit = False
     # sequence/waveform must start with an open (left) curly brace, {
     consume("{")
     output_text = ""
@@ -2160,6 +2161,7 @@ def generic_sequence(*sequenceName):
                     consume(IDENTIFIER)
                     consume("(")
                     consume(")")
+                    has_exit = True
                     break
             # If token is in the list of subroutines then it must be CALLed
             # and must be followed by parentheses and an optional number
@@ -2187,6 +2189,7 @@ def generic_sequence(*sequenceName):
                 else:
                     seq_return_to = sequenceName[0]
                 output_text += "RETURN " + seq_return_to + "\n"
+                has_exit = True
                 break
             else:
                 sequence_line += token.cargo
@@ -2205,6 +2208,10 @@ def generic_sequence(*sequenceName):
         # but could happen during testing
         if len(sequence_line) > 0:
             output_text += sequence_line + "\n"
+    # do we have an exit from this sequence?
+    if not has_exit:
+        error("(wdlParser.py::generic_sequence) no exit from sequence "
+              + sequenceName[0])
     # sequence/waveform must end with a close (right) curly brace, }
     consume("}")
     return output_text
