@@ -317,12 +317,15 @@ def dio(slot_number):
                 + direction
                 + "\n"
             )
+            if label != "":
+                dioOutput += "MOD" + slot_number + "\DIO_LABEL" + dio_chan + "=" + label + "\n"
     elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
         dioOutput += (
             "MOD" + slot_number + "\DIO_DIR" + dio_chan + "=" + direction + "\n"
         )
-    if label != "":
-        dioOutput += "MOD" + slot_number + "\DIO_LABEL" + dio_chan + "=" + label + "\n"
+        if label != "" and module_name.upper() == "LVDS":
+            dioOutput += "MOD" + slot_number + "\LVDS_LABEL" + dio_chan + "=" + label + "\n"
+
 
 
 # -----------------------------------------------------------------------------
@@ -1290,10 +1293,13 @@ def pbias(slot_number):
     """
     These are the rules for the PBIAS keyword, encountered while parsing
     the xvbias command for the modules (.mod) file. Required format is
-    PBIAS # # "label";
+    PBIAS n b [#,#] "label";
 
+    where n is channel number
+    where b is 0 - disabled, 1 - enabled
     where # is any number
-    format of numbers is
+        format is [source, direction]
+    where "label" is a string
     """
     global token
     global pbiasOutput
@@ -1359,10 +1365,13 @@ def nbias(slot_number):
     """
     These are the rules for the NBIAS keyword, encountered while parsing
     the xvbias command for the modules (.mod) file. Required format is
-    NBIAS n [#,#] "label";
+    NBIAS n b [#,#] "label";
 
+    where n is channel number
+    where b is 0 - disabled, 1 - enabled
     where # is any number
-    format of numbers is
+        format is [source, direction]
+    where "label" is a string
     """
     global token
     global nbiasOutput
@@ -2115,6 +2124,7 @@ def name_label():
 def generic_sequence(*sequenceName):
     """ """
     global token
+    has_exit = False
     # sequence/waveform must start with an open (left) curly brace, {
     consume("{")
     output_text = ""
@@ -2151,6 +2161,7 @@ def generic_sequence(*sequenceName):
                     consume(IDENTIFIER)
                     consume("(")
                     consume(")")
+                    has_exit = True
                     break
             # If token is in the list of subroutines then it must be CALLed
             # and must be followed by parentheses and an optional number
@@ -2178,6 +2189,7 @@ def generic_sequence(*sequenceName):
                 else:
                     seq_return_to = sequenceName[0]
                 output_text += "RETURN " + seq_return_to + "\n"
+                has_exit = True
                 break
             else:
                 sequence_line += token.cargo
@@ -2196,6 +2208,10 @@ def generic_sequence(*sequenceName):
         # but could happen during testing
         if len(sequence_line) > 0:
             output_text += sequence_line + "\n"
+    # do we have an exit from this sequence?
+    if not has_exit:
+        error("(wdlParser.py::generic_sequence) no exit from sequence "
+              + sequenceName[0])
     # sequence/waveform must end with a close (right) curly brace, }
     consume("}")
     return output_text
