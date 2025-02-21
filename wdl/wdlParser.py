@@ -317,12 +317,15 @@ def dio(slot_number):
                 + direction
                 + "\n"
             )
+            if label != "":
+                dioOutput += "MOD" + slot_number + "\DIO_LABEL" + dio_chan + "=" + label + "\n"
     elif module_name.upper() == "HS" or module_name.upper() == "LVDS":
         dioOutput += (
             "MOD" + slot_number + "\DIO_DIR" + dio_chan + "=" + direction + "\n"
         )
-    if label != "":
-        dioOutput += "MOD" + slot_number + "\DIO_LABEL" + dio_chan + "=" + label + "\n"
+        if label != "" and module_name.upper() == "LVDS":
+            dioOutput += "MOD" + slot_number + "\LVDS_LABEL" + dio_chan + "=" + label + "\n"
+
 
 
 # -----------------------------------------------------------------------------
@@ -1290,10 +1293,13 @@ def pbias(slot_number):
     """
     These are the rules for the PBIAS keyword, encountered while parsing
     the xvbias command for the modules (.mod) file. Required format is
-    PBIAS # # "label";
+    PBIAS n b [#,#] "label";
 
+    where n is channel number
+    where b is 0 - disabled, 1 - enabled
     where # is any number
-    format of numbers is
+        format is [source, direction]
+    where "label" is a string
     """
     global token
     global pbiasOutput
@@ -1359,10 +1365,13 @@ def nbias(slot_number):
     """
     These are the rules for the NBIAS keyword, encountered while parsing
     the xvbias command for the modules (.mod) file. Required format is
-    NBIAS n [#,#] "label";
+    NBIAS n b [#,#] "label";
 
+    where n is channel number
+    where b is 0 - disabled, 1 - enabled
     where # is any number
-    format of numbers is
+        format is [source, direction]
+    where "label" is a string
     """
     global token
     global nbiasOutput
