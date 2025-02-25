@@ -1674,7 +1674,9 @@ def slot():
             consume("NBIAS")
             nbias(slot_number)
         else:
-            print("here")
+            if found(STRING):
+                error("unknown token: " + token.cargo)
+
     consume("}")
 
     # Build up the information for a .system file --
