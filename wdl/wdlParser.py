@@ -1617,64 +1617,64 @@ def slot():
     while not found("}"):
         if token.type == EOF:
             break
-        if found("PRINT"):
+        elif found("PRINT"):
             wprint()
-        if found("DRV"):
+        elif found("DRV"):
             consume("DRV")
             drv(slot_number)
-        if found("DRVX"):
+        elif found("DRVX"):
             consume("DRVX")
             drvx(slot_number)
         elif found("CLAMP"):
             consume("CLAMP")
             clamp(slot_number)
-        if found("PREAMPGAIN"):
+        elif found("PREAMPGAIN"):
             consume("PREAMPGAIN")
             preampgain(slot_number)
-        if found("HVLC"):
+        elif found("HVLC"):
             consume("HVLC")
             hvlc(slot_number)
-        if found("HVHC"):
+        elif found("HVHC"):
             consume("HVHC")
             hvhc(slot_number)
-        if found("LVLC"):
+        elif found("LVLC"):
             consume("LVLC")
             lvlc(slot_number)
-        if found("LVHC"):
+        elif found("LVHC"):
             consume("LVHC")
             lvhc(slot_number)
-        if found("DIO"):
+        elif found("DIO"):
             consume("DIO")
             dio(slot_number)
-        if found("DIOPOWER"):
+        elif found("DIOPOWER"):
             consume("DIOPOWER")
             diopower(slot_number)
-        if found("UPDATETIME"):
+        elif found("UPDATETIME"):
             consume("UPDATETIME")
             updatetime(slot_number)
-        if found("PID"):
+        elif found("PID"):
             consume("PID")
             pid(slot_number)
-        if found("SENSOR"):
+        elif found("SENSOR"):
             consume("SENSOR")
             sensor(slot_number)
-        if found("HTR"):
+        elif found("HTR"):
             consume("HTR")
             heater(slot_number)
-        if found("RAMP"):
+        elif found("RAMP"):
             consume("RAMP")
             ramp(slot_number)
-        if found("HEATER"):
+        elif found("HEATER"):
             consume("HEATER")
             heater(slot_number)
-        if found("PBIAS"):
+        elif found("PBIAS"):
             consume("PBIAS")
             pbias(slot_number)
-        if found("NBIAS"):
+        elif found("NBIAS"):
             consume("NBIAS")
             nbias(slot_number)
         else:
-            pass
+            print("here")
     consume("}")
 
     # Build up the information for a .system file --
