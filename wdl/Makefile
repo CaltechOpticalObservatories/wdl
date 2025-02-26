@@ -43,8 +43,21 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
+# -----------------------------------------------------------------------------
+# @file     Makefile
+# @brief    Makefile for Software/wdl/demo
+# @author   David Hale
+# @date     2015-xx-xx
+# @modified 2024-08-02 made generic for demo
+#
+# This Makefile uses the general preprocessor GPP 2.24 for macro processing.
+# It also requires the ini2acf.pl Perl script for creating an Archon acf file.
+#
+# -----------------------------------------------------------------------------
+#
+
 # set to path to gpp
-GPP       = /usr/local/bin/gpp
+GPP       = /usr/bin/gpp
 # set to path to wdl code
 WDLPATH   = ..
 # output for *.acf file
@@ -52,13 +65,13 @@ ACFPATH   = ./
 
 PLOT      = False # True   # show waveform plots by default, True | False
 GFLAGS    = +c "/*" "*/" +c "//" "\n" +c "\\\n" ""
-SEQPARSER = $(WDLPATH)/seqParserDriver.py
-INCPARSER = $(WDLPATH)/incParserDriver.py
-WDLPARSER = $(WDLPATH)/wdlParserDriver.py
-MODPARSER = $(WDLPATH)/modParserDriver.py
-WAVGEN    = $(WDLPATH)/wavgenDriver.py
-MODEGEN   = $(WDLPATH)/modegenDriver.py
-I2A       = $(WDLPATH)/ini2acf.pl
+SEQPARSER = $(WDLPATH)/wdl/seqParserDriver.py
+INCPARSER = $(WDLPATH)/wdl/incParserDriver.py
+WDLPARSER = $(WDLPATH)/wdl/wdlParserDriver.py
+MODPARSER = $(WDLPATH)/wdl/modParserDriver.py
+WAVGEN    = $(WDLPATH)/wdl/wavgenDriver.py
+MODEGEN   = $(WDLPATH)/wdl/modegenDriver.py
+I2A       = $(WDLPATH)/wdl/ini2acf.pl
 INCL      = -I$(CURDIR)
 
 # Global variable to store the filename
@@ -104,7 +117,9 @@ generate_wdl:
 	@test -f $(MODFILE) || { echo "$(MODFILE) does not exist"; exit 1; }
 	$(call debug_message, "Found MODULE_FILE: $(MODFILE)")
 
-	@cat $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) | $(MODPARSER) -
+	@cat $(MODFILE) | $(GPP) $(GFLAGS) $(INCL) | $(MODPARSER)
+	@test -f .modules && mv .modules $(F_TMP).modules || echo "No .modules file created"
+	@test -f .system && mv .system $(F_TMP).system || echo "No .system file created"
 	$(call debug_message, "Processed MODULE_FILE: $(MODFILE)")
 
 	@$(WAVGEN) $(F_TMP) $(PLOT) || { echo "Waveform generation failed"; exit 1; }
