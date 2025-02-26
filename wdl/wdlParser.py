@@ -87,6 +87,7 @@ hvlOutput = ""
 hvhOutput = ""
 lvlOutput = ""
 lvhOutput = ""
+lvdsOutput = ""
 dioOutput = ""
 sysOutput = ""
 sensorOutput = ""
@@ -230,6 +231,53 @@ def module():
         error(f"(wdlParser.py::module) unrecognized module type: {dq(module_name)}")
 
     return mod_type
+
+
+# -----------------------------------------------------------------------------
+# @fn     lvds
+# @brief  rules for the LVDSL keyword
+# @param  string slotNumber
+# @param  int type
+# @return none, appends to global variable "lvdsOutput"
+# -----------------------------------------------------------------------------
+def lvds(slot_number):
+    """
+    These are the rules for the LVDSL keyword, encountered while parsing
+    the SLOT command for the modules (.mod) file. Required format is
+    LVDSL # "label";
+
+    where # is any number
+    where "label" is a string
+    """
+    global token
+    global lvdsOutput
+
+    lvds_chan = None
+
+    if found(NUMBER):
+        lvds_chan = token.cargo
+        if module_name.upper() in {"LVDS"}:
+            if not (1 <= int(lvds_chan) <= 16):
+                error(
+                    f"LVDS channel {dq(lvds_chan)} outside range {{1:16}} for module: "
+                    f"{module_name.upper()}"
+                )
+        else:
+            error(f"LVDSL is an invalid keyword for module: {module_name.upper()}")
+
+    consume(NUMBER)
+
+    # there can be an optional label, specified as token type=STRING
+    if found(STRING):
+        label = token.cargo[1:-1]  # strip leading and trailing quote chars
+        consume(STRING)
+    else:
+        label = ""
+    consume(";")
+
+    if label != "":
+        lvdsOutput += "MOD" + slot_number + "\LVDS_LABEL" + lvds_chan + "=" + label + "\n"
+
 
 # -----------------------------------------------------------------------------
 # @fn     dio
@@ -1643,6 +1691,9 @@ def slot():
         elif found("LVHC"):
             consume("LVHC")
             lvhc(slot_number)
+        elif found("LVDSL"):
+            consume("LVDSL")
+            lvds(slot_number)
         elif found("DIO"):
             consume("DIO")
             dio(slot_number)
@@ -2501,6 +2552,7 @@ def parse_modules(source_text):
     retval += hvhOutput
     retval += lvlOutput
     retval += lvhOutput
+    retval += lvdsOutput
     retval += dioOutput
     retval += sensorOutput
     retval += heaterOutput
