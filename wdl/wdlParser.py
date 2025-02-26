@@ -1674,8 +1674,7 @@ def slot():
             consume("NBIAS")
             nbias(slot_number)
         else:
-            if found(STRING):
-                error("unknown token: " + token.cargo)
+            error("unknown token: " + token.cargo)
 
     consume("}")
 
