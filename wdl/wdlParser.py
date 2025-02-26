@@ -371,8 +371,8 @@ def dio(slot_number):
         dioOutput += (
             "MOD" + slot_number + "\DIO_DIR" + dio_chan + "=" + direction + "\n"
         )
-        if label != "" and module_name.upper() == "LVDS":
-            dioOutput += "MOD" + slot_number + "\LVDS_LABEL" + dio_chan + "=" + label + "\n"
+    if label != "":
+        dioOutput += "MOD" + slot_number + "\DIO_LABEL" + dio_chan + "=" + label + "\n"
 
 
 
