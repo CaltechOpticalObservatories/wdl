@@ -14,7 +14,7 @@ dependencies = [
     "numpy>=2.0.2",
     "scipy>=1.13.1",
     "matplotlib>=3.9.2",
-    "pyqt>=5.15.11"
+    "PyQt5>=5.15"
 ]
 [project.urls]
 Repository = "https://github.com/CaltechOpticalObservatories/wdl"
