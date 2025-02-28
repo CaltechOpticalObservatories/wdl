@@ -135,11 +135,12 @@ class WavgenDriver(WDLDriver):
         #For some reason I don't understand, legacy wavegenDriver.py wants the BASE NAME of the project as
         #the argument, not the actual filename. Implement this behaviour here for compatibility even though
         #I must stress it seems a little odd
-        #global variable because OF COURSE IT IS
+
         self._fname: str = fname
         self._plots: bool = plots
 
     def __call__(self) -> None:
+        #global variable because OF COURSE IT IS
         wavgen.GenerateFigs = self._plots
         wavgen.loadWDL(f"{self._fname}.wdl", self._fname)
 
