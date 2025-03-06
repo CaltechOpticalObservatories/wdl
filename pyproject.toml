@@ -1,13 +1,17 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64", "wheel", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["wdl"]
 
+[tool.setuptools_scm]
+version_file = "wdl/_version.py"
+
 [project]
 name = "wdl"
-version = "1.0.0"
+dyanmic = ["version"]
+
 description = "WDL (Waveform Definition Language) is designed for use with Archons. This library provides tools and instructions for setting up and using WDL efficiently."
 authors = [{name = "Caltech Optical Observatories"}]
 dependencies = [
