@@ -4,6 +4,7 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Generator, Optional
 import sys
+from argparse import ArgumentParser
 
 def _extract_section_name(line: str) -> Optional[tuple[str, bool]]:
     if '[' not in line:
@@ -15,7 +16,7 @@ def _extract_section_name(line: str) -> Optional[tuple[str, bool]]:
         return secname.strip('#'), True
 
 
-def _section_replace_filter(inp: str) -> Generator[tuple[str, list[str]]]:
+def _section_replace_filter(inp: str) -> Generator[tuple[str, list[str]], None, None]:
     #The original script uses a regex here to get the tag names but we'll just do it a
     #way that even a physicist can understand here
     thissection: Optional[str] = None
@@ -65,9 +66,46 @@ def generate_acf(inifile: str | Path | TextIOWrapper,
             outp.extend(seclines)
     return outp
 
+def main():
+    ap = ArgumentParser(prog="ini2acf",
+                        description="""
+
+                        This is a python rewrite of David Hale and Peter Mao's ini2acf.pl script.
+                        It is intended to be call compatible with that script. The original
+                        documentation follows...
+
+                        Format an INI type file for insertion into ACF.  Removes comments, and
+                        trailing whitespace.  
+
+                        In the input file, lines of the same tag type are grouped under [TAG].
+                        When the tag is specified as [TAG#], the acf lines are numbered and
+                        the number of lines of a tag type are reported when a new tag is
+                        encountered or the end of file is reached.
+
+                        Appropriate for numbered tags: LINE, PARAMETER, CONSTANT, TAPLINE
+
+                        This code is NOT smart enough to know if you use the same tag in
+                        two disjoint parts of the INI file.
+
+                        """)
+    ap.add_argument("infile", help="input ini file", type=str)
+    ap.add_argument("-o,--outfile", help="output file to use. By default, outputs to stdout", type=str)
+
+    args = ap.parse_args()
+
+    out_content: str = generate_acf(args.inifile)
+
+    if args.outfile is not None:
+        with open(args.outfile,"w") as f:
+            f.write(out_content)
+
+    else:
+        sys.stdout.write(out_content)
+    
+
 
 if __name__ == "__main__":
     #basic direct call behaviour to mimic the old ini2acf.pl script
     # TODO
-    pass
-    
+    main()
+

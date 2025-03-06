@@ -23,3 +23,13 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/CaltechOpticalObservatories/wdl"
 
+
+[project.scripts]
+# the "new" command line tool
+wdl = "wdl.cli:main"
+ini2acf = "wdl.ini2acf:main"
+
+#command script wrappers for legacy .py "Driver" scripts
+"LexerDriver.py" = "wdl.LexerDriver:__main__"
+
+

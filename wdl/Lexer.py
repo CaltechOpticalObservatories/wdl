@@ -29,10 +29,10 @@ be a Lexer object that is ready to return the tokens in the source text.
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-import genericScanner as Scanner
-from genericToken import *
-from Symbols import *
-from genericCharacter import *
+from . import genericScanner as Scanner
+from .genericToken import *
+from .Symbols import *
+from .genericCharacter import *
 
 character = ""
 c1 = ""

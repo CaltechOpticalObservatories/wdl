@@ -53,8 +53,8 @@
 # for backwards compatibility with python 2
 
 
-import Lexer
-from Symbols import *
+from . import Lexer
+from .Symbols import *
 import sys
 
 sys.dont_write_bytecode = True

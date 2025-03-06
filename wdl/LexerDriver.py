@@ -22,8 +22,8 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-import Lexer
-from Symbols import EOF
+from . import Lexer
+from .Symbols import EOF
 import fileinput
 
 
