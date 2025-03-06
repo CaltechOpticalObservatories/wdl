@@ -20,6 +20,14 @@ dependencies = [
     "matplotlib>=3.9.2",
     "PyQt5>=5.15"
 ]
+
+
+#note this is a GUESS. With agreement from COO software people (I need context for this)
+#I would like to bump this sooner. Note python 3.8 was released in 2019, and is the default python for e.g. ubuntu 20.04
+#On ubuntu 20.04, python 3.10 is available from "official" sources and as recent as python 3.12 is available from PPAs.
+#This is not including, of course, installing a conda distribution to get python whatever.
+requires-python = ">=3.8"
+
 [project.urls]
 Repository = "https://github.com/CaltechOpticalObservatories/wdl"
 

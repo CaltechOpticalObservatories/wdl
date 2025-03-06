@@ -22,8 +22,12 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
+
+
+
+
 import fileinput
-import wdlParser as Parser
+from . import wdlParser as Parser
 import sys
 
 sys.dont_write_bytecode = True

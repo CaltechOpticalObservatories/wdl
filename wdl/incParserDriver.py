@@ -24,7 +24,7 @@
 
 
 import fileinput
-import wdlParser as Parser
+from . import wdlParser as Parser
 import sys
 
 sys.dont_write_bytecode = True
