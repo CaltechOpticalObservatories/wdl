@@ -27,8 +27,8 @@ def main():
         logging.basicConfig(level=logging.INFO)
 
     # call the command
-    args.func(args)
+    return args.func(args)
 
 
 if __name__ == "__main__":
-    main()
+    return main()

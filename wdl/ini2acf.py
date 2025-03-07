@@ -101,11 +101,12 @@ def main():
 
     else:
         sys.stdout.write(out_content)
-    
+
+    return 0
 
 
 if __name__ == "__main__":
     #basic direct call behaviour to mimic the old ini2acf.pl script
     # TODO
-    main()
+    return main()
 

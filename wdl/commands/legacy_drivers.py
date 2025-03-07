@@ -25,9 +25,10 @@ class SeqParserDriver(WDLDriver):
     CMD_NAME: str = "seq"
     CMD_DESCRIPTION: str = "parse a .conf file and make an include list from it"
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         logger.info("making include sequence")
         make_include_sequence(self._text)
+        return 0
 
 
 class ModParserDriver(WDLDriver):
@@ -59,7 +60,7 @@ class ModParserDriver(WDLDriver):
         # awfulness. DO NOT MOVE THIS LINE ABOVE THE PREVIOUS ONE, therefore
         logger.debug("writing output to .system file...")
         self._write_output("SYSTEM", "system", parse_system())
-
+        return 0
 
     def _write_output(self, archonkw: str, fileext: str, output: str) -> None:
         fname: str = f"{self._projname}.{fileext}"
@@ -73,6 +74,7 @@ class IncParserDriver(WDLDriver):
 
     def __call__(self) -> None:
         make_include(self._text)
+        return 0
 
 class WdlParserDriver(WDLDriver):
     CMD_NAME: str = "wdl"
@@ -89,7 +91,7 @@ class WdlParserDriver(WDLDriver):
 
         #apparently this one just prints it out, to stdout I guess?
         stdout.write(output)
-
+        return 0
 
 class WavgenDriver(WDLDriver):
     CMD_NAME: str = "wavgen"
@@ -121,6 +123,9 @@ class WavgenDriver(WDLDriver):
         if self._plots:
             plt.show(block=True)
 
+        return 0
+
+
 class ModegenDriver(WDLDriver):
     CMD_NAME: str = "modegen"
     CMD_DESCRIPTION: str = "generate archon modes from WDL description"
@@ -139,6 +144,7 @@ class ModegenDriver(WDLDriver):
 
     def __call__(self) -> None:
         modegen.Modegen(self._modefile, self._acffile)
+        return 0
 
 class Ini2acfDriver(WDLDriver):
     CMD_NAME: str = "ini2acf"
@@ -152,9 +158,10 @@ class Ini2acfDriver(WDLDriver):
 
     def __init__(self, fname: str, outfile: Optional[str]):
         super().__init__(fname)
-        self._outfile = sys.stdout if outfile is None else outfile
+        self._outfile = stdout if outfile is None else outfile
 
     def __call__(self) -> None:
         outtxt: str = generate_acf(self._text, treat_str_as_content=True)
         with self._file_or_stdout(self._outfile) as f:
             f.write(outtxt)
+            return 0
