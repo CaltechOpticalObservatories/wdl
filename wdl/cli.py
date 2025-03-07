@@ -14,7 +14,7 @@ import wdl.modegen as modegen
 import fileinput
 import logging
 import matplotlib.pyplot as plt
-from pathlib import Path, glob
+from pathlib import Path
 import os
 
 logger = logging.getLogger(__name__)
