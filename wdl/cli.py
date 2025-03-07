@@ -1,18 +1,21 @@
 from argparse import ArgumentParser, _SubParsersAction, Namespace
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from sys import stdin
+from sys import stdin, stdout
 from typing  import Optional, ContextManager
 from contextlib import contextmanager
 from io import TextIOWrapper
 import warnings
 
 from wdl.wdlParser import make_include_sequence, parse_modules, parse_system, make_include
+from wdl.ini2acf import generate_acf
 import wdl.wavgen as wavgen
 import wdl.modegen as modegen
 import fileinput
 import logging
 import matplotlib.pyplot as plt
+from pathlib import Path, glob
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +40,16 @@ class WDLDriver(metaclass=ABCMeta):
         parser.set_defaults(func=runner)
         return parser
 
+    @classmethod
+    def find_input_files(cls, basepath: str | Path) -> list[str]:
+        if not hasattr(cls, "CMD_FILE_EXTENSIONS"):
+            raise AttributeError("don't know file extensions to search for")
+        if isinstance(basepath, str):
+            basepath: Path = Path(basepath)
+        for extn in cls.CMD_FILE_EXTENSIONS:
+            possible_files = basepath.glob(f"*.{extn}")
+        return possible_files
+    
     def __init__(self, fname: str, **kwargs):
         """The default __init__ of a driver takes a filename and reads it into the ._text attribute of the class.
         Since this is the most common operation of a WDL driver program"""
@@ -54,6 +67,14 @@ class WDLDriver(metaclass=ABCMeta):
             f = open(fname, "r")
             yield f
             f.close()
+
+    @contextmanager
+    def _file_or_stdout(self, output: TextIOWrapper | str) -> ContextManager[TextIOWrapper]:
+        if isinstance(output, str):
+            f = open(output, "w")
+            yield f
+        else:
+            yield output
 
     def _read_file_or_stdin(self, fname: str) -> str:
         with self._file_or_stdin(fname) as f:
@@ -170,6 +191,26 @@ class ModegenDriver(WDLDriver):
     def __call__(self) -> None:
         modegen.Modegen(self._modefile, self._acffile)
 
+class Ini2acfDriver(WDLDriver):
+    CMD_NAME: str = "ini2acf"
+    CMD_DESCRIPTION: str = "convert a INI syntax file into ACF"
+
+    @classmethod
+    def setup_subparser(cls, subparsers) -> ArgumentParser:
+        parser = super().setup_subparser(subparsers)
+        parser.add_argument("-o,--outfile",help="output file to use. By default, outputs to stdout", type=str)
+        return parser
+
+    def __init__(self, fname: str, outfile: Optional[str]):
+        super().__init__(fname)
+        self._outfile = sys.stdout if outfile is None else outfile
+
+    def __call__(self) -> None:
+        outtxt: str = generate_acf(self._text, treat_str_as_content=True)
+        with self._file_or_stdout(self._outfile) as f:
+            f.write(outtxt)
+
+        
 def main():
     ap = ArgumentParser(prog="wdl",
                              description="command line interface to Waveform Definition Language (WDL)")
@@ -177,7 +218,7 @@ def main():
     subparsers = ap.add_subparsers(required=True, help="the WDL subcommand to run")
 
     for cls in [SeqParserDriver, ModParserDriver, IncParserDriver, WdlParserDriver,
-                WavgenDriver, ModegenDriver]:
+                WavgenDriver, ModegenDriver, Ini2acfDriver]:
         cls.setup_subparser(subparsers)
 
     args = ap.parse_args()
