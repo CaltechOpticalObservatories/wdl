@@ -10,7 +10,7 @@ version_file = "wdl/_version.py"
 
 [project]
 name = "wdl"
-dyanmic = ["version"]
+dynamic = ["version"]
 
 description = "WDL (Waveform Definition Language) is designed for use with Archons. This library provides tools and instructions for setting up and using WDL efficiently."
 authors = [{name = "Caltech Optical Observatories"}]
