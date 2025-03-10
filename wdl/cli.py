@@ -1,8 +1,11 @@
 from argparse import ArgumentParser
+import sys
 
 from .commands.legacy_drivers import (
     SeqParserDriver, ModParserDriver, IncParserDriver,
     WdlParserDriver, WavgenDriver, ModegenDriver, Ini2acfDriver)
+
+from .commands.preprocess import FindGPP
 
 
 import logging
@@ -16,7 +19,7 @@ def main():
     subparsers = ap.add_subparsers(required=True, help="the WDL subcommand to run")
 
     for cls in [SeqParserDriver, ModParserDriver, IncParserDriver, WdlParserDriver,
-                WavgenDriver, ModegenDriver, Ini2acfDriver]:
+                WavgenDriver, ModegenDriver, Ini2acfDriver, FindGPP]:
         cls.setup_subparser(subparsers)
 
     args = ap.parse_args()
@@ -31,4 +34,5 @@ def main():
 
 
 if __name__ == "__main__":
-    return main()
+    retcode = main()
+    sys.exit(retcode)

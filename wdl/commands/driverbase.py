@@ -4,6 +4,7 @@ from pathlib import Path
 from io import TextIOWrapper
 from sys import stdin
 from contextlib import contextmanager
+from typing import ContextManager
 
 class WDLDriver(metaclass=ABCMeta):
     @classmethod

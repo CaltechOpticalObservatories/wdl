@@ -4,7 +4,7 @@ from typing import Optional
 from argparse import ArgumentParser
 from sys import stdout
 
-from ..cli import WDLDriver
+from .driverbase import WDLDriver
 
 from wdl.ini2acf import generate_acf
 
@@ -12,7 +12,8 @@ from wdl.ini2acf import generate_acf
 # horrible legacy code imports here, TODO: gradually chip away at it
 import wdl.wavgen as wavgen
 import wdl.modegen as modegen
-from wdl.wdlParser import make_include_sequence, parse_modules, parse_system, make_include, Parser
+from wdl.wdlParser import make_include_sequence, parse_modules, parse_system, make_include
+import wdl.wdlParser as Parser
 
 # TODO: separate out plotting, no need for this
 import matplotlib.pyplot as plt
@@ -52,7 +53,7 @@ class ModParserDriver(WDLDriver):
             self._projname: str = projname
             self._text: str = f.read()
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         logger.debug("writing output to .modules file...")
         self._write_output("CONFIG", "modules", parse_modules(self._text))
 
@@ -62,7 +63,7 @@ class ModParserDriver(WDLDriver):
         self._write_output("SYSTEM", "system", parse_system())
         return 0
 
-    def _write_output(self, archonkw: str, fileext: str, output: str) -> None:
+    def _write_output(self, archonkw: str, fileext: str, output: str) -> int:
         fname: str = f"{self._projname}.{fileext}"
         with open(fname, "w") as f:
             f.writelines([f"[{archonkw}]"])
@@ -72,7 +73,7 @@ class IncParserDriver(WDLDriver):
     CMD_NAME: str = "inc"
     CMD_DESCRIPTION: str = "parse an include file"
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         make_include(self._text)
         return 0
 
@@ -80,7 +81,7 @@ class WdlParserDriver(WDLDriver):
     CMD_NAME: str = "wdl"
     CMD_DESCRIPTION: str = "parse the subroutines from a WDL input file"
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         logger.info("parsing WDL file...")
 
         # TODO:blergh
@@ -111,7 +112,7 @@ class WavgenDriver(WDLDriver):
         self._fname: str = fname
         self._plots: bool = plots
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         # global variable because OF COURSE IT IS
         wavgen.GenerateFigs = self._plots
         wavgen.loadWDL(f"{self._fname}.wdl", self._fname)
@@ -142,7 +143,7 @@ class ModegenDriver(WDLDriver):
         self._modefile = modefile
         self._acffile = acffile
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         modegen.Modegen(self._modefile, self._acffile)
         return 0
 
@@ -160,7 +161,7 @@ class Ini2acfDriver(WDLDriver):
         super().__init__(fname)
         self._outfile = stdout if outfile is None else outfile
 
-    def __call__(self) -> None:
+    def __call__(self) -> int:
         outtxt: str = generate_acf(self._text, treat_str_as_content=True)
         with self._file_or_stdout(self._outfile) as f:
             f.write(outtxt)
