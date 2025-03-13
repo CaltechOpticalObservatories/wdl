@@ -2261,7 +2261,7 @@ def generic_sequence(*sequenceName):
         if len(sequence_line) > 0:
             output_text += sequence_line + "\n"
     # do we have an exit from this sequence?
-    if not has_exit:
+    if not has_exit and not 'Start' in sequenceName:
         error("(wdlParser.py::generic_sequence) no exit from sequence "
               + sequenceName[0])
     # sequence/waveform must end with a close (right) curly brace, }
