@@ -30,6 +30,8 @@ import sys
 import os
 import collections
 
+from genericToken import LexerError
+
 # from IPython.core.debugger import Tracer
 # from IPython.core.magic import register_line_magic
 # import time as t
@@ -1062,6 +1064,8 @@ class TimingSegment(object):
         #               Tracer()()
         return
 
+def state_empty(sstr):
+    return len(sstr.replace('"', '')) == 0
 
 def state(outfile=None):
     """write states from the UniqueStateArr to the
@@ -1128,6 +1132,8 @@ def state(outfile=None):
                     )
 
             statestring = statestring[:-1] + '"'
+            if state_empty(statestring):
+                print("Empty state: %d" % ii)
             ofile.write(statestring + "\n")
             offset += 2 * __chan_per_board__["drvr"]  # !driver-speed-keep
         for lvdsslot in slot["lvds"]:
@@ -1141,6 +1147,8 @@ def state(outfile=None):
                 else:
                     statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
             statestring = statestring[:-1] + '"'
+            if state_empty(statestring):
+                print("Empty state: %d" % ii)
             ofile.write(statestring + "\n")
             offset += 2 * __chan_per_board__["lvds"]
         for htrslot in slot["htr"]:
@@ -1154,6 +1162,8 @@ def state(outfile=None):
                 else:
                     statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
             statestring = statestring[:-1] + '"'
+            if state_empty(statestring):
+                print("Empty state: %d" % ii)
             ofile.write(statestring + "\n")
             offset += 2 * __chan_per_board__["htr"]
         for xvslot in slot["xvbd"]:  # this is similar to the hvbd states
@@ -1214,9 +1224,9 @@ def state(outfile=None):
                 nxvbd_chan = np.where(nxvbdKeep == 0)[0]
                 statestring += "1,%d,%g" % (nxvbd_chan + 1, nxvbdLevel[nxvbd_chan])
             else:
-                print(
-                    "Error in negative XVBD state call -- multiple changes "
-                    "in a state"
+                raise LexerError(
+                    "Error in negative XVBD state call -- multiple changes in state "
+                    + str(ii)
                 )
             #            statestring = statestring[:-1] + '"'
             ofile.write(statestring + '"\n')
@@ -1232,6 +1242,8 @@ def state(outfile=None):
             else:
                 statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
             statestring = statestring[:-1] + '"'
+            if state_empty(statestring):
+                print("Empty state: %d" % ii)
             ofile.write(statestring + "\n")
             offset += 2
         if True:  # Backplane
@@ -1271,7 +1283,10 @@ def state(outfile=None):
                 hvbd_chan = np.where(hvbdKeep == 0)[0]
                 statestring += "1,%d,%g" % (hvbd_chan + 1, hvbdLevel[hvbd_chan])
             else:
-                print("Error in HVBD state call -- multiple changes in a state")
+                raise LexerError(
+                    "\nError in HVBD state call -- multiple changes in state "
+                    + str(ii)
+                )
             ofile.write(statestring + '"\n')
             offset += n_hvbd_X_2
         for lvbdslot in slot["lvbd"]:
@@ -1318,7 +1333,10 @@ def state(outfile=None):
                 lvbd_chan = np.where(lvbdKeep == 0)[0]
                 statestring += "1,%d,%g" % (lvbd_chan + 1, lvbdLevel[lvbd_chan])
             else:
-                print("Error in LVBD state call -- multiple changes in a state")
+                raise LexerError(
+                    "\nError in LVBD state call -- multiple changes in state "
+                    + str(ii)
+                )
             ofile.write(statestring + '"\n')
             # offset += n_lvbd_X_2 # this is fine for voltages after DIO
             # use for DIO after voltages
