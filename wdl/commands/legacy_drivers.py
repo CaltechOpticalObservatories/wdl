@@ -47,7 +47,7 @@ class ModParserDriver(WDLDriver):
         with self._file_or_stdin(fname) as f:
             if projname is None:
                 warnings.warn("parsing module file assuming the first line is the project name... This is fragile behaviour, ideally please use the --name argument to the command instead")
-                projname = f.readline()
+                projname = f.readline().strip()
 
             logger.info("project name is: %s", projname)
             self._projname: str = projname
@@ -65,6 +65,7 @@ class ModParserDriver(WDLDriver):
 
     def _write_output(self, archonkw: str, fileext: str, output: str) -> int:
         fname: str = f"{self._projname}.{fileext}"
+        logger.debug("filename is: %s", fname)
         with open(fname, "w") as f:
             f.writelines([f"[{archonkw}]"])
             f.write(output)
@@ -104,7 +105,7 @@ class WavgenDriver(WDLDriver):
         parser.add_argument("--plots", action="store_true", help="generate plots to go with waveforms")
         return parser
 
-    def __init__(self, fname: str, plots: bool):
+    def __init__(self, fname: str, plots: bool, **kwargs):
         #For some reason I don't understand, legacy wavegenDriver.py wants the BASE NAME of the project as
         #the argument, not the actual filename. Implement this behaviour here for compatibility even though
         #I must stress it seems a little odd
@@ -139,7 +140,7 @@ class ModegenDriver(WDLDriver):
         parser.add_argument("acffile", type=str, help="the ACF file to append to")
         return parser
 
-    def __init__(self, modefile: str, acffile: str):
+    def __init__(self, modefile: str, acffile: str, **kwargs):
         self._modefile = modefile
         self._acffile = acffile
 
@@ -157,12 +158,13 @@ class Ini2acfDriver(WDLDriver):
         parser.add_argument("-o,--outfile",help="output file to use. By default, outputs to stdout", type=str)
         return parser
 
-    def __init__(self, fname: str, outfile: Optional[str]):
+    def __init__(self, fname: str, outfile: Optional[str]=None, **kwargs):
         super().__init__(fname)
         self._outfile = stdout if outfile is None else outfile
 
     def __call__(self) -> int:
         outtxt: str = generate_acf(self._text, treat_str_as_content=True)
         with self._file_or_stdout(self._outfile) as f:
+            logger.debug(f"outtxt is: {outtxt}")
             f.write(outtxt)
             return 0

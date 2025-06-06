@@ -23,13 +23,19 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 
+
 import fileinput
-from . import wdlParser as Parser
 import sys
 
-sys.dont_write_bytecode = True
-sys.tracebacklimit = 0
-
+#hack to allow both modern style import and direct script execution
+if __package__ != "wdl":
+    import os
+    import warnings
+    basen = os.path.basename(__file__)
+    warnings.warn(f"detected running a script directly, consider using python -m wdl.{basen}")
+    import wdlParser as Parser
+else:
+    from . import wdlParser as Parser
 
 # -----------------------------------------------------------------------------
 # @fn     main

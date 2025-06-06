@@ -29,10 +29,21 @@ be a Lexer object that is ready to return the tokens in the source text.
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from . import genericScanner as Scanner
-from .genericToken import *
-from .Symbols import *
-from .genericCharacter import *
+
+if __package__ != "wdl":
+    import os
+    import warnings
+    basen = os.path.basename(__file__)
+    warnings.warn(f"detected running a script directly, consider using python -m wdl.{basen}")
+    import genericScanner as Scanner
+    from genericToken import *
+    from Symbols import *
+    from genericCharacter import *
+else:
+    from . import genericScanner as Scanner
+    from .genericToken import *
+    from .Symbols import *
+    from .genericCharacter import *
 
 character = ""
 c1 = ""

@@ -24,6 +24,7 @@ def main():
 
     args = ap.parse_args()
 
+
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
     else:

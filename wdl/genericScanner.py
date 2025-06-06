@@ -27,7 +27,17 @@ character from the file and returns it.
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-from .genericCharacter import *
+
+#hack to allow both modern style import and direct script execution
+if __package__ != "wdl":
+    import os
+    import warnings
+    basen = os.path.splitext(os.path.basename(__file__))[0]
+    warnings.warn(f"detected running a script directly, consider using python -m wdl.{basen}")
+    import genericScanner as Scanner
+    from genericCharacter import *
+else:
+    from .genericCharacter import *
 
 """
 A Scanner object reads through the source_text

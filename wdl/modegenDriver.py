@@ -32,9 +32,21 @@
 #     Stephen Kaye <skaye@caltech.edu>
 
 # import fileinput
+
+#hack to allow both modern style import and direct script execution
+if __package__ != "wdl":
+    import os
+    import warnings
+    basen = os.path.basename(__file__)
+    warnings.warn(f"detected running a script directly, consider using python -m wdl.{basen}")
+    import wavgen
+    import modegen
+else:
+    from . import wavgen
+    from . import modegen
+
+
 import matplotlib.pyplot as plt
-import wavgen
-import modegen
 import sys
 
 sys.dont_write_bytecode = True
