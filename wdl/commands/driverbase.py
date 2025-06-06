@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from typing import ContextManager
 
 class WDLDriver(metaclass=ABCMeta):
+    ACCEPTS_EXTRA_ARGS: bool = False
+
     @classmethod
     def setup_subparser(cls, subparsers: _SubParsersAction, fname_arg_setup: bool=True) -> ArgumentParser:
         """sets up a sub-parser for arguments specific to this particular type of WDL subcommand driver"""
@@ -19,12 +21,10 @@ class WDLDriver(metaclass=ABCMeta):
         if fname_arg_setup:
             parser.add_argument("fname", help="file to read input from. Use '-' to read from stdin")            
 
-        def runner(args: Namespace) -> None:
-            kwargs = vars(args)
-            obj: cls = cls(**kwargs)
-            obj()
+        def cls_provider(args: Namespace) -> None:
+            return cls
 
-        parser.set_defaults(func=runner)
+        parser.set_defaults(func=cls_provider)
         return parser
 
     @classmethod
@@ -43,8 +43,10 @@ class WDLDriver(metaclass=ABCMeta):
         self._text = self._read_file_or_stdin(fname)
 
     @abstractmethod
-    def __call__(self) -> None: ...
-
+    def __call__(self, cli_mode: bool) -> None:
+        """This method will be called when the driver runs from the command line interface"""
+        pass
+        
     @contextmanager
     def _file_or_stdin(self, fname: str) -> ContextManager[TextIOWrapper]:
         """context manager that opens a specified file or uses sys.stdin for the special case of file '-'"""

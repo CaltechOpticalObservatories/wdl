@@ -26,7 +26,7 @@ class SeqParserDriver(WDLDriver):
     CMD_NAME: str = "seq"
     CMD_DESCRIPTION: str = "parse a .conf file and make an include list from it"
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         logger.info("making include sequence")
         make_include_sequence(self._text)
         return 0
@@ -53,7 +53,7 @@ class ModParserDriver(WDLDriver):
             self._projname: str = projname
             self._text: str = f.read()
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         logger.debug("writing output to .modules file...")
         self._write_output("CONFIG", "modules", parse_modules(self._text))
 
@@ -74,7 +74,7 @@ class IncParserDriver(WDLDriver):
     CMD_NAME: str = "inc"
     CMD_DESCRIPTION: str = "parse an include file"
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         make_include(self._text)
         return 0
 
@@ -82,7 +82,7 @@ class WdlParserDriver(WDLDriver):
     CMD_NAME: str = "wdl"
     CMD_DESCRIPTION: str = "parse the subroutines from a WDL input file"
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         logger.info("parsing WDL file...")
 
         # TODO:blergh
@@ -113,7 +113,7 @@ class WavgenDriver(WDLDriver):
         self._fname: str = fname
         self._plots: bool = plots
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         # global variable because OF COURSE IT IS
         wavgen.GenerateFigs = self._plots
         wavgen.loadWDL(f"{self._fname}.wdl", self._fname)
@@ -144,7 +144,7 @@ class ModegenDriver(WDLDriver):
         self._modefile = modefile
         self._acffile = acffile
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         modegen.Modegen(self._modefile, self._acffile)
         return 0
 
@@ -162,7 +162,7 @@ class Ini2acfDriver(WDLDriver):
         super().__init__(fname)
         self._outfile = stdout if outfile is None else outfile
 
-    def __call__(self) -> int:
+    def __call__(self, cli_mode: bool) -> int:
         outtxt: str = generate_acf(self._text, treat_str_as_content=True)
         with self._file_or_stdout(self._outfile) as f:
             logger.debug(f"outtxt is: {outtxt}")
