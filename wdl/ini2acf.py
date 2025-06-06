@@ -5,12 +5,15 @@ from pathlib import Path
 from typing import Generator, Optional
 import sys
 from argparse import ArgumentParser
+from os import linesep
 
 def _extract_section_name(line: str) -> Optional[tuple[str, bool]]:
     if '[' not in line:
+        print(f"no section in line: {line}")
         return None
     else:
         secname: str = line.split("[")[1].split("]")[0]
+        print(f"found section: {secname}")
         if '#' not in secname:
             return secname, False
         return secname.strip('#'), True
@@ -21,15 +24,19 @@ def _section_replace_filter(inp: str) -> Generator[tuple[str, list[str]], None, 
     #way that even a physicist can understand here
     thissection: Optional[str] = None
     seclines: list[str] = []
-    for line in inp:
+    for line in inp.splitlines():
         if (tpl :=_extract_section_name(line)) is not None:
             secname, process = tpl
             # This is a new section. If we are already processing one, yield it out and start the next
             # Otherwise, start processing the lines
+            print(f"section with name: {secname}")
             if thissection is not None:
                 yield thissection, seclines, process
             thissection = secname
             seclines.clear()
+        else:
+            #this is a continuation of the previous section, just append the lines
+            seclines.append(line)
 
 def generate_acf(inifile: str | Path | TextIOWrapper,
                  treat_str_as_content: bool=False) -> str:
@@ -51,6 +58,7 @@ def generate_acf(inifile: str | Path | TextIOWrapper,
         #This is an already open file like opject
         inp: str = inifile.read()
 
+    print(f"input string length: {len(inp)}")
     outp: list[str] = []
     for secname, seclines, process in _section_replace_filter(inp):
         outp.append(f"[{secname}]")
@@ -64,7 +72,7 @@ def generate_acf(inifile: str | Path | TextIOWrapper,
             outp.append(f'{secname}S={ind+1}')
         else:
             outp.extend(seclines)
-    return outp
+    return f"{linesep.join(outp)}{linesep}"
 
 def main():
     ap = ArgumentParser(prog="ini2acf",

@@ -46,7 +46,7 @@ class ModParserDriver(WDLDriver):
     def __init__(self, fname: str, projname: Optional[str] = None, **kwargs):
         with self._file_or_stdin(fname) as f:
             if projname is None:
-                warnings.warn("parsing module file assuming the first line is the project name... This is fragile behaviour, ideally please use the --name argument to the command instead")
+                warnings.warn("parsing module file assuming the first line is the project name... please use the --name argument to the command instead")
                 projname = f.readline().strip()
 
             logger.info("project name is: %s", projname)
