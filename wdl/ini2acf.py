@@ -21,6 +21,7 @@ def _section_replace_filter(inp: str) -> Generator[tuple[str, list[str]], None, 
     #The original script uses a regex here to get the tag names but we'll just do it a
     #way that even a physicist can understand here
     thissection: Optional[str] = None
+    thisprocess: Optional[bool] = None
     seclines: list[str] = []
     for line in inp.splitlines():
         if (tpl :=_extract_section_name(line)) is not None:
@@ -28,12 +29,13 @@ def _section_replace_filter(inp: str) -> Generator[tuple[str, list[str]], None, 
             # This is a new section. If we are already processing one, yield it out and start the next
             # Otherwise, start processing the lines
             if thissection is not None:
-                yield thissection, seclines, process
-            thissection = secname
+                yield thissection, seclines, thisprocess
+            thissection, thisprocess = secname, process
             seclines.clear()
         else:
             #this is a continuation of the previous section, just append the lines
             seclines.append(line)
+    yield thissection, seclines, thisprocess
 
 def generate_acf(inifile: str | Path | TextIOWrapper,
                  treat_str_as_content: bool=False) -> str:
