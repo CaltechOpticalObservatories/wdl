@@ -1403,7 +1403,7 @@ def script(outfile=None, quiet=False):
         if len(Constants) > 0:
             outfilehandle.write("[CONSTANT#]\n")
             for const in Constants:
-                outfilehandle.write("%s=%d\n" % (const, Constants[const]))
+                outfilehandle.write("%s=%f\n" % (const, Constants[const]))
         outfilehandle.write("[LINE#]\n")
         if outfilehandle.name != "<stdout>":
             outfilehandle.close()
