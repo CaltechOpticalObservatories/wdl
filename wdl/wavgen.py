@@ -134,10 +134,10 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
                 Parameters.update({pname: pval})
                 continue
             # look for constants
-            match = re.search("^constant\s+(\w+)=(\d+)\s*$", line)
+            match = re.search(r"^constant\s+(\w+)\s*=\s*([+-]?\d+(?:\.\d*)?)\s*$", line)
             if match is not None:
                 cname = match.group(1)
-                cval = int(match.group(2))
+                cval = float(match.group(2))
                 Constants.update({cname: cval})
                 continue
             # look for a label
