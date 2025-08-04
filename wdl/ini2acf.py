@@ -57,8 +57,11 @@ def generate_acf(inifile: str | Path | TextIOWrapper,
         #This is an already open file like opject
         inp: str = inifile.read()
     outp: list[str] = []
+
+    #need to add [CONFIG] at the top
+    outp.append("[CONFIG]")
+
     for secname, seclines, process in _section_replace_filter(inp):
-        outp.append(f"[{secname}]")
         if process:
             for ind, line in enumerate(seclines):
                 #strip whitespace and remove any trailing comment
@@ -68,6 +71,7 @@ def generate_acf(inifile: str | Path | TextIOWrapper,
             # A line telling us how many we had
             outp.append(f'{secname}S={ind+1}')
         else:
+            outp.append(f"[{secname}]")
             outp.extend(seclines)
     return f"{linesep.join(outp)}{linesep}"
 
