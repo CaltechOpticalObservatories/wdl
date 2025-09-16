@@ -546,7 +546,10 @@ def clamp(slot_number):
         ad_chan = token.cargo
         if int(ad_chan) < 1 or int(ad_chan) > 4:
             error("CLAMP channel " + dq(ad_chan) + " outside range [1..4]")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        ad_chan = token.cargo
+        consume(IDENTIFIER)
     _clamp = None
     consume("=")
     while not found(";"):
@@ -561,7 +564,10 @@ def clamp(slot_number):
 
         if found(NUMBER):
             _clamp = sign * float(token.cargo)
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            _clamp = sign * float(token.cargo)
+            consume(IDENTIFIER)
     consume(";")
 
     adcOutput += "MOD" + slot_number + "\CLAMP" + ad_chan + "=" + str(_clamp) + "\n"
@@ -590,8 +596,11 @@ def hvhc(slot_number):
         hvh_chan = token.cargo
         if not (1 <= int(hvh_chan) <= 6):
             error(f"HVHC channel {dq(hvh_chan)} outside range [1..6]")
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        hvh_chan = token.cargo
+        consume(IDENTIFIER)
 
-    consume(NUMBER)
     volts = None
     current = None
     order = None
@@ -605,25 +614,37 @@ def hvhc(slot_number):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
                 error("HVHC volts " + dq(volts) + " outside range [0..31] V")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            volts = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             current = token.cargo
             if float(current) < 0 or float(current) > 250:
                 error("HVHC current " + dq(current) + " outside range [0..250] mA")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            current = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             order = token.cargo
             if int(order) < 0 or int(order) > 6:
                 error("HVHC order " + dq(order) + " outside range [0..6]")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            order = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             enable = token.cargo
             if enable != "0" and enable != "1":
                 error("HVHC enable " + dq(enable) + " must be 0 or 1")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            enable = token.cargo
+            consume(IDENTIFIER)
     consume("]")
 
     # there can be an optional label, specified as token type=STRING
@@ -665,7 +686,10 @@ def hvlc(slot_number):
         hvl_chan = token.cargo
         if int(hvl_chan) < 1 or int(hvl_chan) > 24:
             error("HVLC channel " + dq(hvl_chan) + " outside range [1..24]")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        hvl_chan = token.cargo
+        consume(IDENTIFIER)
     volts = None
     order = None
     consume("[")
@@ -676,13 +700,19 @@ def hvlc(slot_number):
             volts = token.cargo
             if float(volts) < 0 or float(volts) > 31:
                 error("HVLC volts " + dq(volts) + " outside range [0..31] V")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            volts = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             order = token.cargo
             if int(order) < 0 or int(order) > 24:
                 error("HVLC order " + dq(order) + " outside range [0..24]")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            order = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
@@ -721,7 +751,11 @@ def lvhc(slot_number):
         lvh_chan = token.cargo
         if int(lvh_chan) < 1 or int(lvh_chan) > 6:
             error("LVHC channel " + dq(lvh_chan) + " outside range [1..6]")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        lvh_chan = token.cargo
+        consume(IDENTIFIER)
+
     volts = None
     current = None
     order = None
@@ -739,25 +773,37 @@ def lvhc(slot_number):
             volts = sign * float(token.cargo)
             if float(volts) < -14 or float(volts) > 14:
                 error("LVHC volts " + dq(str(volts)) + " outside range [-14..14] V")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            volts = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             current = token.cargo
             if float(current) < 0 or float(current) > 250:
                 error("LVHC current " + dq(current) + " outside range [0..250] mA")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            current = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             order = token.cargo
             if int(order) < 0 or int(order) > 6:
                 error("LVHC order " + dq(order) + " outside range [0..6]")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            order = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             enable = token.cargo
             if enable != "0" and enable != "1":
                 error("LVHC enable " + dq(enable) + " must be 0 or 1")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            enable = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
@@ -798,7 +844,10 @@ def lvlc(slot_number):
         lvl_chan = token.cargo
         if int(lvl_chan) < 1 or int(lvl_chan) > 24:
             error("LVLC channel " + dq(lvl_chan) + " outside range [1..24]")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        lvl_chan = token.cargo
+        consume(IDENTIFIER)
     volts = None
     order = None
     consume("[")
@@ -816,13 +865,19 @@ def lvlc(slot_number):
             volts = sign * float(token.cargo)
             if volts < -14 or volts > 14:
                 error("LVLC volts " + dq(str(volts)) + " outside range [-14..14] V")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            volts = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             order = token.cargo
             if int(order) < 0 or int(order) > 24:
                 error("LVLC order " + dq(order) + " outside range [0..24]")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            order = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
@@ -876,11 +931,17 @@ def sensor(slot_number):
             sensorType = token.cargo
             if int(sensorType) < 0 or int(sensorType) > 5:
                 error("SENSOR type: " + sensorType + ": must be in range {0:5}")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            sensorType = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             sensor_current = token.cargo
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            sensor_current = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         # sensor_lo_lim could have a negative number...
         sign = +1
@@ -895,7 +956,10 @@ def sensor(slot_number):
                     + str(sensor_lo_lim)
                     + ": must be in range {-150:50} deg C"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            sensor_lo_lim = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         # sensor_hi_lim could have a negative number...
         sign = +1
@@ -910,13 +974,19 @@ def sensor(slot_number):
                     + str(sensor_hi_lim)
                     + ": must be in range {-150:50} deg C"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            sensor_hi_lim = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             sensor_filter = token.cargo
             if int(sensor_filter) < 0 or int(sensor_filter) > 8:
                 error("SENSOR filter " + sensor_filter + ": must be in range {0:8}")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            sensor_filter = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
@@ -1008,19 +1078,31 @@ def pid(slot_number):
             break
         if found(NUMBER):
             heater_p = token.cargo
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_p = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             heater_i = token.cargo
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_i = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             heater_d = token.cargo
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_d = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             heater_ilim = token.cargo
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_ilim = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     consume(";")
 
@@ -1073,7 +1155,10 @@ def ramp(slot_number):
             ramprate = int(token.cargo)
             if ramprate < 1 or ramprate > 32767:
                 error("RAMP rate " + dq(str(ramprate)) + " must be in range {1:32767}")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            ramprate = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         # if it's a number then allow a 0 or 1
         if found(NUMBER):
@@ -1162,7 +1247,10 @@ def heater(slot_number):
                     + str(heater_target)
                     + ": must be in range {-150:50}"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_target = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         # heater_sensor
         if found(IDENTIFIER):
@@ -1186,7 +1274,10 @@ def heater(slot_number):
                     + str(heater_limit)
                     + ": must be in range {0:25}"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_limit = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         # heater_forcelevel
         if found(NUMBER):
@@ -1197,7 +1288,10 @@ def heater(slot_number):
                     + str(heater_forcelevel)
                     + ": must be in range {0:25}"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            heater_forcelevel = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         # heater_force
         # if it's a number then allow a 0 or 1
@@ -1357,13 +1451,19 @@ def pbias(slot_number):
         bias_chan = token.cargo
         if int(bias_chan) < 1 or int(bias_chan) > 4:
             error("PBIAS channel " + dq(bias_chan) + " outside range {1:4}")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        bias_chan = token.cargo
+        consume(IDENTIFIER)
 
     if found(NUMBER):
         enable = token.cargo
         if int(enable) < 0 or int(enable) > 1:
             error("PBIAS enable " + dq(enable) + " must be 0 or 1")
-        consume(NUMBER)
+            consume(NUMBER)
+    elif found(IDENTIFIER):
+        enable = token.cargo
+        consume(IDENTIFIER)
     else:
         enable = "1"
 
@@ -1377,13 +1477,19 @@ def pbias(slot_number):
             order = token.cargo
             if int(order) < 0:
                 error("PBIAS order " + order + " must be >= 0")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            order = token.cargo
+            consume(IDENTIFIER)
 
         consume(",")
 
         if found(NUMBER):
             cmd = token.cargo
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            cmd = token.cargo
+            consume(IDENTIFIER)
 
     consume("]")
     # there can be an optional label, specified as token type=STRING
@@ -1429,13 +1535,19 @@ def nbias(slot_number):
         bias_chan = token.cargo
         if int(bias_chan) < 1 or int(bias_chan) > 4:
             error("NBIAS channel " + dq(bias_chan) + " outside range {1:4}")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        bias_chan = token.cargo
+        consume(IDENTIFIER)
 
     if found(NUMBER):
         enable = token.cargo
         if int(enable) < 0 or int(enable) > 1:
             error("NBIAS enable " + dq(enable) + " must be 0 or 1")
         consume(NUMBER)
+    elif found(IDENTIFIER):
+        enable = token.cargo
+        consume(IDENTIFIER)
     else:
         enable = "1"
 
@@ -1449,7 +1561,10 @@ def nbias(slot_number):
             order = token.cargo
             if int(order) < 0:
                 error("NBIAS order " + order + " must be >= 0")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            order = token.cargo
+            consume(IDENTIFIER)
 
         consume(",")
 
@@ -1500,7 +1615,10 @@ def drv(slot_number):
         drv_chan = token.cargo
         if int(drv_chan) < 0 or int(drv_chan) > 8:
             error("DRV channel " + dq(drv_chan) + " outside range [1..8]")
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        drv_chan = token.cargo
+        consume(IDENTIFIER)
     slewfast = None
     slewslow = None
     enable = None
@@ -1516,7 +1634,10 @@ def drv(slot_number):
                     + dq(slewfast)
                     + " outside range [0.001..1000] V/us"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            slewfast = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             slewslow = token.cargo
@@ -1526,13 +1647,19 @@ def drv(slot_number):
                     + dq(slewslow)
                     + " outside range [0.001..1000] V/us"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            slewslow = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             enable = token.cargo
             if enable != "0" and enable != "1":
                 error("DRV enable " + dq(enable) + " must be 0 or 1")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            enable = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     if found(STRING):
@@ -1576,8 +1703,11 @@ def drvx(slot_number):
         drv_chan = token.cargo
         if int(drv_chan) < 0 or int(drv_chan) > 12:
             error(f"DRVX channel {dq(drv_chan)} outside range [1..12]")
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        drv_chan = token.cargo
+        consume(IDENTIFIER)
 
-    consume(NUMBER)
     slewfast = None
     slewslow = None
     enable = None
@@ -1589,7 +1719,10 @@ def drvx(slot_number):
             slewfast = token.cargo
             if float(slewfast) < 0.001 or float(slewfast) > 1000:
                 error(f"DRVX Slow Slew Rate {dq(slewslow)} outside range [0.001..1000] V/us")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            slewfast = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             slewslow = token.cargo
@@ -1599,13 +1732,19 @@ def drvx(slot_number):
                     + dq(slewslow)
                     + " outside range [0.001..1000] V/us"
                 )
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            slewslow = token.cargo
+            consume(IDENTIFIER)
         consume(",")
         if found(NUMBER):
             enable = token.cargo
             if enable != "0" and enable != "1":
                 error(f"DRVX enable {dq(enable)} must be 0 or 1")
-        consume(NUMBER)
+            consume(NUMBER)
+        elif found(IDENTIFIER):
+            enable = token.cargo
+            consume(IDENTIFIER)
     consume("]")
     # there can be an optional label, specified as token type=STRING
     label = ""
@@ -1652,7 +1791,7 @@ def slot():
         slot_number = token.cargo
         if int(slot_number) < 1 or int(slot_number) > 12:
             error("SLOT " + dq(slot_number) + " outside range [1..12]")
-    consume(NUMBER)
+        consume(NUMBER)
 
     mod_type = None
     if found(IDENTIFIER):
@@ -1919,7 +2058,10 @@ def to():
     if found(NUMBER):
         # multiply the value by the sign from above (hehe)
         setLevel = str(sign * float(token.cargo))
-    consume(NUMBER)
+        consume(NUMBER)
+    elif found(IDENTIFIER):
+        setLevel = token.cargo
+        consume(IDENTIFIER)
 
 
 # -----------------------------------------------------------------------------
