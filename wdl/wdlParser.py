@@ -1460,7 +1460,7 @@ def pbias(slot_number):
         enable = token.cargo
         if int(enable) < 0 or int(enable) > 1:
             error("PBIAS enable " + dq(enable) + " must be 0 or 1")
-            consume(NUMBER)
+        consume(NUMBER)
     elif found(IDENTIFIER):
         enable = token.cargo
         consume(IDENTIFIER)
