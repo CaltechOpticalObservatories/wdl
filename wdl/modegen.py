@@ -59,6 +59,7 @@ class Modegen:
                     # look for key=value pairs, matching the LAST = on the line
                     match = re.search("^(.+:.+)\s*=\s*(.+?)\n", line)
                     if match:
+                        print(f"found match: {match}")
                         # union will hold one of every key specified
                         self.union.update({match.group(1): None})
                         # modes only hold specified key=value pairs
@@ -67,8 +68,10 @@ class Modegen:
                         )
                         # if the key is a non-empty TAPLINE setting,
                         # then increment self.taplines[thismode]
-                        if re.search('ACF:TAPLINE\d+="[\w,]+"', line):
+                        if re.search('ACF:TAPLINE\d+=\"[\w,-]+\"', line):
+                            print("found tapline")
                             if thismode not in self.taplines:
+                                print("updating tapline!")
                                 self.taplines.update({thismode: 1})
                             else:
                                 self.taplines[thismode] += 1
