@@ -144,8 +144,9 @@ class ModegenDriver(WDLDriver):
         self._modefile = modefile
         self._acffile = acffile
 
-    def __call__(self, cli_mode: bool) -> int:
-        modegen.Modegen(self._modefile, self._acffile)
+    def __call__(self, cli_mode: bool, append: bool=True) -> int:
+        mobj = modegen.Modegen(self._modefile, self._acffile)
+        mobj.write(append)
         return 0
 
 class Ini2acfDriver(WDLDriver):
