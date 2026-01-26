@@ -232,7 +232,7 @@ def module():
         "ADF": 13,
         "ADX": 14,
         "ADLN": 15,
-        "DRIVERX": 16,
+        "DRIVERX": 16
     }
 
     mod_type = module_map.get(module_name.upper(), -1)

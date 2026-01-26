@@ -38,6 +38,7 @@ class Modegen:
 
         # print error messages for keys in union that are not
         # declared the default mode
+        print(f"union: {self.union}")
         for key in self.union:
             if self.union[key] is None:
                 print("WARNING: '%s' needs to be defined in MODE_DEFAULT." % key)
@@ -59,7 +60,7 @@ class Modegen:
                     # look for key=value pairs, matching the LAST = on the line
                     match = re.search("^(.+:.+)\s*=\s*(.+?)\n", line)
                     if match:
-                        print(f"found match: {match}")
+                        print(f"found match: {match} group 1 {match.group(1)}")
                         # union will hold one of every key specified
                         self.union.update({match.group(1): None})
                         # modes only hold specified key=value pairs
@@ -69,7 +70,7 @@ class Modegen:
                         # if the key is a non-empty TAPLINE setting,
                         # then increment self.taplines[thismode]
                         if re.search('ACF:TAPLINE\d+=\"[\w,-]+\"', line):
-                            print("found tapline")
+                            print(f"found tapline {match.group(2)}")
                             if thismode not in self.taplines:
                                 print("updating tapline!")
                                 self.taplines.update({thismode: 1})
