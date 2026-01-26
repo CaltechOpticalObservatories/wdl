@@ -92,7 +92,7 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
     with open(infile, "r") as f:
         for line in f:
             # look for mod file
-            match = re.search("^modulefile\s+([~\w./]+)\s*$", line)
+            match = re.search(r"^modulefile\s+([~\w./]+)\s*$", line)
             if match is not None:
                 ModFile = os.path.abspath(os.path.expanduser(match.group(1)))
                 wdl_file_did_not_specify_mod_file = False
@@ -116,18 +116,18 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
             if line == "":
                 continue
             # look for mod file
-            match = re.search("^modulefile\s+([~\w./]+)\s*$", line)
+            match = re.search(r"^modulefile\s+([~\w./]+)\s*$", line)
             if match is not None:
                 continue
             # look for signal file
-            match = re.search("^signalfile\s+([~\w./]+)\s*$", line)
+            match = re.search(r"^signalfile\s+([~\w./]+)\s*$", line)
             if match is not None:
                 __SignalFile__ = os.path.abspath(os.path.expanduser(match.group(1)))
                 if not os.path.isfile(__SignalFile__):
                     print("Signal file specified does not exist (%s)" % __SignalFile__)
                 continue
             # look for parameters
-            match = re.search("^parameter\s+(\w+)=(\d+)\s*$", line)
+            match = re.search(r"^parameter\s+(\w+)=(\d+)\s*$", line)
             if match is not None:
                 pname = match.group(1)
                 pval = int(match.group(2))
@@ -165,7 +165,7 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
                     thisTS.sequenceDef.append([ctr, line[:-1]])
                     ctr += 1
                 elif TStype == "waveform":
-                    match = re.search("(\d+)\s+(\d+)\s+(\d+)\s+([+-]?[\d\.]+)", line)
+                    match = re.search(r"(\d+)\s+(\d+)\s+(\d+)\s+([+-]?[\d\.]+)", line)
                     if match is not None:
                         # body of a waveform
                         time = int(match.group(1))
@@ -204,7 +204,7 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
                             )
                     else:
                         # handle the end line of a waveform.
-                        match = re.search("(\d+)\s+(\w+)", line)
+                        match = re.search(r"(\d+)\s+(\w+)", line)
                         thisTS.nperiods = int(match.group(1))
                         if thisTS.nperiods == 0:
                             print(
@@ -264,7 +264,7 @@ def __loadMod__(ModFile):  # subroutine of loadWDL()
     # btype = []
     with open(ModFile, "r") as f:
         for line in f:
-            match = re.search("^\s*SLOT\s+(\d+)\s+(\w+)\s{", line)
+            match = re.search(r"^\s*SLOT\s+(\d+)\s+(\w+)\s{", line)
             if match is not None:
                 thisSlotNum = int(match.group(1))
                 thisBoardLabel = match.group(2)
@@ -341,7 +341,7 @@ def __loadSignals__(__SignalFile__):  # subroutine of loadWDL()
     with open(__SignalFile__, "r") as f:
         for line in f:
             # look for signal file
-            match = re.search("^#define (\w+)\s+(\d+)\s+:\s+(\d+)", line)
+            match = re.search(r"^#define (\w+)\s+(\d+)\s+:\s+(\d+)", line)
             if match is not None:
                 signame = match.group(1)
                 sigslot = int(match.group(2))
@@ -757,7 +757,7 @@ class TimingSegment(object):
                 EOL = True
                 if this_sub_call[0:3].upper() == "IF ":
                     # get the first word after IF...
-                    regexmatch = re.search("\w+\s+!?([\w]+)", this_sub_call)
+                    regexmatch = re.search(r"\w+\s+!?([\w]+)", this_sub_call)
                     this_param = regexmatch.group(1)
                     try:  # demo if this_param is an integer
                         int(this_param)
@@ -901,9 +901,9 @@ class TimingSegment(object):
             if len(seq_indx):
                 this_sub_call = self.sequenceDef[seq_indx[0]][1]
                 match = re.search(
-                    "(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?"
-                    + "((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?"
-                    + "(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?",
+                    r"(IF\s+(?P<N0>!)?(?P<P0>\w+)(?P<D0>--)?\s+)?"
+                    + r"((?P<CMD>RETURN|GOTO|CALL)\s+(?P<TS>\w+)\(?)?"
+                    + r"(\(?(?P<P1>\w+)?(?P<D1>--)?)\)?",
                     this_sub_call,
                 )
                 #  REGEX labels:
@@ -1037,7 +1037,7 @@ class TimingSegment(object):
                 axes[kk].grid("on")
                 if kk > 0:
                     axes[kk].set_xticklabels([])
-            axes[0].set_xlabel("time [$\mu$s]")
+            axes[0].set_xlabel(r"time [$\mu$s]")
             axes[kk].set_title("non-static waveforms for %s" % self.name)
             plt.draw()
         print("(Figure %d)" % self.label, end=" ")
@@ -1268,7 +1268,7 @@ def state(outfile=None):
                 statestring += "0,1,0"
             elif (KeepSum + 1) == __chan_per_board__["hvbd"]:  # proper change
                 # 2. get the level corresponding to the non-keep.
-                hvbd_chan = np.where(hvbdKeep == 0)[0]
+                hvbd_chan = int(np.where(hvbdKeep == 0)[0][0])
                 statestring += "1,%d,%g" % (hvbd_chan + 1, hvbdLevel[hvbd_chan])
             else:
                 print("Error in HVBD state call -- multiple changes in a state")
