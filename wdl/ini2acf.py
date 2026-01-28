@@ -59,7 +59,7 @@ def generate_acf(inifile: str | Path | TextIOWrapper,
     outp: list[str] = []
 
     #need to add [CONFIG] at the top
-    outp.append("[CONFIG]")
+    outp.append(f"[CONFIG]{linesep}")
 
     for secname, seclines, process in _section_replace_filter(inp):
         if process:

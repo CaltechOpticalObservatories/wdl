@@ -3,7 +3,7 @@ import warnings
 from typing import Optional
 from argparse import ArgumentParser
 from sys import stdout
-
+import os
 from .driverbase import WDLDriver
 
 from wdl.ini2acf import generate_acf
@@ -67,7 +67,7 @@ class ModParserDriver(WDLDriver):
         fname: str = f"{self._projname}.{fileext}"
         logger.debug("filename is: %s", fname)
         with open(fname, "w") as f:
-            f.writelines([f"[{archonkw}]"])
+            f.writelines([f"[{archonkw}]{os.linesep}"])
             f.write(output)
 
 class IncParserDriver(WDLDriver):
