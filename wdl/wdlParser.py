@@ -1581,6 +1581,9 @@ def nbias(slot_number):
         # must be a negative number...
         if found(NUMBER):
             cmd = token.cargo
+
+        if float(cmd) > 0.0:
+            error("XVN value must be negative!")
         consume(NUMBER)
 
     consume("]")
@@ -2057,16 +2060,8 @@ def to():
     global setLevel
 
     consume("TO")
-    # could be a negative number...
-    if found("-"):
-        # if so, consume the sign and remember it
-        consume("-")
-        sign = -1.0
-    else:
-        sign = 1.0
     if found(NUMBER):
-        # multiply the value by the sign from above (hehe)
-        setLevel = str(sign * float(token.cargo))
+        setLevel = float(token.cargo)
         consume(NUMBER)
     elif found(IDENTIFIER):
         setLevel = token.cargo
