@@ -1579,7 +1579,6 @@ def nbias(slot_number):
         consume(",")
 
         # must be a negative number...
-        consume("-")
         if found(NUMBER):
             cmd = token.cargo
         consume(NUMBER)

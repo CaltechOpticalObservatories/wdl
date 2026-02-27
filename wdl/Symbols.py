@@ -108,7 +108,7 @@ TwoCharacterSymbols = TwoCharacterSymbols.split()
 IDENTIFIER_STARTCHARS = string.ascii_letters
 IDENTIFIER_CHARS = string.ascii_letters + string.digits + "_"
 
-NUMBER_STARTCHARS = string.digits
+NUMBER_STARTCHARS = string.digits + '-'
 NUMBER_CHARS = string.digits + "."
 
 STRING_STARTCHARS = "'" + '"'
