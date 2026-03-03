@@ -1595,7 +1595,7 @@ def nbias(slot_number):
         label = ""
     consume(";")
 
-    nbiasOutput += "MOD" + slot_number + "\XVN_V" + bias_chan + "=-" + cmd + "\n"
+    nbiasOutput += "MOD" + slot_number + "\XVN_V" + bias_chan + "=" + cmd + "\n"
     nbiasOutput += "MOD" + slot_number + "\XVN_ORDER" + bias_chan + "=" + order + "\n"
     nbiasOutput += "MOD" + slot_number + "\XVN_ENABLE" + bias_chan + "=" + enable + "\n"
     if label != "":
