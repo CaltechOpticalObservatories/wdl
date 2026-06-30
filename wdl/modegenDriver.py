@@ -33,14 +33,25 @@
 
 # import fileinput
 
-#hack to allow both modern style import and direct script execution
-if __package__ != "wdl":
-    import os
+# Hack to allow both modern style import and direct script execution
+if __package__ in (None, ""):
+    import sys
     import warnings
-    basen = os.path.basename(__file__)
-    warnings.warn(f"detected running a script directly, consider using python -m wdl.{basen}")
-    import wavgen
-    import modegen
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(repo_root))
+
+    module_name = Path(__file__).stem
+    warnings.warn(
+        f"Detected direct script execution. "
+        f"Consider using: python -m wdl.{module_name}",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+
+    from wdl import wavgen
+    from wdl import modegen
 else:
     from . import wavgen
     from . import modegen

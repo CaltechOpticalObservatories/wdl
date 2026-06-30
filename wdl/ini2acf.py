@@ -98,11 +98,16 @@ def main():
 
                         """)
     ap.add_argument("infile", help="input ini file", type=str)
-    ap.add_argument("-o,--outfile", help="output file to use. By default, outputs to stdout", type=str)
+    ap.add_argument(
+        "-o",
+        "--outfile",
+        help="output file to use. By default, outputs to stdout",
+        type=str,
+    )
 
     args = ap.parse_args()
 
-    out_content: str = generate_acf(args.inifile)
+    out_content: str = generate_acf(args.infile)
 
     if args.outfile is not None:
         with open(args.outfile,"w") as f:
