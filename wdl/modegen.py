@@ -38,6 +38,7 @@ class Modegen:
 
         # print error messages for keys in union that are not
         # declared the default mode
+        print(f"union: {self.union}")
         for key in self.union:
             if self.union[key] is None:
                 print("WARNING: '%s' needs to be defined in MODE_DEFAULT." % key)
@@ -48,7 +49,7 @@ class Modegen:
         with open(self.modefile) as FILE:
             for line in FILE:
                 # look for headers
-                match = re.search("^\[(.*?)\]", line)
+                match = re.search(r"^\[(.*?)\]", line)
                 if match:
                     # initialize the KVpair entry
                     self.modeKVpair.update({match.group(1): {}})
@@ -57,8 +58,9 @@ class Modegen:
                     thismode = match.group(1)
                 else:
                     # look for key=value pairs, matching the LAST = on the line
-                    match = re.search("^(.+:.+)\s*=\s*(.+?)\n", line)
+                    match = re.search(r"^(.+:.+)\s*=\s*(.+?)\n", line)
                     if match:
+                        print(f"found match: {match} group 1 {match.group(1)}")
                         # union will hold one of every key specified
                         self.union.update({match.group(1): None})
                         # modes only hold specified key=value pairs
@@ -67,8 +69,10 @@ class Modegen:
                         )
                         # if the key is a non-empty TAPLINE setting,
                         # then increment self.taplines[thismode]
-                        if re.search('ACF:TAPLINE\d+="[\w,]+"', line):
+                        if re.search(r'ACF:TAPLINE\d+=\"[\w,-]+\"', line):
+                            print(f"found tapline {match.group(2)}")
                             if thismode not in self.taplines:
+                                print("updating tapline!")
                                 self.taplines.update({thismode: 1})
                             else:
                                 self.taplines[thismode] += 1
@@ -79,7 +83,7 @@ class Modegen:
                         self.modelist[thismode].append(match.group(1))
                         continue
                     # both matches failed - issue warning
-                    if re.search("[^\w]+", line[:-1]):
+                    if re.search(r"[^\w]+", line[:-1]):
                         print(
                             "WARNING: '%s' in %s not recognized as a "
                             "mode-setting statement" % (line[:-1], thismode)
@@ -98,7 +102,7 @@ class Modegen:
         with open(self.acffile) as ACF:
             for line in ACF:
                 # skip [MODE_X] statments
-                if re.search("^\w+:\w", line):
+                if re.search(r"^\w+:\w", line):
                     continue
                 # look for key=value pairs in ACF
                 match = re.search("^(.+)=(.+?)\n", line)
@@ -118,7 +122,7 @@ class Modegen:
                             if re.search("%d", unionkey):
                                 # make regex from printf %d ONLY IF
                                 # it appears in the key
-                                unionregex = re.sub("%d", "(\d+)", unionkey)
+                                unionregex = re.sub("%d", r"(\d+)", unionkey)
                                 kmatch = re.search(unionregex, ACFKEY)
                                 if kmatch:
                                     try:
@@ -151,7 +155,7 @@ class Modegen:
             print("**NOTE** 'ACF:'-type keys use default values from %s" % self.acffile)
 
     def __index_modeKVpair(self):
-        """convert (\d+)'s into proper ACF indices"""
+        """convert (\\d+)'s into proper ACF indices"""
         for mode in self.modeKVpair:
             for key in self.modeKVpair[mode]:
                 # search the "ACF:" keys for "%d="
@@ -161,7 +165,7 @@ class Modegen:
                 # or MOD ACF statements, as they would not be unique
                 if match:
                     # now figure out which key in self.union this corresponds to
-                    keyregex = re.sub("%d", "(\d+)", key)
+                    keyregex = re.sub("%d", r"(\d+)", key)
                     for ukey in self.union:
                         kmatch = re.search(keyregex, ukey)
                         if kmatch:

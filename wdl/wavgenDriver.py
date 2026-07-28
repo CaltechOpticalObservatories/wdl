@@ -33,7 +33,16 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
-import wavgen
+#hack to allow both modern style import and direct script execution
+if __package__ != "wdl":
+    import os
+    import warnings
+    basen = os.path.basename(__file__)
+    warnings.warn(f"detected running a script directly, consider using python -m wdl.{basen}")
+    import wavgen
+else:
+    from . import wavgen
+
 import matplotlib.pyplot as plt
 import sys
 

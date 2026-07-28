@@ -22,8 +22,30 @@
 #     David Hale <dhale@caltech.edu> or
 #     Stephen Kaye <skaye@caltech.edu>
 
+#hack to allow both modern style import and direct script execution
+if __package__ in (None, ""):
+    import sys
+    import warnings
+    from pathlib import Path
+
+    # Add the repo/package parent directory so `import wdl...` works
+    # even when this file is run directly.
+    repo_root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(repo_root))
+
+    module_name = Path(__file__).stem
+    warnings.warn(
+        f"Detected direct script execution. "
+        f"Consider using: python -m wdl.{module_name}",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+
+    from wdl import wdlParser as Parser
+else:
+    from . import wdlParser as Parser
+
 import fileinput
-import wdlParser as Parser
 import sys
 
 sys.dont_write_bytecode = True

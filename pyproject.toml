@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "wheel", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["wdl"]
+packages = ["wdl"]
 
 [tool.setuptools_scm]
 version_file = "wdl/_version.py"
@@ -20,6 +20,18 @@ dependencies = [
     "matplotlib>=3.9.2",
     "PyQt5>=5.15"
 ]
+
+requires-python = ">=3.12"
+
 [project.urls]
 Repository = "https://github.com/CaltechOpticalObservatories/wdl"
+
+
+[project.scripts]
+wdl = "wdl.cli:main"
+ini2acf = "wdl.ini2acf:main"
+
+# Legacy command wrappers for historical *.py driver scripts
+"LexerDriver.py" = "wdl.LexerDriver:__main__"
+
 
