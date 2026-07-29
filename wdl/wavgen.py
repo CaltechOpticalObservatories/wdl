@@ -61,6 +61,11 @@ UniqueStateArr = np.array([])
 Catalog = []  # list of all TimingSegment objects
 Parameters = collections.OrderedDict()  # all the parameters
 Constants = collections.OrderedDict()  # all the constants
+
+# bidirectional const name <-> unique placeholder value, so a const used
+# as a WAVEFORM "SET ... TO <const>" level survives the numeric state
+# and can be swapped back for its name when the ACF is written (see state())
+__constLevels__ = {}
 __SignalByName__ = {}
 __SignalByIndx__ = {}
 __seq_ID__ = 0
@@ -165,13 +170,25 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
                     thisTS.sequenceDef.append([ctr, line[:-1]])
                     ctr += 1
                 elif TStype == "waveform":
-                    match = re.search(r"(\d+)\s+(\d+)\s+(\d+)\s+([+-]?[\d\.]+)", line)
+                    match = re.search(
+                        r"(\d+)\s+(\d+)\s+(\d+)\s+([+-]?[\d.]+|[A-Za-z_]\w*)", line
+                    )
                     if match is not None:
                         # body of a waveform
                         time = int(match.group(1))
                         nslot = int(match.group(2))
                         chan = int(match.group(3))  # this is the slot channel
-                        value = float(match.group(4))
+                        rawlevel = match.group(4)
+                        if re.match(r"^[+-]?[\d.]+$", rawlevel):
+                            value = float(rawlevel)
+                        else:
+                            # a const name used as the SET...TO level: give
+                            # it a unique placeholder (see __constLevels__)
+                            if rawlevel not in __constLevels__:
+                                placeholder = -1.0e18 - len(__constLevels__)
+                                __constLevels__[rawlevel] = placeholder
+                                __constLevels__[placeholder] = rawlevel
+                            value = __constLevels__[rawlevel]
                         # get the key for the slot
                         foundBoardType = False
                         for board_type in slot:
@@ -1069,6 +1086,13 @@ def state(outfile=None):
     global UniqueStateArr
     global __chan_per_board__
 
+    def levelstr(value, fmt="%g"):
+        """format a level value, substituting the const name if this
+        value is a registered SET...TO placeholder (see __constLevels__)"""
+        value = float(value)
+        name = __constLevels__.get(value)
+        return name if name is not None else fmt % value
+
     if outfile is None:
         ofile = sys.stdout
     elif type(outfile) is str:
@@ -1122,8 +1146,8 @@ def state(outfile=None):
                         )
                 else:
                     # in USA, 0==FAST 1==SLOW.  IN ACF, 1==FAST, 0==SLOW.
-                    statestring += "%g,%d,0," % (
-                        UniqueStateArr[ii, jj_level],
+                    statestring += "%s,%d,0," % (
+                        levelstr(UniqueStateArr[ii, jj_level]),
                         int(not bool(UniqueStateArr[ii, jj_fast])),
                     )
 
@@ -1139,7 +1163,9 @@ def state(outfile=None):
                 if not UniqueStateArr[ii, jj_change]:
                     statestring += "1,1,"
                 else:
-                    statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
+                    statestring += "%s,0," % (
+                        levelstr(UniqueStateArr[ii, jj_level], "%d")
+                    )
             statestring = statestring[:-1] + '"'
             ofile.write(statestring + "\n")
             offset += 2 * __chan_per_board__["lvds"]
@@ -1152,7 +1178,9 @@ def state(outfile=None):
                 if not UniqueStateArr[ii, jj_change]:
                     statestring += "1,1,"
                 else:
-                    statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
+                    statestring += "%s,0," % (
+                        levelstr(UniqueStateArr[ii, jj_level], "%d")
+                    )
             statestring = statestring[:-1] + '"'
             ofile.write(statestring + "\n")
             offset += 2 * __chan_per_board__["htr"]
@@ -1184,7 +1212,10 @@ def state(outfile=None):
                 # 2. get the level corresponding to on the non-keep.
                 pxvbd_chan = np.where(pxvbdKeep == 0)[0]
                 # again need comma at end of pops string
-                statestring += "1,%d,%g," % (pxvbd_chan + 1, pxvbdLevel[pxvbd_chan])
+                statestring += "1,%d,%s," % (
+                    pxvbd_chan + 1,
+                    levelstr(pxvbdLevel[pxvbd_chan]),
+                )
             else:
                 print(
                     "Error in positive XVBD state call -- multiple changes "
@@ -1212,7 +1243,10 @@ def state(outfile=None):
             elif (nKeepSum + 1) == (__chan_per_board__["xvbd"] / 2):
                 # 2. get the level corresponding to on the non-keep.
                 nxvbd_chan = np.where(nxvbdKeep == 0)[0]
-                statestring += "1,%d,%g" % (nxvbd_chan + 1, nxvbdLevel[nxvbd_chan])
+                statestring += "1,%d,%s" % (
+                    nxvbd_chan + 1,
+                    levelstr(nxvbdLevel[nxvbd_chan]),
+                )
             else:
                 print(
                     "Error in negative XVBD state call -- multiple changes "
@@ -1230,7 +1264,9 @@ def state(outfile=None):
             if not UniqueStateArr[ii, jj_change]:
                 statestring += "0,1,"
             else:
-                statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
+                statestring += "%s,0," % (
+                    levelstr(UniqueStateArr[ii, jj_level], "%d")
+                )
             statestring = statestring[:-1] + '"'
             ofile.write(statestring + "\n")
             offset += 2
@@ -1269,7 +1305,10 @@ def state(outfile=None):
             elif (KeepSum + 1) == __chan_per_board__["hvbd"]:  # proper change
                 # 2. get the level corresponding to the non-keep.
                 hvbd_chan = int(np.where(hvbdKeep == 0)[0][0])
-                statestring += "1,%d,%g" % (hvbd_chan + 1, hvbdLevel[hvbd_chan])
+                statestring += "1,%d,%s" % (
+                    hvbd_chan + 1,
+                    levelstr(hvbdLevel[hvbd_chan]),
+                )
             else:
                 print("Error in HVBD state call -- multiple changes in a state")
             ofile.write(statestring + '"\n')
@@ -1294,7 +1333,9 @@ def state(outfile=None):
                 if not UniqueStateArr[ii, jj_change]:
                     statestring += "1,1,"
                 else:
-                    statestring += "%d,0," % (UniqueStateArr[ii, jj_level])
+                    statestring += "%s,0," % (
+                        levelstr(UniqueStateArr[ii, jj_level], "%d")
+                    )
 
             # move back to beginning of voltages
             offset -= 2 * (__chan_per_board__["lvbd"] - n_LVDIO)
@@ -1316,7 +1357,10 @@ def state(outfile=None):
             elif (KeepSum + 1) == n_LVBIAS:
                 # 2. get the level corresponding to the non-keep.
                 lvbd_chan = np.where(lvbdKeep == 0)[0]
-                statestring += "1,%d,%g" % (lvbd_chan + 1, lvbdLevel[lvbd_chan])
+                statestring += "1,%d,%s" % (
+                    lvbd_chan + 1,
+                    levelstr(lvbdLevel[lvbd_chan]),
+                )
             else:
                 print("Error in LVBD state call -- multiple changes in a state")
             ofile.write(statestring + '"\n')
