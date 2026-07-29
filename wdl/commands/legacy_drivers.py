@@ -89,6 +89,7 @@ class WdlParserDriver(WDLDriver):
         global subroutines 
         subroutines = Parser.get_subroutines(self._text)
         Parser.get_params(self._text)
+        Parser.get_consts(self._text)
         output: str = Parser.parse(self._text)
 
         #apparently this one just prints it out, to stdout I guess?

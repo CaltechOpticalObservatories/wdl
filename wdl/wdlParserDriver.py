@@ -70,6 +70,7 @@ def main(input_source_text):
     subroutines = Parser.get_subroutines(input_source_text)
 
     Parser.get_params(input_source_text)
+    Parser.get_consts(input_source_text)
 
     wdl_output = Parser.parse(input_source_text)
 

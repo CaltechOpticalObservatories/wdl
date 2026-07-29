@@ -2322,6 +2322,7 @@ def name_label():
 def generic_sequence(*sequenceName):
     """ """
     global token
+    global constNames
     has_exit = False
     # sequence/waveform must start with an open (left) curly brace, {
     consume("{")
@@ -2337,6 +2338,7 @@ def generic_sequence(*sequenceName):
                 (found(IDENTIFIER))
                 and (token.cargo not in subroutines)
                 and (token.cargo not in paramNames)
+                and (token.cargo not in constNames)
             ):
                 error(
                     "(wdlParser.py::generic_sequence) undefined symbol "
@@ -2371,8 +2373,13 @@ def generic_sequence(*sequenceName):
                 # it's a number or param
                 if not found(")"):
                     sequence_line += "(" + token.cargo  # + ")"
-                    # and if it's not a number then it must be a defined param
-                    if not found(NUMBER) and token.cargo not in paramNames:
+                    # and if it's not a number then it must be a defined
+                    # param or const
+                    if (
+                        not found(NUMBER)
+                        and token.cargo not in paramNames
+                        and token.cargo not in constNames
+                    ):
                         error(
                             "(wdlParser.py::generic_sequence) undefined "
                             "param " + token.show(align=False)
@@ -2629,6 +2636,33 @@ def get_params(source_text):
             consume(NUMBER)
 
     return paramNames
+
+
+# -----------------------------------------------------------------------------
+# @fn     get_consts
+# @brief
+# @param  source_text
+# @return none
+# -----------------------------------------------------------------------------
+def get_consts(source_text):
+    """ """
+    global token
+    global constNames
+
+    Lexer.initialize(source_text)
+
+    while True:
+        get_token()
+        if token.type == EOF:
+            break
+        if found("const"):
+            consume("const")
+            constNames.append(token.cargo)
+            consume(IDENTIFIER)
+            consume("=")
+            consume(NUMBER)
+
+    return constNames
 
 
 # -----------------------------------------------------------------------------
