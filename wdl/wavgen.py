@@ -185,7 +185,7 @@ def loadWDL(infile, outfile="/dev/null", verbose=1):
                             # a const name used as the SET...TO level: give
                             # it a unique placeholder (see __constLevels__)
                             if rawlevel not in __constLevels__:
-                                placeholder = -1.0e18 - len(__constLevels__)
+                                placeholder = -1.0e9 - len(__constLevels__)
                                 __constLevels__[rawlevel] = placeholder
                                 __constLevels__[placeholder] = rawlevel
                             value = __constLevels__[rawlevel]
