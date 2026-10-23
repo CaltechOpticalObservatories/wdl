@@ -48,6 +48,9 @@ class Modegen:
         """read the input file"""
         with open(self.modefile) as FILE:
             for line in FILE:
+                # terminate the last line too, since the patterns below
+                # require a trailing newline
+                line = line.rstrip("\n") + "\n"
                 # look for headers
                 match = re.search(r"^\[(.*?)\]", line)
                 if match:
