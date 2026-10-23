@@ -1210,7 +1210,7 @@ def state(outfile=None):
             # proper change for positive voltage
             elif (pKeepSum + 1) == (__chan_per_board__["xvbd"] / 2):
                 # 2. get the level corresponding to on the non-keep.
-                pxvbd_chan = np.where(pxvbdKeep == 0)[0]
+                pxvbd_chan = int(np.where(pxvbdKeep == 0)[0][0])
                 # again need comma at end of pops string
                 statestring += "1,%d,%s," % (
                     pxvbd_chan + 1,
@@ -1242,7 +1242,7 @@ def state(outfile=None):
             # proper change for positive voltage
             elif (nKeepSum + 1) == (__chan_per_board__["xvbd"] / 2):
                 # 2. get the level corresponding to on the non-keep.
-                nxvbd_chan = np.where(nxvbdKeep == 0)[0]
+                nxvbd_chan = int(np.where(nxvbdKeep == 0)[0][0])
                 statestring += "1,%d,%s" % (
                     nxvbd_chan + 1,
                     levelstr(nxvbdLevel[nxvbd_chan]),
@@ -1356,7 +1356,7 @@ def state(outfile=None):
             # __chan_per_board__['lvbd']: # proper change
             elif (KeepSum + 1) == n_LVBIAS:
                 # 2. get the level corresponding to the non-keep.
-                lvbd_chan = np.where(lvbdKeep == 0)[0]
+                lvbd_chan = int(np.where(lvbdKeep == 0)[0][0])
                 statestring += "1,%d,%s" % (
                     lvbd_chan + 1,
                     levelstr(lvbdLevel[lvbd_chan]),
